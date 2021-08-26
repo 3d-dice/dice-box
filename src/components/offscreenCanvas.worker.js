@@ -96,7 +96,7 @@ const initScene = async (data) => {
 // all this does is start the render engine.
 const render = () => {
   // document.body.addEventListener('click',()=>engine.stopRenderLoop())
-  engine.runRenderLoop(renderLoop.bind(this))
+  engine.runRenderLoop(renderLoop.bind(self))
 	physicsWorkerPort.postMessage({
 		action: "resumeSimulation",
 	})

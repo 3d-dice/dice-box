@@ -1,0 +1,72 @@
+{
+	"name": "dice-box",
+	"author": {
+		"name": "Frank Ali"
+	},
+	"description": "A 3D environment for rolling game dice",
+	"version": "0.1.0",
+	"keywords": [
+		"3D",
+		"dice",
+		"roll",
+		"roller",
+		"javascript",
+		"rpg",
+		"dnd",
+		"d&d",
+		"tabletop"
+	],
+	"license": "MIT",
+	"engines": {
+		"node": ">=14.15.0",
+		"npm": "6.14.x"
+	},
+	"homepage": "https://github.com/3Ddice/Dice-Box#readme",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/3Ddice/Dice-Box"
+	},
+	"bugs": {
+		"url": "https://github.com/3Ddice/issues"
+	},
+	"files": [
+		"dist"
+	],
+	"main": "./dist/dice-box.umd.js",
+	"module": "./dist/dice-box.es.js",
+	"exports": {
+		".": {
+			"import": "./dist/dice-box.es.js",
+			"require": "./dist/dice-box.umd.js"
+		}
+	},
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"serve": "vite preview"
+	},
+	"dependencies": {
+		"@babylonjs/core": "^5.0.0-alpha.22",
+		"@babylonjs/loaders": "^5.0.0-alpha.22",
+		"@babylonjs/materials": "^5.0.0-alpha.22",
+		"ammo.js": "github:kripken/ammo.js"
+	},
+	"devDependencies": {
+		"vite": "^2.5.0",
+		"rollup-plugin-copy": "^3.4.0"
+	},
+	"browserslist": {
+		"production": [
+			">0.2%",
+			"not dead",
+			"not op_mini all",
+			"not ie all"
+		],
+		"development": [
+			">0.2%",
+			"not dead",
+			"not op_mini all",
+			"not ie all"
+		]
+	}
+}

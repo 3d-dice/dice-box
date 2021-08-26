@@ -1,6 +1,7 @@
 // import { Mesh, PhysicsImpostor, SceneLoader, TransformNode, Vector3 } from '@babylonjs/core'
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader'
 import '@babylonjs/loaders/glTF/2.0/glTFLoader'
+// import '@babylonjs/core/Loading/Plugins/babylonFileLoader'
 import '@babylonjs/core/Meshes/instancedMesh'
 
 import { loadTheme } from './themes'
@@ -92,7 +93,8 @@ class Dice {
 
   // load all the dice from a webWorker
   static async loadModels() {
-    const models = await SceneLoader.ImportMeshAsync("", "/DiceBoxOffscreen/assets/models/diceMeshes.glb")
+    // const models = await SceneLoader.ImportMeshAsync(null,"/DiceBoxOffscreen/assets/models/", "diceMeshes.babylon")
+    const models = await SceneLoader.ImportMeshAsync(null,`${import.meta.env.BASE_URL}assets/models/`, "diceMeshes.glb")
     // const model = await SceneLoader.ImportMeshAsync(["die","collider"], "./DiceBox/assets/models/", `d20.glb`)
     models.meshes.forEach(model => {
       // console.log(`model.id`, model.id)

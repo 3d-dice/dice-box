@@ -20,6 +20,7 @@ module.exports = defineConfig({
 						{
 							// src: path.resolve(__dirname, 'src/assets/*'),
 							src: [
+								path.resolve(__dirname, 'src/assets/ammo'),
 								path.resolve(__dirname, 'src/assets/models'),
 								path.resolve(__dirname, 'src/assets/themes')
 							],

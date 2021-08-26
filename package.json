@@ -48,8 +48,7 @@
 	"dependencies": {
 		"@babylonjs/core": "^5.0.0-alpha.22",
 		"@babylonjs/loaders": "^5.0.0-alpha.22",
-		"@babylonjs/materials": "^5.0.0-alpha.22",
-		"ammo.js": "github:kripken/ammo.js"
+		"@babylonjs/materials": "^5.0.0-alpha.22"
 	},
 	"devDependencies": {
 		"vite": "^2.5.0",

@@ -1,8 +1,10 @@
 import { lerp } from '../helpers'
-import * as AmmoJS from "ammo.js/builds/ammo.wasm.js"
+// import * as AmmoJS from "ammo.js/builds/ammo.wasm.js"
+import AmmoJS from "../assets/ammo/ammo.wasm.js"
 
 const ammoWASM = {
-  locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
+  // locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
+  locateFile: () => '../assets/ammo/ammo.wasm.wasm'
 }
 
 // Firefox limitation: https://github.com/vitejs/vite/issues/4586
@@ -109,7 +111,7 @@ const init = async (data) => {
 		
 		// load our collider data
 		// perhaps we don't await this, let it run and resolve it later
-		const modelData = await fetch(`${import.meta.env.BASE_URL}assets/models/diceColliders.json`).then(resp => {
+		const modelData = await fetch('../assets/models/diceColliders.json').then(resp => {
 			if(resp.ok) {
 				const contentType = resp.headers.get("content-type")
 

@@ -1,4 +1,3 @@
-// import { Color3, BoxBuilder, StandardMaterial, TransformNode, Vector3 } from '@babylonjs/core'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { BoxBuilder } from '@babylonjs/core/Meshes/Builders/boxBuilder'
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'

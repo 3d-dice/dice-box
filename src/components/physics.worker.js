@@ -2,11 +2,6 @@ import { lerp } from '../helpers'
 // import * as AmmoJS from "ammo.js/builds/ammo.wasm.js"
 import AmmoJS from "../assets/ammo/ammo.wasm.js"
 
-const ammoWASM = {
-  // locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
-  locateFile: () => '../assets/ammo/ammo.wasm.wasm'
-}
-
 // Firefox limitation: https://github.com/vitejs/vite/issues/4586
 
 // there's probably a better place for these variables
@@ -102,6 +97,11 @@ const init = async (data) => {
 		aspect = width / height
 		config = {...config,...data.options}
 
+		const ammoWASM = {
+			// locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
+			locateFile: () => `${config.assetPath}ammo/ammo.wasm.wasm`
+		}
+
 		Ammo = await new AmmoJS(ammoWASM)
 
 		tmpBtTrans = new Ammo.btTransform()
@@ -111,7 +111,7 @@ const init = async (data) => {
 		
 		// load our collider data
 		// perhaps we don't await this, let it run and resolve it later
-		const modelData = await fetch('../assets/models/diceColliders.json').then(resp => {
+		const modelData = await fetch(`${config.assetPath}models/diceColliders.json`).then(resp => {
 			if(resp.ok) {
 				const contentType = resp.headers.get("content-type")
 

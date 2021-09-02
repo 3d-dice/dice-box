@@ -1,39 +1,25 @@
-// import { StandardMaterial, Texture } from '@babylonjs/core'
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
-// import { PBRMaterial } from '@babylonjs/materials'
-// import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 
-async function loadStandardMaterial(theme) {
+async function loadStandardMaterial(theme,assetPath) {
   let diceMaterial = new StandardMaterial(theme);
-  let diceTexture = await importTextureAsync(`${import.meta.env.BASE_URL}assets/themes/${theme}/albedo.jpg`)
-  let diceBumpTexture = await importTextureAsync(`${import.meta.env.BASE_URL}assets/themes/${theme}/normal.jpg`)
+  let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`)
+  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal.jpg`)
 	diceMaterial.diffuseTexture = diceTexture
 	diceMaterial.diffuseTexture.level = 1.3
   diceMaterial.bumpTexture = diceBumpTexture
   diceMaterial.bumpTexture.level = 2
-  diceMaterial.invertNormalMapY = true
+  // diceMaterial.invertNormalMapY = true
 
 	// additional settings for .babylon file settings with Preserve Z-up right handed coordinate
-	// diceMaterial.diffuseTexture.vScale = -1
-  // diceMaterial.bumpTexture.vScale = -1
+	diceMaterial.diffuseTexture.vScale = -1
+  diceMaterial.bumpTexture.vScale = -1
 
   diceMaterial.allowShaderHotSwapping = false
 
   // diceMaterial.freeze() // can not freeze until after first mesh
   return diceMaterial
 }
-
-// async function loadPBRMaterial(theme) {
-//   let pbr = new PBRMaterial(theme);
-//   pbr.albedoTexture = await importTextureAsync(`./DiceBox/assets/themes/${theme}/albedo.jpg`);
-//   pbr.normalTexture = await importTextureAsync(`./DiceBox/assets/themes/${theme}/normal.jpg`);
-//   pbr.metallicTexture = await importTextureAsync(`./DiceBox/assets/themes/${theme}/metalRoughness.jpg`);
-//   pbr.useRoughnessFromMetallicTextureAlpha = false;
-//   pbr.useRoughnessFromMetallicTextureGreen = true;
-//   pbr.useMetallnessFromMetallicTextureBlue = true;
-//   return pbr;
-// }
 
 async function importTextureAsync(url) {
   return new Promise((resolve, reject) => {
@@ -49,7 +35,7 @@ async function importTextureAsync(url) {
   })
 }
 
-const loadTheme = async (theme) => {
+const loadTheme = async (theme,assetPath) => {
   let material;
   switch (theme) {
     case 'galaxy':
@@ -60,11 +46,11 @@ const loadTheme = async (theme) => {
     case 'sunrise':
     case 'sunset':
     case 'walnut':
-      material = await loadStandardMaterial(theme)
+      material = await loadStandardMaterial(theme,assetPath)
       // material = await loadPBRMaterial(theme)
       return material
     default:
-      material = await loadStandardMaterial(theme)
+      material = await loadStandardMaterial(theme,assetPath)
       return material
   }
 }

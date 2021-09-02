@@ -30,25 +30,18 @@
 		"url": "https://github.com/3Ddice/issues"
 	},
 	"files": [
-		"dist"
+		"src"
 	],
-	"main": "./dist/dice-box.umd.js",
-	"module": "./dist/dice-box.es.js",
-	"exports": {
-		".": {
-			"import": "./dist/dice-box.es.js",
-			"require": "./dist/dice-box.umd.js"
-		}
-	},
+	"main": "./src/index",
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
 		"serve": "vite preview"
 	},
 	"dependencies": {
-		"@babylonjs/core": "^5.0.0-alpha.22",
-		"@babylonjs/loaders": "^5.0.0-alpha.22",
-		"@babylonjs/materials": "^5.0.0-alpha.22"
+		"@babylonjs/core": "5.0.0-alpha.22",
+		"@babylonjs/loaders": "5.0.0-alpha.22",
+		"@babylonjs/materials": "5.0.0-alpha.22"
 	},
 	"devDependencies": {
 		"vite": "^2.5.0",

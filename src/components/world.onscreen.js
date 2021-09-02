@@ -25,8 +25,8 @@ class WorldOnscreen {
 		// canvas.height = options.height
 	
 		engine = createEngine(canvas)
-		scene = await createScene({engine})
-		camera = await createCamera({engine, zoomLevel: this.config.zoomLevel})
+		scene = createScene({engine})
+		camera = createCamera({engine, zoomLevel: this.config.zoomLevel})
 		lights = createLights({enableShadows: this.config.enableShadows})
 	
 		// initialize die caches
@@ -45,7 +45,7 @@ class WorldOnscreen {
 		
 		// loading all our dice models
 		// we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
-		await Dice.loadModels()
+		await Dice.loadModels(this.config.assetPath)
 		
 		// start the render engine
 		// render()

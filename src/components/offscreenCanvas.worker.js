@@ -5,7 +5,7 @@ import { createLights } from './lights'
 import DiceBox from './DiceBox'
 import Dice from './Dice'
 
-let canvas, config = "poop", engine, scene, camera, diceBox, lights, physicsWorkerPort, dieCache = [], sleeperCache = [], count = 0, dieRollTimer = []
+let canvas, config, engine, scene, camera, diceBox, lights, physicsWorkerPort, dieCache = [], sleeperCache = [], count = 0, dieRollTimer = []
 
 // these are messages sent to this worker from World.js
 self.onmessage = (e) => {
@@ -64,8 +64,8 @@ const initScene = async (data) => {
 	canvas.height = data.height
 
 	engine = createEngine(canvas)
-  scene = await createScene({engine})
-  camera = await createCamera({engine, zoomLevel: config.zoomLevel})
+  scene = createScene({engine})
+  camera = createCamera({engine, zoomLevel: config.zoomLevel})
   lights = createLights({enableShadows: config.enableShadows})
 
   // initialize die caches
@@ -74,6 +74,7 @@ const initScene = async (data) => {
   sleeperCache = [] // cache dice that have stopped rolling
 
   // create the box that provides surfaces for shadows to render on
+	// const DiceBox = await import('./DiceBox.js').then(module => module.default)
 	diceBox = new DiceBox({
 		...config,
     zoomLevel: config.zoomLevel,
@@ -84,7 +85,7 @@ const initScene = async (data) => {
   
   // loading all our dice models
   // we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
-  await Dice.loadModels()
+  await Dice.loadModels(config.assetPath)
   
   // start the render engine
   // render()

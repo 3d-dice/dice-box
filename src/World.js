@@ -1,7 +1,7 @@
 import { createCanvas } from './components/canvas'
-import WorldOnscreen from './components/world.onscreen'
+// import WorldOnscreen from './components/world.onscreen'
 import WorldOffscreen from './components/world.offscreen'
-import physicsWorker from './components/physics.worker?worker'
+import physicsWorker from './components/physics.worker.js?worker'
 import { debounce } from './helpers'
 
 // private variables
@@ -19,6 +19,7 @@ const defaultOptions = {
 	zoomLevel: 3, // 0-7, can we round it out to 9? And reverse it because higher zoom means closer
 	theme: 'nebula',
 	offscreen: true,
+	assetPath: '/DiceBoxOffscreen/assets/'
 }
 
 class World {
@@ -32,55 +33,70 @@ class World {
 		this.onDieComplete = () => {}
 		this.onRollComplete = () => {}
 
+  }
+
+	async loadWorld(){
 		if ("OffscreenCanvas" in window && "transferControlToOffscreen" in canvas && this.config.offscreen) { 
 			// Ok to use offscreen canvas
 			// transfer controll offscreen
+			// const WorldOffscreen = await import('./components/world.offscreen').then(module => module.default)
 			DiceWorld = new WorldOffscreen({
 				canvas,
-				options: {...this.config, ...options}
+				options: this.config
 			})
 		} else {
 			if(this.config.offscreen){
 				console.warn("This browser does not support OffscreenCanvas. Using standard canvas fallback.")
 				this.config.offscreen = false
 			}
+			const WorldOnscreen = await import('./components/world.onscreen').then(module => module.default)
 			DiceWorld = new WorldOnscreen({
 				canvas,
-				options: {...this.config, ...options}
+				options: this.config
 			})
 		}
+	}
 
-		DiceWorld.init = new Promise((resolve, reject) => {
-      DiceWorldInit = resolve
-    })
-
+	connectWorld(){
 		// create message channels for the two web workers to communicate through
 		const channel = new MessageChannel()
+
+		DiceWorld.init = new Promise((resolve, reject) => {
+			DiceWorldInit = resolve
+		})
+
 		DiceWorld.connect(channel.port1)
 
 		// initialize physics world in which AmmoJS runs
-    diceWorker = new physicsWorker()
-    diceWorker.init = new Promise((resolve, reject) => {
-      diceWorkerInit = resolve
-    })
+		diceWorker = new physicsWorker()
+		diceWorker.init = new Promise((resolve, reject) => {
+			diceWorkerInit = resolve
+		})
 
-    // Setup the connection: Port 2 is for diceWorker
-    diceWorker.postMessage({
-      action: "connect",
-    },[ channel.port2 ])
+		// Setup the connection: Port 2 is for diceWorker
+		diceWorker.postMessage({
+			action: "connect",
+		},[ channel.port2 ])
+	}
 
-    // send resize events to workers - debounced for performance
+	resizeWorld(){
+		// send resize events to workers - debounced for performance
 		const resizeWorkers = () => {
 			// canvas.width = data.width
 			// canvas.height = data.height
 			DiceWorld.resize({width: canvas.clientWidth, height: canvas.clientHeight})
-      diceWorker.postMessage({action: "resize", width: canvas.clientWidth, height: canvas.clientHeight});
+			diceWorker.postMessage({action: "resize", width: canvas.clientWidth, height: canvas.clientHeight});
 		}
 		const debounceResize = debounce(resizeWorkers)
-    window.addEventListener("resize", debounceResize)
-  }
+		window.addEventListener("resize", debounceResize)
+	}
 
-  async initScene(options = {}) {
+  async init(options = {}) {
+
+		const that = this
+		await this.loadWorld()
+		this.connectWorld()
+		this.resizeWorld()
 
 		DiceWorld.onInitComplete = () => {
 			DiceWorldInit()
@@ -119,8 +135,9 @@ class World {
     }
 
     // pomise.all to initialize both offscreenWorker and diceWorker
-		// TODO: yikes. Going to have to async the onscreen class init as well
 		await Promise.all([DiceWorld.init, diceWorker.init])
+
+		return this
 
   }
 

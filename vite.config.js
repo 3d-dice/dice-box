@@ -14,6 +14,11 @@ module.exports = defineConfig({
       input: {
 				main: path.resolve(__dirname, 'src/index.js')
 			},
+			output: [{
+				format: "es",
+				manualChunks: {},
+				sourcemap: false
+			}],
 			plugins: [
 				copy({
 					targets: [

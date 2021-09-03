@@ -9,7 +9,8 @@ async function loadStandardMaterial(theme,assetPath) {
 	diceMaterial.diffuseTexture.level = 1.3
   diceMaterial.bumpTexture = diceBumpTexture
   diceMaterial.bumpTexture.level = 2
-  // diceMaterial.invertNormalMapY = true
+  // diceMaterial.invertNormalMapY = false
+  diceMaterial.invertNormalMapX = true
 
 	// additional settings for .babylon file settings with Preserve Z-up right handed coordinate
 	diceMaterial.diffuseTexture.vScale = -1

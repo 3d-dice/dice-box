@@ -1,2 +1,140 @@
 # Dice-Box
-High performance 3D dice roller made with BabylonJS and AmmoJS and implemented with web workers and offscreenCanvas.
+High performance 3D dice roller made with BabylonJS, AmmoJS and implemented with web workers and offscreenCanvas.
+
+## Demo
+Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html
+
+This demo includes other `@3d-dice` modules such as `dice_roller`, `FUI`, and `DRP`. Advanced dice notation is supported here such as `4d6dl1` or `4d6!r<2`
+
+## Quickstart (sort of)
+Install the library using:
+```
+npm install @3d-dice/dice-box
+```
+
+After installing the library, you'll need to copy some files over to your development folder. They can be found in the `@3d-dice/dice-box/src/assets` folder. Copy everything from this folder to your local static assets or public folder.
+
+This is an ES module intended to be part of a build system. To import the module into your project use:
+```
+import DiceBox from '@3d-dice/dice-box'
+```
+
+Then create a new instance of the `DiceBox` class. Be sure to set the path to the assets folder copied earlier.
+```
+const diceBox = new DiceBox({
+	assetPath: '/assets/'
+})
+```
+
+After you initialize the class then it will be ready to roll some dice. The `init` method is an async method so it can be awaited or followed by a `.then()` method.
+```
+diceBox.init().then(()=>{
+	diceBox.roll('2d20')
+})
+```
+
+## Usage
+Dice-Box can only accept simple dice notations and a modifier such as `2d20` or `2d6+4` It returns a result object once the dice have stopped rolling. For more advanced rolling features you'll want to look at adding [@3d-dice/dice_roller](https://github.com/3d-dice/dice_roller) which supports the full [Roll20 Dice Specification](https://help.roll20.net/hc/en-us/articles/360037773133-Dice-Reference#DiceReference-RollTemplates).
+
+### Configuration Options
+| Option | Default Setting|Description|
+|-|-|-|
+|id|'dice-canvas'|The ID of the canvas element to use. If no canvas present then one will be created|
+|assetPath|'/assets/'|The path to files needed by this module|
+|enableShadows|true|Do the dice cast a shadow? Turn off for a performance bump|
+|delay|10|The delay between dice being generate. If they're all generated at the same time they instantly collide with each other which doesn't look very natural.|
+|gravity|3|Too much gravity will cause the dice to jitter. Too little and they take much longer to settle.
+|startingHeight|15|The height at which the toss begins|
+|spinForce|20|The maximum amout of spin the dice may have|
+|throwForce|2.5|The maximum amout of throwing force used|
+|zoomLevel|3| Options are 0-7. The higher the number the larger the dice.|
+|theme|'nebula'| Options are 'galaxy', 'gemstone', 'glass', 'iron', 'nebula', 'sunrise','sunset', and 'walnut'.|
+|offscreen|true|If offscreenCanvas is available it will be used|
+
+### Results Object
+The result object for `3d6` will look something like this
+```
+[
+	{
+		"qty": 3,
+		"sides": 6,
+		"modifier": 0,
+		"rolls": [
+			{
+				"sides": 6,
+				"groupId": 0,
+				"rollId": 1,
+				"id": 1,
+				"theme": "nebula",
+				"result": 5
+			},
+			{
+				"sides": 6,
+				"groupId": 0,
+				"rollId": 2,
+				"id": 2,
+				"theme": "nebula",
+				"result": 6
+			},
+			{
+				"sides": 6,
+				"groupId": 0,
+				"rollId": 3,
+				"id": 3,
+				"theme": "nebula",
+				"result": 3
+			},
+		],
+		"value": 14
+	}
+]
+```
+
+### Roll
+A roll will clear current dice and start a new roll. 
+```
+diceBox.roll('2d20')
+```
+
+### Add
+This method will add the specified notation to the current roll in a new roll group.
+```
+diceBox.add('2d6')
+```
+
+### Remove
+This method requires an object for an argument identifying the roll group and die you wish to remove. This method can only remove one die at a time.
+```
+diceBox.remove({
+	groupId: 0,
+	rollId: 2
+})
+```
+You may pass a result roll object into this method to remove that specific die from the box.
+
+### Reroll
+Reroll act much like Remove except that it will use the roll object to make another roll of the same die.
+```
+diceBox.reroll({
+	groupId: 0,
+	rollId: 2
+})
+```
+
+### Clear
+This will clear all dice from the dice box.
+```
+diceBox.clear()
+```
+
+### Hide
+This will hide the canvas element that the dice box is rendered to.
+```
+diceBox.hide()
+```
+
+### Show
+This will show the canvas element that the dice box is rendered to.
+```
+diceBox.show()
+```

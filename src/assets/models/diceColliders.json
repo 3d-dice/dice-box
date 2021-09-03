@@ -58,7 +58,7 @@
 ,102,103,104,105,106,107]
 ,"subMeshes":[{"materialIndex":0,"verticesStart":0,"verticesCount":108,"indexStart":0,"indexCount":108}]
 ,"instances":[]}
-,{"name":"c10","id":"c10","billboardMode":0,"position":[0,0,0],"rotationQuaternion":[0,0,0,-1],"scaling":[1,1,1],"isVisible":true,"freezeWorldMatrix":false,"isEnabled":true,"checkCollisions":false,"receiveShadows":false,"pickable":true,"tags":"","physicsImpostor":8,"physicsMass":17,"physicsFriction":0.5,"physicsRestitution":0.2
+,{"name":"c10","id":"c10","billboardMode":0,"position":[0,0,0],"rotationQuaternion":[0,0,0,-1],"scaling":[1,-1,1],"isVisible":true,"freezeWorldMatrix":false,"isEnabled":true,"checkCollisions":false,"receiveShadows":false,"pickable":true,"tags":"","physicsImpostor":8,"physicsMass":17,"physicsFriction":0.5,"physicsRestitution":0.2
 ,"positions":[0,0.1294,1.1356,0.6689,-0.13,0.9186,0,-1.1321,0,-0.6685,-0.1287,0.9201,0,1.1321,0,0.669,0.1282,-0.919,1.0796,-0.1316,-0.3508,1.0812,0.129,0.3505,0,1.1321,0,1.0812,0.129,0.3505,0.6689,-0.13,0.9186,0,0.1294,1.1356,-0.6693,0.1285,-0.9177,-1.0801,-0.1294,-0.3509,0,-1.1321,0,0.0028,-0.13,-1.1364,1.0812,0.129,0.3505
 ,1.0796,-0.1316,-0.3508,0,-1.1321,0,0.6689,-0.13,0.9186,-0.6693,0.1285,-0.9177,0,1.1321,0,-1.081,0.1296,0.3532,-1.0801,-0.1294,-0.3509,0,1.1321,0,0,0.1294,1.1356,-0.6685,-0.1287,0.9201,-1.081,0.1296,0.3532,-1.0801,-0.1294,-0.3509,-1.081,0.1296,0.3532,-0.6685,-0.1287,0.9201,0,-1.1321,0,1.0796,-0.1316,-0.3508,0.669,0.1282,-0.919
 ,0.0028,-0.13,-1.1364,0,-1.1321,0,0,1.1321,0,-0.6693,0.1285,-0.9177,0.0028,-0.13,-1.1364,0.669,0.1282,-0.919]
@@ -97,7 +97,7 @@
 ,"indices":[0,1,2,0,2,3,4,5,6,4,6,7,8,9,10,8,10,11,12,13,14,12,14,15,16,17,18,16,18,19,20,21,22,20,22,23]
 ,"subMeshes":[{"materialIndex":0,"verticesStart":0,"verticesCount":24,"indexStart":0,"indexCount":36}]
 ,"instances":[]}
-,{"name":"c4","id":"c4","billboardMode":0,"position":[0,0,0],"rotationQuaternion":[0,0,0,-1],"scaling":[1,1,1],"isVisible":true,"freezeWorldMatrix":false,"isEnabled":true,"checkCollisions":false,"receiveShadows":false,"pickable":true,"tags":"","physicsImpostor":8,"physicsMass":14,"physicsFriction":0.5,"physicsRestitution":0.2
+,{"name":"c4","id":"c4","billboardMode":0,"position":[0,0,0],"rotationQuaternion":[0,0,0,-1],"scaling":[-1,1,-1],"isVisible":true,"freezeWorldMatrix":false,"isEnabled":true,"checkCollisions":false,"receiveShadows":false,"pickable":true,"tags":"","physicsImpostor":8,"physicsMass":14,"physicsFriction":0.5,"physicsRestitution":0.2
 ,"positions":[-1.0428,-0.5979,-0.6038,-0.0007,1.1058,-0.0014,0,-0.5986,1.2068,1.0434,-0.5968,-0.6034,-0.0007,1.1058,-0.0014,-1.0428,-0.5979,-0.6038,0,-0.5986,1.2068,-0.0007,1.1058,-0.0014,1.0434,-0.5968,-0.6034,0,-0.5986,1.2068,1.0434,-0.5968,-0.6034,-1.0428,-0.5979,-0.6038]
 ,"normals":[-0.817,0.333,0.471,-0.817,0.333,0.471,-0.817,0.333,0.471,0,0.333,-0.943,0,0.333,-0.943,0,0.333,-0.943,0.816,0.334,0.471,0.816,0.334,0.471,0.816,0.334,0.471,0,-1,-0.001,0,-1,-0.001,0,-1,-0.001]
 ,"tangents":[-0.499,0,-0.867,1,-0.499,0,-0.867,1,-0.499,0,-0.867,1,0.5,-0.816,-0.289,1,0.5,-0.816,-0.289,1,0.5,-0.816,-0.289,1,0.5,-0.816,-0.289,1,0.5,-0.816,-0.289,1,0.5,-0.816,-0.289,1,0.499,0,0.867,1,0.499,0,0.867,1,0.499,0,0.867,1]

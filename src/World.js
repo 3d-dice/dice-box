@@ -164,7 +164,7 @@ class World {
 	}
 
 	// add a die to another group. groupId should be included
-  add(notation, groupId = 0, theme) {
+  add(notation, groupId, theme) {
 		if(typeof groupId === 'string' || theme) {
 			this.config.theme = theme
 		}

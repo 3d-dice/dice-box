@@ -21,13 +21,13 @@
 		"node": ">=14.15.0",
 		"npm": "6.14.x"
 	},
-	"homepage": "https://github.com/3Ddice/Dice-Box#readme",
+	"homepage": "https://github.com/3d-dice/dice-box#readme",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/3Ddice/Dice-Box"
+		"url": "https://github.com/3d-dice/dice-box"
 	},
 	"bugs": {
-		"url": "https://github.com/3Ddice/issues"
+		"url": "https://github.com/3d-dice/dice-box/issues"
 	},
 	"files": [
 		"src"

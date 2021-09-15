@@ -145,6 +145,7 @@ class World {
 		// reset indexes and rollData
 		rollIndex = 0
 		groupIndex = 0
+		idIndex = 0
 		this.rollData = []
 		// clear all rendered die bodies
 		DiceWorld.clear()

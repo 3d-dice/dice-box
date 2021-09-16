@@ -7,14 +7,13 @@ import { debounce } from './helpers'
 // private variables
 let canvas, DiceWorld, DiceWorldInit, diceWorker, diceWorkerInit, groupIndex = 0, rollIndex = 0, idIndex = 0
 
-
 const defaultOptions = {
 	id: 'dice-canvas',
   enableShadows: true,
   delay: 10,
 	gravity: 3, //TODO: high gravity will cause dice piles to jiggle
 	startingHeight: 15,
-	spinForce: 20,
+	spinForce: 6,
 	throwForce: 2.5,
 	zoomLevel: 3, // 0-7, can we round it out to 9? And reverse it because higher zoom means closer
 	theme: 'nebula',
@@ -140,6 +139,18 @@ class World {
 		return this
 
   }
+
+	updateConfig(options) {
+		const newConfig = {...this.config,...options}
+		this.config = newConfig
+		// pass updates to DiceWorld
+		DiceWorld.updateConfig(newConfig)
+		// pass updates to PhysicsWorld
+		diceWorker.postMessage({
+			action: 'updateConfig',
+			options: newConfig
+		})
+	}
 
 	clear() {
 		// reset indexes and rollData

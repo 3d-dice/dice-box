@@ -69,6 +69,10 @@ class WorldOffScreen{
 		},[ port ])
 	}
 
+	updateConfig(options){
+		offscreenWorker.postMessage({action: "updateConfig", options});
+	}
+
 	resize(options){
 		offscreenWorker.postMessage({action: "resize", ...options});
 	}

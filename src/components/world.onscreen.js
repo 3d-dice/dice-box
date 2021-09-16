@@ -36,7 +36,7 @@ class WorldOnscreen {
 	
 		// create the box that provides surfaces for shadows to render on
 		diceBox = new DiceBox({
-			...config,
+			...this.config,
 			zoomLevel: this.config.zoomLevel,
 			aspect: canvas.width / canvas.height,
 			lights,
@@ -69,6 +69,27 @@ class WorldOnscreen {
             break;
         }
       }
+	}
+
+	updateConfig(options){
+		const prevConfig = this.config
+		this.config = options
+		if(prevConfig.zoomLevel !== this.config.zoomLevel){
+			diceBox.destroy()
+			diceBox = new DiceBox({
+				...this.config,
+				zoomLevel: this.config.zoomLevel,
+				aspect: canvas.width / canvas.height,
+				lights,
+				scene
+			})
+			camera.dispose()
+			camera = createCamera({engine, zoomLevel: this.config.zoomLevel})
+		}
+		if(prevConfig.enableShadows !== this.config.enableShadows) {
+			Object.values(lights).forEach(light => light.dispose())
+			lights = createLights({enableShadows: this.config.enableShadows})
+		}
 	}
 
 	// all this does is start the render engine.

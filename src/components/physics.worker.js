@@ -22,10 +22,14 @@ let zoom = [43,37,32,26.5,23,20.5,18,15.75]
 const defaultOptions = {
 	zoomLevel: 3,
 	startingHeight: 12,
-	spinForce: 30,
+	spinForce: 6,
 	throwForce: 2,
 	gravity: 4,
+	mass: 3,
 	friction: .8,
+	restitution: 0,
+	linearDamping: .5,
+	angularDamping: .4,
 	settleTimeout: 5000,
 	// runTime: 15000, // TODO: force dice to sleep after specific time
 	// TODO: toss: "center", "edge", "allEdges"
@@ -56,6 +60,9 @@ self.onmessage = (e) => {
 			height = e.data.height
 			aspect = width / height
 			addBoxToWorld(zoom[config.zoomLevel])
+			break
+		case "updateConfig":
+			updateConfig(e.data.options)
 			break
     case "connect":
       worldWorkerPort = e.ports[0]
@@ -146,9 +153,17 @@ const init = async (data) => {
 			colliders[model.id] = model
 		})
 
-		const box = addBoxToWorld(zoom[config.zoomLevel])
+		addBoxToWorld(zoom[config.zoomLevel])
 
 		// loop()
+
+}
+
+const updateConfig = (options) => {
+	config = {...config,...options}
+	removeBoxFromWorld()
+	addBoxToWorld(zoom[config.zoomLevel])
+	physicsWorld.setGravity(setVector3(0, -9.81 * config.gravity, 0))
 
 }
 
@@ -223,7 +238,7 @@ const createRigidBody = (collisionShape, params) => {
 		],
 		scale = [1,1,1],
 		friction = config.friction,
-		restitution = 0
+		restitution = config.restitution
 	} = params
 
 	// apply position and rotation
@@ -254,7 +269,7 @@ const createRigidBody = (collisionShape, params) => {
 	rigidBody.setCollisionFlags(collisionFlags)
 	rigidBody.setFriction(friction)
 	rigidBody.setRestitution(restitution)
-	rigidBody.setDamping(.5, .4)
+	rigidBody.setDamping(config.linearDamping, config.angularDamping)
 
 	// ad rigid body to physics world
 	// physicsWorld.addRigidBody(rigidBody)
@@ -276,7 +291,7 @@ const addBoxToWorld = (size) => {
 	const groundInfo = new Ammo.btRigidBodyConstructionInfo(0, groundMotionState, groundShape, localInertia)
 	const groundBody = new Ammo.btRigidBody(groundInfo)
 	groundBody.setFriction(config.friction)
-	groundBody.setRestitution(0)
+	groundBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(groundBody)
 	tempParts.push(groundBody)
 
@@ -288,7 +303,7 @@ const addBoxToWorld = (size) => {
 	const topInfo = new Ammo.btRigidBodyConstructionInfo(0, topMotionState, wallTopShape, localInertia)
 	const topBody = new Ammo.btRigidBody(topInfo)
 	topBody.setFriction(config.friction)
-	topBody.setRestitution(.6)
+	topBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(topBody)
 	tempParts.push(topBody)
 
@@ -300,7 +315,7 @@ const addBoxToWorld = (size) => {
 	const bottomInfo = new Ammo.btRigidBodyConstructionInfo(0, bottomMotionState, wallBottomShape, localInertia)
 	const bottomBody = new Ammo.btRigidBody(bottomInfo)
 	bottomBody.setFriction(config.friction)
-	bottomBody.setRestitution(.6)
+	bottomBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(bottomBody)
 	tempParts.push(bottomBody)
 
@@ -312,7 +327,7 @@ const addBoxToWorld = (size) => {
 	const rightInfo = new Ammo.btRigidBodyConstructionInfo(0, rightMotionState, wallRightShape, localInertia)
 	const rightBody = new Ammo.btRigidBody(rightInfo)
 	rightBody.setFriction(config.friction)
-	rightBody.setRestitution(.6)
+	rightBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(rightBody)
 	tempParts.push(rightBody)
 
@@ -324,7 +339,7 @@ const addBoxToWorld = (size) => {
 	const leftInfo = new Ammo.btRigidBodyConstructionInfo(0, leftMotionState, wallLeftShape, localInertia)
 	const leftBody = new Ammo.btRigidBody(leftInfo)
 	leftBody.setFriction(config.friction)
-	leftBody.setRestitution(.6)
+	leftBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(leftBody)
 	tempParts.push(leftBody)
 
@@ -343,7 +358,7 @@ const addDie = (sides, id) => {
 	cType = cType.replace('100','10')
 	// clone the collider
 	const newDie = createRigidBody(colliders[cType].convexHull, {
-		mass: colliders[cType].physicsMass,
+		mass: colliders[cType].physicsMass * config.mass,
 		scaling: colliders[cType].scaling,
 		pos: config.startPosition,
 		// quat: colliders[cType].rotationQuaternion,

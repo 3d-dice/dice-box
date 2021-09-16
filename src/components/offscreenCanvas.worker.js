@@ -35,6 +35,9 @@ self.onmessage = (e) => {
     case "init":
       initScene(e.data)
       break
+		case "updateConfig":
+			updateConfig(e.data.options)
+			break
     case "connect": // These are messages sent from physics.worker.js
       physicsWorkerPort = e.ports[0]
       physicsWorkerPort.onmessage = (e) => {
@@ -92,6 +95,27 @@ const initScene = async (data) => {
 
   // init complete - let the world know
   self.postMessage({action:"init-complete"})
+}
+
+const updateConfig = (options) => {
+	const prevConfig = config
+	config = options
+	if(prevConfig.zoomLevel !== config.zoomLevel){
+		diceBox.destroy()
+		diceBox = new DiceBox({
+			...config,
+			zoomLevel: config.zoomLevel,
+			aspect: canvas.width / canvas.height,
+			lights,
+			scene
+		})
+		camera.dispose()
+		camera = createCamera({engine, zoomLevel: config.zoomLevel})
+	}
+	if(prevConfig.enableShadows !== config.enableShadows) {
+		Object.values(lights).forEach(light => light.dispose())
+		lights = createLights({enableShadows: config.enableShadows})
+	}
 }
 
 // all this does is start the render engine.

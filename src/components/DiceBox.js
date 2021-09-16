@@ -37,12 +37,12 @@ class DiceBox{
 			boxMaterial.diffuseColor = new Color3(1, 1, 0);
 		}
 		else {
-			if(enableShadows) {
+			// if(enableShadows) {
 				boxMaterial = new ShadowOnlyMaterial('shadowOnly',this.config.scene)
 				boxMaterial.alpha = .5
 				// boxMaterial.diffuseColor = new Color3(1, 1, 1)
 				// boxMaterial.activeLight = lights.directional
-			}
+			// } 
 		}
 
 		// Bottom of the Box

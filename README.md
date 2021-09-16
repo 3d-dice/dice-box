@@ -4,7 +4,7 @@ High performance 3D dice roller made with BabylonJS, AmmoJS and implemented with
 ## Demo
 Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html
 
-This demo includes other `@3d-dice` modules such as `dice_roller`, `FUI`, and `DRP`. Advanced dice notation is supported here such as `4d6dl1` or `4d6!r<2`
+This demo includes other `@3d-dice` modules such as [dice-roller-parser](https://github.com/3d-dice/dice-roller-parser), [FUI](https://github.com/3d-dice/FUI), and [FDP](https://github.com/3d-dice/FDP). Advanced dice notation is supported here such as `4d6dl1` or `4d6!r<2`
 
 ## Quickstart (sort of)
 Install the library using:

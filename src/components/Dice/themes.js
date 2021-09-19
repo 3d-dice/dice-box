@@ -11,7 +11,7 @@ async function loadStandardMaterial(theme,assetPath) {
   diceMaterial.bumpTexture = diceBumpTexture
 
 	sharedSettings(diceMaterial)
-	
+
   return diceMaterial
 }
 
@@ -66,6 +66,8 @@ const sharedSettings = (material) => {
 	// additional settings for .babylon file settings with Preserve Z-up right handed coordinate
 	material.diffuseTexture.vScale = -1
   material.bumpTexture.vScale = -1
+	// material.diffuseTexture.uScale = -1
+  // material.bumpTexture.uScale = -1
 
   material.allowShaderHotSwapping = false
 	return material
@@ -90,13 +92,7 @@ async function importTextureAsync(url) {
 const loadTheme = async (theme,assetPath) => {
   let material;
   switch (theme) {
-    case 'galaxy':
-    case 'gemstone':
-    case 'iron':
-    case 'nebula':
-    case 'sunrise':
-    case 'sunset':
-    case 'walnut':
+    case 'purpleRock':
       material = await loadStandardMaterial(theme,assetPath)
       // material = await loadPBRMaterial(theme)
       return material

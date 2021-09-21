@@ -36,6 +36,9 @@ const defaultOptions = {
 }
 
 let config = {...defaultOptions}
+let emptyVector
+let diceBuffer
+let diceBufferView
 
 self.onmessage = (e) => {
   switch (e.data.action) {
@@ -68,6 +71,11 @@ self.onmessage = (e) => {
       worldWorkerPort = e.ports[0]
       worldWorkerPort.onmessage = (e) => {
         switch (e.data.action) {
+					case "initBuffer":
+						diceBufferView = new Float32Array(e.data.diceBuffer)
+						diceBufferView[0] = -1
+						// diceBufferView = new Int32Array(diceBuffer);
+						break;
           case "addDie":
 						// toss from all edges
 						// setStartPosition()
@@ -86,6 +94,11 @@ self.onmessage = (e) => {
             stopLoop = false
 						loop()
             break;
+					case "stepSimulation":
+						// console.log(`stepping simulation`)
+						diceBufferView = new Float32Array(e.data.diceBuffer)
+						loop()
+						break;
           default:
             console.error("action not found in physics worker from worldOffscreen worker:", e.data.action)
         }
@@ -113,6 +126,7 @@ const init = async (data) => {
 
 		tmpBtTrans = new Ammo.btTransform()
 		sharedVector3 = new Ammo.btVector3(0, 0, 0)
+		emptyVector = setVector3(0,0,0)
 
 		setStartPosition(aspect)
 		
@@ -372,6 +386,13 @@ const addDie = (sides, id) => {
 }
 
 const rollDie = (die) => {
+	die.setLinearVelocity(setVector3(
+		lerp(-config.startPosition[0] * .5, -config.startPosition[0] * config.throwForce, Math.random()),
+		// lerp(-config.startPosition[1] * .5, -config.startPosition[1] * config.throwForce, Math.random()),
+		lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random()),
+		lerp(-config.startPosition[2] * .5, -config.startPosition[2] * config.throwForce, Math.random()),
+	))
+
 	const force = new Ammo.btVector3(
 		lerp(-config.spinForce, config.spinForce, Math.random()),
 		lerp(-config.spinForce, config.spinForce, Math.random()),
@@ -379,13 +400,6 @@ const rollDie = (die) => {
 	)
 	
 	die.applyImpulse(force, setVector3(4,4,4))
-
-	die.setLinearVelocity(setVector3(
-		lerp(-config.startPosition[0] * .5, -config.startPosition[0] * config.throwForce, Math.random()),
-		// lerp(-config.startPosition[1] * .5, -config.startPosition[1] * config.throwForce, Math.random()),
-		lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random()),
-		lerp(-config.startPosition[2] * .5, -config.startPosition[2] * config.throwForce, Math.random()),
-	))
 }
 
 const removeDie = (data) => {
@@ -430,9 +444,10 @@ const setupPhysicsWorld = () => {
 }
 
 const update = (delta) => {
-	let movements = []
+	// let movements = []
 	let asleep = []
-	const emptyVector = setVector3(0,0,0)
+	// console.log(`bodies`, bodies)
+	
 
 	// step world
 	const deltaTime = delta / 1000
@@ -440,17 +455,28 @@ const update = (delta) => {
 
 	for (let i = 0, len = bodies.length; i < len; i++) {
 		const rb = bodies[i]
+		// console.log(`bodies`, bodies)
+		// if(asleep.length === bodies.length) {
+		// 	console.log("stopping loop")
+		// 	stopLoop = true
+		// }
+		if(rb.asleep){
+			continue
+		}
 		const speed = rb.getLinearVelocity().length()
 		const tilt = rb.getAngularVelocity().length()
 
 		if(speed < .01 && tilt < .01 || rb.timeout < 0) {
+			// console.log("put this die to sleep", [i])
+			diceBufferView[i*8] = -1
 			rb.asleep = true
+			asleep.push(0)
 			rb.setMassProps(0)
 			rb.forceActivationState(3)
 			// zero out anything left
 			rb.setLinearVelocity(emptyVector)
 			rb.setAngularVelocity(emptyVector)
-			asleep.push(i)
+			// asleep.push(i)
 			continue
 		}
 		rb.timeout -= delta
@@ -459,25 +485,35 @@ const update = (delta) => {
 			ms.getWorldTransform(tmpBtTrans)
 			let p = tmpBtTrans.getOrigin()
 			let q = tmpBtTrans.getRotation()
-			movements.push([
-				parseFloat(p.x().toFixed(4)),
-				parseFloat(p.y().toFixed(4)),
-				parseFloat(p.z().toFixed(4)),
-				parseFloat(q.x().toFixed(4)),
-				parseFloat(q.y().toFixed(4)),
-				parseFloat(q.z().toFixed(4)),
-				parseFloat(q.w().toFixed(4)),
-				rb.id
-			])
+			let j = i*8
+			diceBufferView[j] = rb.id
+			diceBufferView[j+1] = parseFloat(p.x().toFixed(4))
+			diceBufferView[j+2] = parseFloat(p.y().toFixed(4))
+			diceBufferView[j+3] = parseFloat(p.z().toFixed(4))
+			diceBufferView[j+4] = parseFloat(q.x().toFixed(4))
+			diceBufferView[j+5] = parseFloat(q.y().toFixed(4))
+			diceBufferView[j+6] = parseFloat(q.z().toFixed(4))
+			diceBufferView[j+7] = parseFloat(q.w().toFixed(4))
+			// diceBufferView.push(
+			// 	rb.id,
+			// 	parseFloat(p.x().toFixed(4)),
+			// 	parseFloat(p.y().toFixed(4)),
+			// 	parseFloat(p.z().toFixed(4)),
+			// 	parseFloat(q.x().toFixed(4)),
+			// 	parseFloat(q.y().toFixed(4)),
+			// 	parseFloat(q.z().toFixed(4)),
+			// 	parseFloat(q.w().toFixed(4)),
+			// )
 		}
 	}
 
-	// this must be a reverse loop so it does not alter the array index numbers
-	for (let i = asleep.length - 1; i >= 0; i--) {
-		sleepingBodies.push(bodies.splice(asleep[i],1)[0])
-	}
 
-	return {movements, asleep}
+	// this must be a reverse loop so it does not alter the array index numbers
+	// for (let i = asleep.length - 1; i >= 0; i--) {
+	// 	sleepingBodies.push(bodies.splice(asleep[i],1)[0])
+	// }
+
+	// return {movements, asleep}
 }
 
 let last = new Date().getTime()
@@ -485,13 +521,19 @@ const loop = () => {
 	let now = new Date().getTime()
 	const delta = now - last
 	last = now
-
-	const updates = update(delta)
-	worldWorkerPort.postMessage({ action: 'updates', updates })
-
+	// console.log(`diceBuffer`, diceBuffer)
+	// console.log(`diceBufferView`, diceBufferView)
 	if(!stopLoop) {
-		// requestAnimationFrame(loop)
-		// using timeout instead for browser compatability
-		setTimeout(loop,4)
+		update(delta)
+		worldWorkerPort.postMessage({
+			action: 'updates',
+			diceBuffer: diceBufferView.buffer
+		}, [diceBufferView.buffer])
 	}
+
+	// if(!stopLoop) {
+	// 	// requestAnimationFrame(loop)
+	// 	// using timeout instead for browser compatability
+	// 	setTimeout(loop,4)
+	// }
 }

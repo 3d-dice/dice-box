@@ -93,6 +93,7 @@ const loadTheme = async (theme,assetPath) => {
   let material;
   switch (theme) {
     case 'purpleRock':
+    case 'molten':
       material = await loadStandardMaterial(theme,assetPath)
       // material = await loadPBRMaterial(theme)
       return material

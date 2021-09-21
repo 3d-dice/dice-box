@@ -16,7 +16,7 @@ const defaultOptions = {
 	spinForce: 6,
 	throwForce: 2.5,
 	zoomLevel: 3, // 0-7, can we round it out to 9? And reverse it because higher zoom means closer
-	theme: 'purpleRock',
+	theme: '#0974e6',
 	offscreen: true,
 	assetPath: '/DiceBoxOffscreen/assets/'
 }

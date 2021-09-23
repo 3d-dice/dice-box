@@ -35,9 +35,35 @@ const defaultOptions = {
 	// TODO: toss: "center", "edge", "allEdges"
 }
 
+const diceDefaults = {
+	c4: {
+		mass: .7,
+		scaling: [-1,1,-1]
+	},
+	c6: {
+		mass: .8,
+		scaling: [1,-1,1]
+	},
+	c8: {
+		mass: .82,
+		scaling: [1,-1,1]
+	},
+	c10: {
+		mass: .85,
+		scaling: [1,-1,1]
+	},
+	c12: {
+		mass: .9,
+		scaling: [1,-1,1]
+	},
+	c20: {
+		mass: 1,
+		scaling: [1,-1,1]
+	}
+}
+
 let config = {...defaultOptions}
 let emptyVector
-let diceBuffer
 let diceBufferView
 
 self.onmessage = (e) => {
@@ -74,7 +100,6 @@ self.onmessage = (e) => {
 					case "initBuffer":
 						diceBufferView = new Float32Array(e.data.diceBuffer)
 						diceBufferView[0] = -1
-						// diceBufferView = new Int32Array(diceBuffer);
 						break;
           case "addDie":
 						// toss from all edges
@@ -95,7 +120,6 @@ self.onmessage = (e) => {
 						loop()
             break;
 					case "stepSimulation":
-						// console.log(`stepping simulation`)
 						diceBufferView = new Float32Array(e.data.diceBuffer)
 						loop()
 						break;
@@ -150,6 +174,10 @@ const init = async (data) => {
 			}
 		})
 		.then(data => {
+			data.meshes.forEach(mesh => {
+				mesh.physicsMass = diceDefaults[mesh.id].mass
+				mesh.scaling = diceDefaults[mesh.id].scaling
+			})
 			return data.meshes
 		})
 		.catch(error => {
@@ -417,6 +445,9 @@ const removeDie = (data) => {
 }
 
 const clearDice = () => {
+	if(diceBufferView.byteLength){
+		diceBufferView.fill(0)
+	}
 	stopLoop = true
 	// clear all bodies
 	bodies.forEach(body => physicsWorld.removeRigidBody(body))
@@ -444,76 +475,53 @@ const setupPhysicsWorld = () => {
 }
 
 const update = (delta) => {
-	// let movements = []
-	let asleep = []
-	// console.log(`bodies`, bodies)
-	
 
 	// step world
 	const deltaTime = delta / 1000
-	physicsWorld.stepSimulation(deltaTime, 1, 1 / 60) // higher number = slow motion
+	// console.time("step")
+	physicsWorld.stepSimulation(deltaTime, 2, 1 / 90) // higher number = slow motion
+	// console.timeEnd("step")
 
-	for (let i = 0, len = bodies.length; i < len; i++) {
+	diceBufferView[0] = bodies.length
+		
+	// looping backwards since bodies are removed as they are put to sleep
+	for (let i = bodies.length - 1; i >= 0; i--) {
 		const rb = bodies[i]
-		// console.log(`bodies`, bodies)
-		// if(asleep.length === bodies.length) {
-		// 	console.log("stopping loop")
-		// 	stopLoop = true
-		// }
-		if(rb.asleep){
-			continue
-		}
 		const speed = rb.getLinearVelocity().length()
 		const tilt = rb.getAngularVelocity().length()
 
 		if(speed < .01 && tilt < .01 || rb.timeout < 0) {
-			// console.log("put this die to sleep", [i])
-			diceBufferView[i*8] = -1
+			// flag the second param for this body so it can be processed in World, first param will be the roll.id
+			diceBufferView[(i*8) + 1] = rb.id
+			diceBufferView[(i*8) + 2] = -1
 			rb.asleep = true
-			asleep.push(0)
 			rb.setMassProps(0)
 			rb.forceActivationState(3)
 			// zero out anything left
 			rb.setLinearVelocity(emptyVector)
 			rb.setAngularVelocity(emptyVector)
-			// asleep.push(i)
+			sleepingBodies.push(bodies.splice(i,1)[0])
 			continue
 		}
+		// tick down the movement timeout on this die
 		rb.timeout -= delta
 		const ms = rb.getMotionState()
 		if (ms) {
 			ms.getWorldTransform(tmpBtTrans)
 			let p = tmpBtTrans.getOrigin()
 			let q = tmpBtTrans.getRotation()
-			let j = i*8
+			let j = i*8 + 1
+			
 			diceBufferView[j] = rb.id
-			diceBufferView[j+1] = parseFloat(p.x().toFixed(4))
-			diceBufferView[j+2] = parseFloat(p.y().toFixed(4))
-			diceBufferView[j+3] = parseFloat(p.z().toFixed(4))
-			diceBufferView[j+4] = parseFloat(q.x().toFixed(4))
-			diceBufferView[j+5] = parseFloat(q.y().toFixed(4))
-			diceBufferView[j+6] = parseFloat(q.z().toFixed(4))
-			diceBufferView[j+7] = parseFloat(q.w().toFixed(4))
-			// diceBufferView.push(
-			// 	rb.id,
-			// 	parseFloat(p.x().toFixed(4)),
-			// 	parseFloat(p.y().toFixed(4)),
-			// 	parseFloat(p.z().toFixed(4)),
-			// 	parseFloat(q.x().toFixed(4)),
-			// 	parseFloat(q.y().toFixed(4)),
-			// 	parseFloat(q.z().toFixed(4)),
-			// 	parseFloat(q.w().toFixed(4)),
-			// )
+			diceBufferView[j+1] = p.x()
+			diceBufferView[j+2] = p.y()
+			diceBufferView[j+3] = p.z()
+			diceBufferView[j+4] = q.x()
+			diceBufferView[j+5] = q.y()
+			diceBufferView[j+6] = q.z()
+			diceBufferView[j+7] = q.w()
 		}
 	}
-
-
-	// this must be a reverse loop so it does not alter the array index numbers
-	// for (let i = asleep.length - 1; i >= 0; i--) {
-	// 	sleepingBodies.push(bodies.splice(asleep[i],1)[0])
-	// }
-
-	// return {movements, asleep}
 }
 
 let last = new Date().getTime()
@@ -521,19 +529,13 @@ const loop = () => {
 	let now = new Date().getTime()
 	const delta = now - last
 	last = now
-	// console.log(`diceBuffer`, diceBuffer)
-	// console.log(`diceBufferView`, diceBufferView)
-	if(!stopLoop) {
+	if(!stopLoop && diceBufferView.byteLength) {
+		// console.time("physics")
 		update(delta)
-		worldWorkerPort.postMessage({
-			action: 'updates',
-			diceBuffer: diceBufferView.buffer
-		}, [diceBufferView.buffer])
+		// console.timeEnd("physics")
+			worldWorkerPort.postMessage({
+				action: 'updates',
+				diceBuffer: diceBufferView.buffer
+			}, [diceBufferView.buffer])
 	}
-
-	// if(!stopLoop) {
-	// 	// requestAnimationFrame(loop)
-	// 	// using timeout instead for browser compatability
-	// 	setTimeout(loop,4)
-	// }
 }

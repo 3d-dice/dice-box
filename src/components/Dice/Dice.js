@@ -1,9 +1,9 @@
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader'
-import { MeshBuilder } from '@babylonjs/core'
 import { Vector3 } from '@babylonjs/core/Maths/math'
 import { Ray } from "@babylonjs/core/Culling/ray";
 import '../../helpers/babylonFileLoader'
 import '@babylonjs/core/Meshes/instancedMesh'
+import { meshFaceIds } from './meshFaceIds';
 
 import { loadTheme } from './themes'
 
@@ -42,33 +42,14 @@ class Dice {
 	}
 
   createInstance() {
-		// console.log(`diceCombos[this.comboKey]`, diceCombos[this.comboKey])
-		// console.time('create instance')
     // create die instance
-		// console.time('instance')
     const dieInstance = diceCombos[this.comboKey].createInstance(`${this.dieType}-instance-${count}`)
-		// console.timeEnd('instance')
 
-		// console.time('clone locators')
     // meshes[this.dieType].getChildTransformNodes().map((child,i) => {
-		// 	// console.time('clone')
     //   const locator = child.clone(child.id)
-    //   // const locator = diceCombos[this.comboKey]._children[i].createInstance()
-		// 	// console.log(`locator`, locator)
-		// 	// console.timeEnd('clone')
-		// 	// console.time('setAbsolutePosition')
     //   locator.setAbsolutePosition(child.getAbsolutePosition())
-		// 	// console.timeEnd('setAbsolutePosition')
-		// 	// console.time('addChild')
     //   dieInstance.addChild(locator)
-		// 	// console.timeEnd('addChild')
     // })
-		// console.timeEnd('clone locators')
-		// console.timeEnd('create instance')
-
-		// console.time('create clone')
-		// const dieClone = diceCombos[this.comboKey].clone()
-		// console.timeEnd('create clone')
 
 		// start the instance under the floor, out of camera view
 		dieInstance.position.y = -100
@@ -91,7 +72,6 @@ class Dice {
 	
   }
 
-  // TODO: add themeOptions for colored materials, must ensure theme and themeOptions are unique somehow
   static async loadDie(options) {
     const { sides, theme = defaultOptions.theme} = options
 		let dieType = 'd' + sides
@@ -133,37 +113,12 @@ class Dice {
   static async getRollResult(die,scene) {
     const getDieRoll = (d=die) => new Promise((resolve,reject) => {
 
-			// die.mesh.updateFacetData();
-			// var positions = die.mesh.getFacetLocalPositions();
-			// var normals = die.mesh.getFacetLocalNormals();
-	
-			// var lines = [];
-			// for (var i = 0; i < positions.length; i++) {
-			// 		var line = [ positions[i], positions[i].add(normals[i]) ];
-			// 		lines.push(line);
-			// }
-			// var lineSystem = MeshBuilder.CreateLineSystem("ls", {lines: lines}, scene);
-			// lineSystem.color = Color3.Green();
-			// console.log(`created normals`)
-    // const getDieRoll = (d = die) => {
-
 			let vector = new Vector3(0, 1, 0);
-			const picked = scene.pickWithRay(new Ray(die.mesh.position, vector, 10))
-			console.log(`picked`, picked)
-      let highestDot = -1
-      let highestLocator
-      for (let locator of d.mesh.getChildTransformNodes()) {
-        const dot = locator.up.y
-        if (dot > highestDot) {
-          highestDot = dot
-          highestLocator = locator
-        }
-      }
+			const picked = scene.pickWithRay(new Ray(die.mesh.position, vector, 3))
 
-      // locators may have crazy names after being instanced, but they all end in '_##' for the face they are on
-			const result = parseInt(highestLocator.name.slice(highestLocator.name.lastIndexOf('_')+1))
-			die.result = result
-      return resolve(result)
+			die.result = meshFaceIds[die.dieType][picked.faceId]
+
+      return resolve(die.result)
     })
     return await getDieRoll()
   }

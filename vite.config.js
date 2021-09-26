@@ -10,6 +10,7 @@ module.exports = defineConfig({
       name: 'dice-box',
       fileName: (format) => `dice-box.${format}.js`
     },
+		assetsDir: 'assets/dice-box',
     rollupOptions: {
       input: {
 				main: path.resolve(__dirname, 'src/index.js')
@@ -17,7 +18,7 @@ module.exports = defineConfig({
 			output: [{
 				format: "es",
 				manualChunks: {},
-				sourcemap: false
+				sourcemap: false,
 			}],
 			plugins: [
 				copy({
@@ -29,7 +30,7 @@ module.exports = defineConfig({
 								path.resolve(__dirname, 'src/assets/models'),
 								path.resolve(__dirname, 'src/assets/themes')
 							],
-							dest: path.resolve(__dirname, 'dist/assets')
+							dest: path.resolve(__dirname, 'dist/assets/dice-box')
 						}
 					],
 					hook: "writeBundle"

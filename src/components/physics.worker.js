@@ -1,6 +1,5 @@
 import { lerp } from '../helpers'
-// import * as AmmoJS from "ammo.js/builds/ammo.wasm.js"
-import AmmoJS from "../assets/ammo/ammo.wasm.js"
+import AmmoJS from "../ammo/ammo.wasm.es.js"
 
 // Firefox limitation: https://github.com/vitejs/vite/issues/4586
 

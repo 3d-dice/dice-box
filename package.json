@@ -30,13 +30,14 @@
 		"url": "https://github.com/3d-dice/dice-box/issues"
 	},
 	"files": [
-		"src"
+		"dist"
 	],
-	"main": "./src/index",
+	"main": "./dist/dice-box.es",
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
-		"serve": "vite preview"
+		"serve": "vite preview",
+		"postinstall": "cp node_modules/@3d-dice/dist/assets public/assets"
 	},
 	"dependencies": {
 		"@babylonjs/core": "5.0.0-alpha.22",

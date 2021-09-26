@@ -4,7 +4,7 @@
 		"name": "Frank Ali"
 	},
 	"description": "A 3D environment for rolling game dice",
-	"version": "0.4.4",
+	"version": "0.4.5",
 	"keywords": [
 		"3D",
 		"dice",
@@ -37,12 +37,13 @@
 		"dev": "vite",
 		"build": "vite build",
 		"serve": "vite preview",
-		"postinstall": "cp ./dist/assets $INIT_CWD/public/assets"
+		"postinstall": "node copyAssets.js"
 	},
 	"dependencies": {
 		"@babylonjs/core": "5.0.0-alpha.22",
 		"@babylonjs/loaders": "5.0.0-alpha.22",
-		"@babylonjs/materials": "5.0.0-alpha.22"
+		"@babylonjs/materials": "5.0.0-alpha.22",
+		"copy-dir": "^1.3.0"
 	},
 	"devDependencies": {
 		"vite": "^2.5.0",

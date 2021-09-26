@@ -4,7 +4,7 @@
 		"name": "Frank Ali"
 	},
 	"description": "A 3D environment for rolling game dice",
-	"version": "0.4.6",
+	"version": "0.4.7",
 	"keywords": [
 		"3D",
 		"dice",
@@ -30,7 +30,8 @@
 		"url": "https://github.com/3d-dice/dice-box/issues"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"copyAssets.js"
 	],
 	"main": "./dist/dice-box.es",
 	"scripts": {

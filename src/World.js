@@ -4,9 +4,6 @@ import WorldOffscreen from './components/world.offscreen'
 import physicsWorker from './components/physics.worker.js?worker'
 import { debounce } from './helpers'
 
-// private variables
-let canvas, DiceWorld, DiceWorldInit, diceWorker, diceWorkerInit, groupIndex = 0, rollIndex = 0, idIndex = 0
-
 const defaultOptions = {
 	id: 'dice-canvas',
   enableShadows: true,
@@ -24,23 +21,25 @@ const defaultOptions = {
 class World {
   constructor(container, options = {}){
 		this.config = {...defaultOptions, ...options}
-    canvas = createCanvas({
+    this.canvas = createCanvas({
       selector: container,
       id: this.config.id
     })
 		this.rollData = []
+		this.groupIndex = 0
+		this.rollIndex = 0
+		this.idIndex = 0
 		this.onDieComplete = () => {}
 		this.onRollComplete = () => {}
-
   }
 
 	async loadWorld(){
-		if ("OffscreenCanvas" in window && "transferControlToOffscreen" in canvas && this.config.offscreen) { 
+		if ("OffscreenCanvas" in window && "transferControlToOffscreen" in this.canvas && this.config.offscreen) { 
 			// Ok to use offscreen canvas
 			// transfer controll offscreen
 			// const WorldOffscreen = await import('./components/world.offscreen').then(module => module.default)
-			DiceWorld = new WorldOffscreen({
-				canvas,
+			this.DiceWorld = new WorldOffscreen({
+				canvas: this.canvas,
 				options: this.config
 			})
 		} else {
@@ -49,8 +48,8 @@ class World {
 				this.config.offscreen = false
 			}
 			const WorldOnscreen = await import('./components/world.onscreen').then(module => module.default)
-			DiceWorld = new WorldOnscreen({
-				canvas,
+			this.DiceWorld = new WorldOnscreen({
+				canvas: this.canvas,
 				options: this.config
 			})
 		}
@@ -60,21 +59,22 @@ class World {
 		// create message channels for the two web workers to communicate through
 		const channel = new MessageChannel()
 
-		DiceWorld.init = new Promise((resolve, reject) => {
-			DiceWorldInit = resolve
+		this.DiceWorld.init = new Promise((resolve, reject) => {
+			this.DiceWorldInit = resolve
 		})
 
-		DiceWorld.connect(channel.port1)
+		this.DiceWorld.connect(channel.port1)
 
 		// initialize physics world in which AmmoJS runs
-		diceWorker = new physicsWorker()
-		diceWorker.init = new Promise((resolve, reject) => {
-			diceWorkerInit = resolve
+		this.diceWorker = new physicsWorker()
+		this.diceWorker.init = new Promise((resolve, reject) => {
+			this.diceWorkerInit = resolve
 		})
 
 		// Setup the connection: Port 2 is for diceWorker
-		diceWorker.postMessage({
+		this.diceWorker.postMessage({
 			action: "connect",
+			id: this.config.id
 		},[ channel.port2 ])
 	}
 
@@ -83,8 +83,8 @@ class World {
 		const resizeWorkers = () => {
 			// canvas.width = data.width
 			// canvas.height = data.height
-			DiceWorld.resize({width: canvas.clientWidth, height: canvas.clientHeight})
-			diceWorker.postMessage({action: "resize", width: canvas.clientWidth, height: canvas.clientHeight});
+			this.DiceWorld.resize({width: this.canvas.clientWidth, height: this.canvas.clientHeight})
+			this.diceWorker.postMessage({action: "resize", width: this.canvas.clientWidth, height: this.canvas.clientHeight});
 		}
 		const debounceResize = debounce(resizeWorkers)
 		window.addEventListener("resize", debounceResize)
@@ -97,16 +97,18 @@ class World {
 		this.connectWorld()
 		this.resizeWorld()
 
-		DiceWorld.onInitComplete = () => {
-			DiceWorldInit()
+		this.DiceWorld.onInitComplete = () => {
+			this.DiceWorldInit()
 		}
-		DiceWorld.onRollResult = (die) => {
+		this.DiceWorld.onRollResult = (die) => {
 			// map die results back to our rollData
+			console.log(`die`, die)
+			console.log(`this.rollData`, this.rollData)
 			this.rollData[die.groupId].rolls[die.rollId].result = die.result
 			// TODO: die should have 'sides' or is that unnecessary data passed between workers?
 			this.onDieComplete(die)
 		}
-		DiceWorld.onRollComplete = () => {
+		this.DiceWorld.onRollComplete = () => {
 			this.rollData.forEach(rollGroup => {
 				// convert rolls from indexed objects to array
 				rollGroup.rolls = Object.values(rollGroup.rolls).map(roll => roll)
@@ -119,22 +121,22 @@ class World {
 		}
 
     // initialize the AmmoJS physics worker
-    diceWorker.postMessage({
+    this.diceWorker.postMessage({
       action: "init",
-      width: canvas.clientWidth,
-      height: canvas.clientHeight,
+      width: this.canvas.clientWidth,
+      height: this.canvas.clientHeight,
 			options: this.config
     })
 
-    diceWorker.onmessage = (e) => {
+    this.diceWorker.onmessage = (e) => {
 			switch( e.data.action ) {
 				case "init-complete":
-					diceWorkerInit() // fulfill promise so other things can run
+					this.diceWorkerInit() // fulfill promise so other things can run
 			}
     }
 
     // pomise.all to initialize both offscreenWorker and diceWorker
-		await Promise.all([DiceWorld.init, diceWorker.init])
+		await Promise.all([this.DiceWorld.init, this.diceWorker.init])
 
 		return this
 
@@ -144,9 +146,9 @@ class World {
 		const newConfig = {...this.config,...options}
 		this.config = newConfig
 		// pass updates to DiceWorld
-		DiceWorld.updateConfig(newConfig)
+		this.DiceWorld.updateConfig(newConfig)
 		// pass updates to PhysicsWorld
-		diceWorker.postMessage({
+		this.diceWorker.postMessage({
 			action: 'updateConfig',
 			options: newConfig
 		})
@@ -154,24 +156,24 @@ class World {
 
 	clear() {
 		// reset indexes and rollData
-		rollIndex = 0
-		groupIndex = 0
-		idIndex = 0
+		this.rollIndex = 0
+		this.groupIndex = 0
+		this.idIndex = 0
 		this.rollData = []
 		// clear all rendered die bodies
-		DiceWorld.clear()
+		this.DiceWorld.clear()
     // clear all physics die bodies
-    diceWorker.postMessage({action: "clearDice"})
+    this.diceWorker.postMessage({action: "clearDice"})
 		return this
   }
 
 	hide() {
-		canvas.style.display = 'none'
+		this.canvas.style.display = 'none'
 		return this
 	}
 
 	show() {
-		canvas.style.display = 'block'
+		this.canvas.style.display = 'block'
 		return this
 	}
 
@@ -202,9 +204,9 @@ class World {
 		// delete the roll from cache
 		delete this.rollData[groupId].rolls[rollId]
 		// remove the die from the render
-		DiceWorld.remove({groupId, rollId})
+		this.DiceWorld.remove({groupId, rollId})
 		// remove the die from the physics bodies - we do this in case there's a reroll. Don't want new dice interacting with a hidden physics body
-		diceWorker.postMessage({action: "removeDie", id: rollId})
+		this.diceWorker.postMessage({action: "removeDie", id: rollId})
 		return this
 	}
 
@@ -227,11 +229,12 @@ class World {
 		parsedNotation.forEach(notation => {
 			// console.log(`notation`, notation)
 			const rolls = {}
-			const index = hasGroupId ? groupId : groupIndex
+			const index = hasGroupId ? groupId : this.groupIndex
+
 			for (var i = 0, len = notation.qty; i < len; i++) {
 				// id's start at zero and zero can be falsy, so we check for undefined
-				let rollId = notation.rollId !== undefined ? notation.rollId : rollIndex++
-				let id = notation.id !== undefined ? notation.id : idIndex++
+				let rollId = notation.rollId !== undefined ? notation.rollId : this.rollIndex++
+				let id = notation.id !== undefined ? notation.id : this.idIndex++
 
 				const roll = {
 					sides: notation.sides,
@@ -243,7 +246,7 @@ class World {
 	
 				rolls[rollId] = roll
 
-				DiceWorld.add(roll)
+				this.DiceWorld.add(roll)
 				
 			}
 	
@@ -253,7 +256,7 @@ class World {
 				// save this roll group for later
 				notation.rolls = rolls
 				this.rollData[index] = notation
-				++groupIndex
+				++this.groupIndex
 			}
 		})
 	}

@@ -50,7 +50,7 @@ class DiceBox{
 			width: size, 
 			height: 1,
 			depth: size
-		})
+		}, this.config.scene)
 		ground.scaling = new Vector3(aspect, 1, 1)
 		ground.material = boxMaterial
 		ground.receiveShadows = true
@@ -61,7 +61,7 @@ class DiceBox{
 			width: size,
 			height: wallHeight,
 			depth: 1
-		})
+		}, this.config.scene)
 		wallTop.position.y = wallHeight / 2
 		wallTop.position.z = size / -2
 		wallTop.scaling = new Vector3(aspect, 1, 1)
@@ -74,7 +74,7 @@ class DiceBox{
 			width: 1, 
 			height: wallHeight,
 			depth: size
-		})
+		}, this.config.scene )
 		wallRight.position.x = size * aspect / 2
 		wallRight.position.y = wallHeight / 2
 		wallRight.material = boxMaterial
@@ -86,7 +86,7 @@ class DiceBox{
 			width: size, 
 			height: wallHeight,
 			depth: 1
-		})
+		}, this.config.scene)
 		wallBottom.position.y = wallHeight / 2
 		wallBottom.position.z = size / 2
 		wallBottom.scaling = new Vector3(aspect, 1, 1)
@@ -99,7 +99,7 @@ class DiceBox{
 			width: 1, 
 			height: wallHeight,
 			depth: size
-		})
+		}, this.config.scene)
 		wallLeft.position.x = size * aspect / -2
 		wallLeft.position.y = wallHeight / 2
 		wallLeft.material = boxMaterial

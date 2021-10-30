@@ -9,12 +9,12 @@ const defaultOptions = {
 }
 
 function createLights(options = defaultOptions) {
-  const { enableShadows } = options
-  const d_light = new DirectionalLight("DirectionalLight", new Vector3(-0.3, -1, 0.4))
+  const { enableShadows, scene } = options
+  const d_light = new DirectionalLight("DirectionalLight", new Vector3(-0.3, -1, 0.4), scene)
   d_light.position = new Vector3(0,30,0)
   d_light.intensity = .3
   
-  const h_light = new HemisphericLight("HemisphericLight", new Vector3(1, 1, 0))
+  const h_light = new HemisphericLight("HemisphericLight", new Vector3(1, 1, 0), scene)
   h_light.intensity = .7
   
   if(enableShadows){

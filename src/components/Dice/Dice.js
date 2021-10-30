@@ -16,32 +16,51 @@ class Dice {
   constructor(options) {
 		// const {dieType = 'd20', theme = defaultTheme, ...rest}, sceneLights, enableShadows = options
 		Object.assign(this, defaultOptions, options)
-    this.id = options.id !== undefined ? options.id : count++
-		this.dieType = `d${this.sides}`
-    this.mesh = null
-    this._result = null
-    this.asleep = false
-    this.comboKey = `${this.dieType}_${this.theme}`
-    this.createInstance()
+    this.count = 0
+    // this.id = options.id !== undefined ? options.id : this.count++
+		// this.dieType = `d${this.sides}`
+    // this.mesh = null
+    this.meshes = {}
+    this.themes = {}
+    this.diceCombos = {}
+    // this._result = null
+    // this.asleep = false
+    // this.comboKey = `${this.dieType}_${this.theme}`
+    // this.createInstance()
   }
 
-	get result() {
-    return this._result
-  }
+	// get result() {
+  //   return this._result
+  // }
 
-  set result(val) {
-    this._result = val
-  }
+  // set result(val) {
+  //   this._result = val
+  // }
 
-	static resetCount(){
-		count = 0
+	resetCount(){
+		this.count = 0
 	}
 
-  createInstance() {
-    // create die instance
-    const dieInstance = diceCombos[this.comboKey].createInstance(`${this.dieType}-instance-${count}`)
+  createInstance(options) {
 
-    meshes[this.dieType].getChildTransformNodes().map(child => {
+    // console.log(`dice options:`, options)
+
+    const config = {...defaultOptions, ...options}
+
+    console.log(`config`, config)
+    // why id?
+    const die = {
+      ...config,
+      id: config.id !== undefined ? config.id : this.count++,
+      dieType: `d${config.sides}`
+    }
+    // const id = config.id !== undefined ? config.id : this.count++
+    const dieType = `d${config.sides}`
+    const comboKey = `d${config.sides}_${config.theme}`
+    // create die instance
+    const dieInstance = this.diceCombos[comboKey].createInstance(`${dieType}-instance-${this.count}`)
+
+    this.meshes[die.dieType].getChildTransformNodes().map(child => {
       const locator = child.clone(child.id)
       locator.setAbsolutePosition(child.getAbsolutePosition())
       dieInstance.addChild(locator)
@@ -49,51 +68,54 @@ class Dice {
 
 		// start the instance under the floor, out of camera view
 		dieInstance.position.y = -100
+		dieInstance.position.x = this.count * -2.5
 		
 		//TODO: die is loading in the middle of the screen. flashes before animation starts
 		// hide the die, reveal when it's ready to toss or after first update from physics
-    if(this.enableShadows){
-      for (const key in this.lights) {
+    if(config.enableShadows){
+      for (const key in config.lights) {
         if(key !== 'hemispheric' ) {
-          this.lights[key].shadowGenerator.addShadowCaster(dieInstance)
+          config.lights[key].shadowGenerator.addShadowCaster(dieInstance)
         }
       }
     }
 
     // attach the instance to the class object
-    this.mesh = dieInstance
+    die.mesh = dieInstance
 
     // console.log(`count`, count)
-    count++
+    this.count++
+
+    return die
   }
 
   // TODO: add themeOptions for colored materials, must ensure theme and themeOptions are unique somehow
-  static async loadDie(options) {
-    const { sides, theme = defaultOptions.theme} = options
+  async loadDie(options) {
+    const { sides, theme = defaultOptions.theme, scene, engine} = options
 		let dieType = 'd' + sides
     // create a key for this die type and theme combo for caching and instance creation
     const comboKey = `${dieType}_${theme}`
 
     // load the theme first - each theme should contain the textures for all dice types
-    if (!Object.keys(themes).includes(theme)) {
-      themes[theme] = await loadTheme(theme, this.assetPath)
+    if (!Object.keys(this.themes).includes(theme)) {
+      this.themes[theme] = await loadTheme(theme, this.assetPath, scene, engine)
     }
 
     // cache die and theme combo for instances
-    if (!Object.keys(diceCombos).includes(comboKey)) {
-      const die = meshes[dieType].clone(comboKey)
-      die.material = themes[theme]
+    if (!Object.keys(this.diceCombos).includes(comboKey)) {
+      const die = this.meshes[dieType].clone(comboKey)
+      die.material = scene.getMaterialByName(theme)
       // die.material.freeze()
-      diceCombos[comboKey] = die
+      this.diceCombos[comboKey] = die
     }
 
     return options
   }
 
   // load all the dice models
-  static async loadModels(assetPath) {
+  async loadModels(assetPath,scene) {
 		this.assetPath = assetPath
-    const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "diceMeshes.babylon")
+    const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "diceMeshes.babylon", scene)
 
     models.meshes.forEach(model => {
       if(model.id === "__root__") return
@@ -101,7 +123,7 @@ class Dice {
       // model.receiveShadows = true
       model.freezeNormals()
       // model.scaling = new Vector3(1, 1, 1)
-      meshes[model.id] = model
+      this.meshes[model.id] = model
     })
     // return models
   }

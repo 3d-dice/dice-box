@@ -4,48 +4,49 @@ import { createCamera } from './camera'
 import DiceBox from './DiceBox'
 import { createLights } from './lights'
 import Dice from './Dice'
-
-let canvas, config, engine, scene, camera, diceBox, lights, physicsWorkerPort, dieCache = [], sleeperCache = [], count = 0, dieRollTimer = []
-
 class WorldOnscreen {
 	constructor(options){
 		this.initialized = this.initScene(options)
+		this.dieCache = []
+		this.sleeperCache = []
+		this.count = 0
+		this.dieRollTimer = []
 		this.onInitComplete = () => {}
 		this.onRollResult = () => {}
 		this.onRollComplete = () => {}
 	}
 	
 	// initialize the babylon scene
+	
 	async initScene(options) {
-		canvas = options.canvas
+		this.canvas = options.canvas
+		this.origin = options.options.id
 	
 		// set the config from World
 		this.config = options.options
 		// canvas.width = options.width
 		// canvas.height = options.height
 	
-		engine = createEngine(canvas)
-		scene = createScene({engine})
-		camera = createCamera({engine, zoomLevel: this.config.zoomLevel})
-		lights = createLights({enableShadows: this.config.enableShadows})
+		this.engine = createEngine(this.canvas)
+		this.scene = createScene({engine:this.engine})
+		this.camera = createCamera({engine:this.engine, zoomLevel:this.config.zoomLevel, scene: this.scene})
+		this.lights = createLights({enableShadows: this.config.enableShadows, scene: this.scene})
 	
-		// initialize die caches
-		// the dieCache order must match the physicsWorker's colliders order so the positioning data matches up
-		dieCache = [] // cache dice that are rolling
-		sleeperCache = [] // cache dice that have stopped rolling
 	
 		// create the box that provides surfaces for shadows to render on
-		diceBox = new DiceBox({
+		this.diceBox = new DiceBox({
 			...this.config,
 			zoomLevel: this.config.zoomLevel,
-			aspect: canvas.width / canvas.height,
-			lights,
-			scene
+			aspect: this.canvas.width / this.canvas.height,
+			lights: this.lights,
+			scene: this.scene
 		})
+
+		this.dice = new Dice()
 		
 		// loading all our dice models
 		// we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
-		await Dice.loadModels(this.config.assetPath)
+		await this.dice.loadModels(this.config.assetPath, this.scene)
 		
 		// start the render engine
 		// render()
@@ -57,8 +58,8 @@ class WorldOnscreen {
 	}
 
 	connect(port){
-		physicsWorkerPort = port
-      physicsWorkerPort.onmessage = (e) => {
+		this.physicsWorkerPort = port
+		this.physicsWorkerPort.onmessage = (e) => {
         switch (e.data.action) {
           case "updates": // dice status/position updates from physics worker
 						this.updatesFromPhysics(e.data)
@@ -75,39 +76,39 @@ class WorldOnscreen {
 		const prevConfig = this.config
 		this.config = options
 		if(prevConfig.zoomLevel !== this.config.zoomLevel){
-			diceBox.destroy()
-			diceBox = new DiceBox({
+			this.diceBox.destroy()
+			this.diceBox = new DiceBox({
 				...this.config,
 				zoomLevel: this.config.zoomLevel,
-				aspect: canvas.width / canvas.height,
-				lights,
-				scene
+				aspect: this.canvas.width / this.canvas.height,
+				lights: this.lights,
+				scene: this.scene
 			})
-			camera.dispose()
-			camera = createCamera({engine, zoomLevel: this.config.zoomLevel})
+			this.camera.dispose()
+			this.camera = createCamera({engine:this.engine, zoomLevel: this.config.zoomLevel})
 		}
 		if(prevConfig.enableShadows !== this.config.enableShadows) {
-			Object.values(lights).forEach(light => light.dispose())
-			lights = createLights({enableShadows: this.config.enableShadows})
+			Object.values(this.lights).forEach(light => light.dispose())
+			this.lights = createLights({enableShadows: this.config.enableShadows})
 		}
 	}
 
 	// all this does is start the render engine.
 	render() {
 		// document.body.addEventListener('click',()=>engine.stopRenderLoop())
-		engine.runRenderLoop(this.renderLoop.bind(this))
-		physicsWorkerPort.postMessage({
+		this.engine.runRenderLoop(this.renderLoop.bind(this))
+		this.physicsWorkerPort.postMessage({
 			action: "resumeSimulation",
 		})
 	}
 	renderLoop() {
 		// if no dice awake then stop the render loop and save some CPU power (unless we're in debug mode where we want the arc camera to continue working)
-		if(sleeperCache.length !== 0 && dieCache.length === 0) {
+		if(this.sleeperCache.length !== 0 && this.dieCache.length === 0) {
 			console.log(`no dice moving`)
-			engine.stopRenderLoop()
-			count = 0
+			this.engine.stopRenderLoop()
+			this.count = 0
 			// stop the physics engine
-			physicsWorkerPort.postMessage({
+			this.physicsWorkerPort.postMessage({
 				action: "stopSimulation",
 			})
 			// post back to the world
@@ -119,61 +120,62 @@ class WorldOnscreen {
 		}
 		// otherwise keep on rendering
 		else {
-			scene.render()
+			this.scene.render()
 		}
 	}
 
 	clear() {
-		if(!dieCache.length && !sleeperCache.length) {
+		if(!this.dieCache.length && !this.sleeperCache.length) {
 			return
 		}
-		dieRollTimer.forEach(timer=>clearTimeout(timer))
+		this.dieRollTimer.forEach(timer=>clearTimeout(timer))
 		// stop anything that's currently rendering
-		engine.stopRenderLoop()
+		this.engine.stopRenderLoop()
 		// clear all dice
-		dieCache.forEach(die => die.mesh.dispose())
-		sleeperCache.forEach(die => die.mesh.dispose())
-		Dice.resetCount()
-		count = 0
+		this.dieCache.forEach(die => die.mesh.dispose())
+		this.sleeperCache.forEach(die => die.mesh.dispose())
+		this.dice.resetCount()
+		this.count = 0
 	
 		// step the animation forward
-		scene.render()
+		this.scene.render()
 	
-		dieCache = []
-		sleeperCache = []
+		this.dieCache = []
+		this.sleeperCache = []
 	}
 
 	add(options) {
 		// space out adding the dice so they don't lump together too much
-		dieRollTimer.push(setTimeout(() => {
+		this.dieRollTimer.push(setTimeout(() => {
 			this._add(options)
-		}, count++ * this.config.delay))
+		}, this.count++ * this.config.delay))
 	}
 
 	// add a die to the scene
 	async _add(options) {
-		if(engine.activeRenderLoops.length === 0) {
+		if(this.engine.activeRenderLoops.length === 0) {
 			this.render()
 		}
 		// const themes = ['galaxy','gemstone','glass','iron','nebula','sunrise','sunset','walnut']
 		// options.theme = themes[Math.floor(Math.random() * themes.length)]
 		// loadDie allows you to specify sides(dieType) and theme and returns the options you passed in
-		const newDie = await Dice.loadDie(options).then( response =>  {
+		const newDie = await this.dice.loadDie({...options, scene:this.scene}).then( response =>  {
 			// after the die model and textures have loaded we can add the die to the scene for rendering
-		if(!response.lights) {
-			response.lights = lights
-		}
-		if(!response.enableShadows){
-			response.enableShadows = this.config.enableShadows
-		}
-    return new Dice(response)
+			if(!response.lights) {
+				response.lights = this.lights
+			}
+			if(!response.enableShadows){
+				response.enableShadows = this.config.enableShadows
+			}
+			console.log(`response`, response)
+			return this.dice.createInstance(response)
 		})
 	
 		// save the die just created to the cache
-		dieCache.push(newDie)
+		this.dieCache.push(newDie)
 	
 		// tell the physics engine to roll this die type - which is a low poly collider
-		physicsWorkerPort.postMessage({
+		this.physicsWorkerPort.postMessage({
 			action: "addDie",
 			sides: options.sides,
 			id: newDie.id
@@ -182,15 +184,15 @@ class WorldOnscreen {
 		// for d100's we need to add an additional d10 and pair it up with the d100 just created
 		if(options.sides === 100) {
 			// assign the new die to a property on the d100 - spread the options in order to pass a matching theme
-    newDie.d10Instance = await Dice.loadDie({...options, sides: 10}).then( response =>  {
-				const d10Instance = new Dice(response, lights, this.config.enableShadows)
+			newDie.d10Instance = await this.dice.loadDie({...options, sides: 10}, this.scene).then( response =>  {
+				const d10Instance = this.dice.createInstance(response, this.lights, this.config.enableShadows)
 				// identify the parent of this d10 so we can calculate the roll result later
 				d10Instance.dieParent = newDie
 				return d10Instance
 			})
 			// add the d10 to the cache and ask the physics worker for a collider
-			dieCache.push(newDie.d10Instance)
-			physicsWorkerPort.postMessage({
+			this.dieCache.push(newDie.d10Instance)
+			this.physicsWorkerPort.postMessage({
 				action: "addDie",
 				sides: 10,
 				id: newDie.d10Instance.id
@@ -204,7 +206,7 @@ class WorldOnscreen {
 	
 	remove(data) {
 	// remove from sleepercache
-	sleeperCache = sleeperCache.filter((die) => {
+	this.sleeperCache = this.sleeperCache.filter((die) => {
 		let match = die.groupId === data.groupId && die.rollId === data.rollId
 		if(match){
 			// remove the mesh from the scene
@@ -214,23 +216,23 @@ class WorldOnscreen {
 	})
 
 	// step the animation forward
-	scene.render()
+	this.scene.render()
 }
 	
 	updatesFromPhysics(data) {
 		// get dice that are sleeping.
-		// console.log(`data.updates`, data.updates)
 		const asleep = data.updates.asleep
 		// loop through all the sleeping dice
 		asleep.reverse().forEach(async (dieIndex,i) => {
 			// remove the sleeping die from the dieCache. It's been removed from the physics simulation and will no longer send position updates in the data array
-			const sleeper = dieCache.splice(dieIndex,1)[0]
+			const sleeper = this.dieCache.splice(dieIndex,1)[0]
 			// mark this die as asleep
 			sleeper.asleep = true
 			// cache all the dice that are asleep
-			sleeperCache.push(sleeper)
+			this.sleeperCache.push(sleeper)
 			// get die result now that it's asleep
 			let result = await Dice.getRollResult(sleeper)
+			console.log(`result`, result)
 			// special case for d100's since they are a pair of dice
 			// d100's will have a d10Instance prop and the d10 they are paired with will have a dieParent prop
 			if(sleeper.d10Instance || sleeper.dieParent) {
@@ -290,10 +292,10 @@ class WorldOnscreen {
 		// move through the updates 7 at a time getting position and rotation values
 		// const dieCacheLength = dieCache.length
 		for (let i = 0, len = updates.length; i < len; i++) {
-			if (!dieCache[i]) break
+			if (!this.dieCache[i]) break
 			let [px,py,pz,qx,qy,qz,qw,id] = updates[i]
-			let obj = dieCache[i].mesh
-			if(dieCache[i].id !== id) {
+			let obj = this.dieCache[i].mesh
+			if(this.dieCache[i].id !== id) {
 				console.error("id does not match")
 			}
 			obj.position.set(px, py, pz)
@@ -303,8 +305,8 @@ class WorldOnscreen {
 	
 	resize(data) {
 		// redraw the dicebox
-		diceBox.create({aspect: canvas.width / canvas.height})
-		engine.resize()
+		this.diceBox.create({aspect: this.canvas.width / this.canvas.height})
+		this.engine.resize()
 	}
 }
 

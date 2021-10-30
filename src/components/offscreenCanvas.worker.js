@@ -39,7 +39,7 @@ self.onmessage = (e) => {
 			updateConfig(e.data.options)
 			break
     case "connect": // These are messages sent from physics.worker.js
-      physicsWorkerPort = e.ports[0]
+      physicsWorkerPort = e.data.port
       physicsWorkerPort.onmessage = (e) => {
         switch (e.data.action) {
           case "updates": // dice status/position updates from physics worker

@@ -47,7 +47,6 @@ class Dice {
 
     const config = {...defaultOptions, ...options}
 
-    console.log(`config`, config)
     // why id?
     const die = {
       ...config,

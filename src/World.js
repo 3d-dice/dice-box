@@ -102,8 +102,6 @@ class World {
 		}
 		this.DiceWorld.onRollResult = (die) => {
 			// map die results back to our rollData
-			console.log(`die`, die)
-			console.log(`this.rollData`, this.rollData)
 			this.rollData[die.groupId].rolls[die.rollId].result = die.result
 			// TODO: die should have 'sides' or is that unnecessary data passed between workers?
 			this.onDieComplete(die)

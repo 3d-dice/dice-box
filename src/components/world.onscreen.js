@@ -167,7 +167,6 @@ class WorldOnscreen {
 			if(!response.enableShadows){
 				response.enableShadows = this.config.enableShadows
 			}
-			console.log(`response`, response)
 			return this.dice.createInstance(response)
 		})
 	
@@ -232,7 +231,7 @@ class WorldOnscreen {
 			this.sleeperCache.push(sleeper)
 			// get die result now that it's asleep
 			let result = await Dice.getRollResult(sleeper)
-			console.log(`result`, result)
+			// console.log(`result`, result)
 			// special case for d100's since they are a pair of dice
 			// d100's will have a d10Instance prop and the d10 they are paired with will have a dieParent prop
 			if(sleeper.d10Instance || sleeper.dieParent) {

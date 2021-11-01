@@ -220,6 +220,7 @@ class World {
 		return this
   }
 
+	// used by both .add and .roll - .roll clears the box and .add does not
 	makeRoll(parsedNotation, groupId){
 		const hasGroupId = groupId !== undefined
 

@@ -5,7 +5,7 @@ import { createLights } from './lights'
 import DiceBox from './DiceBox'
 import Dice from './Dice'
 
-let canvas, config, engine, scene, camera, diceBox, lights, physicsWorkerPort, dieCache = [], sleeperCache = [], count = 0, dieRollTimer = []
+let canvas, config, engine, scene, camera, dice, diceBox, lights, physicsWorkerPort, dieCache = [], sleeperCache = [], count = 0, dieRollTimer = []
 
 // these are messages sent to this worker from World.js
 self.onmessage = (e) => {
@@ -85,10 +85,12 @@ const initScene = async (data) => {
     lights,
 		scene
 	})
+
+	dice = new Dice()
   
   // loading all our dice models
   // we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
-  await Dice.loadModels(config.assetPath)
+  await dice.loadModels(config.assetPath, scene)
   
   // start the render engine
   // render()
@@ -157,7 +159,7 @@ const clear = () => {
 	// clear all dice
 	dieCache.forEach(die => die.mesh.dispose())
 	sleeperCache.forEach(die => die.mesh.dispose())
-	Dice.resetCount()
+	dice.resetCount()
 	count = 0
 
 	// step the animation forward
@@ -176,7 +178,7 @@ const add = async (options) => {
 	// const themes = ['galaxy','gemstone','glass','iron','nebula','sunrise','sunset','walnut']
 	// options.theme = themes[Math.floor(Math.random() * themes.length)]
   // loadDie allows you to specify sides(dieType) and theme and returns the options you passed in
-  const newDie = await Dice.loadDie(options).then( response =>  {
+  const newDie = await dice.loadDie({...options, scene}).then( response =>  {
     // after the die model and textures have loaded we can add the die to the scene for rendering
 		if(!response.lights) {
 			response.lights = lights
@@ -184,7 +186,7 @@ const add = async (options) => {
 		if(!response.enableShadows){
 			response.enableShadows = config.enableShadows
 		}
-    return new Dice(response)
+    return dice.createInstance(response)
   })
 
   // save the die just created to the cache
@@ -200,8 +202,8 @@ const add = async (options) => {
   // for d100's we need to add an additional d10 and pair it up with the d100 just created
   if(options.sides === 100) {
     // assign the new die to a property on the d100 - spread the options in order to pass a matching theme
-    newDie.d10Instance = await Dice.loadDie({...options, sides: 10}).then( response =>  {
-      const d10Instance = new Dice(response, lights, config.enableShadows)
+    newDie.d10Instance = await dice.loadDie({...options, sides: 10, scene}).then( response =>  {
+      const d10Instance = dice.createInstance(response, lights, config.enableShadows)
       // identify the parent of this d10 so we can calculate the roll result later
       d10Instance.dieParent = newDie
       return d10Instance

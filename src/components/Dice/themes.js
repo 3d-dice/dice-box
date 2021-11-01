@@ -3,7 +3,7 @@ import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { CustomMaterial } from '@babylonjs/materials/custom/customMaterial';
 
-async function loadStandardMaterial(theme,assetPath,scene,engine) {
+async function loadStandardMaterial(theme,assetPath,scene) {
   let diceMaterial = new StandardMaterial(theme,scene);
   let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,scene)
   let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal.jpg`,scene)
@@ -15,11 +15,11 @@ async function loadStandardMaterial(theme,assetPath,scene,engine) {
   return diceMaterial
 }
 
-async function loadSemiTransparentMaterial(theme,assetPath,scene,engine) {
+async function loadSemiTransparentMaterial(theme,assetPath,scene) {
   let diceMaterial = new StandardMaterial(theme,scene);
-  let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,engine)
-  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal.jpg`,engine)
-  let diceOpacityTexture = await importTextureAsync(`${assetPath}themes/${theme}/mask.png`,engine)
+  let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,scene)
+  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal.jpg`,scene)
+  let diceOpacityTexture = await importTextureAsync(`${assetPath}themes/${theme}/mask.png`,scene)
 	diceMaterial.diffuseTexture = diceTexture
 	diceMaterial.opacityTexture = diceOpacityTexture
 	diceMaterial.opacityTexture.getAlphaFromRGB = true
@@ -32,15 +32,15 @@ async function loadSemiTransparentMaterial(theme,assetPath,scene,engine) {
   return diceMaterial
 }
 
-async function loadColorMaterial(theme,assetPath,scene,engine) {
+async function loadColorMaterial(theme,assetPath,scene) {
 	let color = Color3.FromHexString(theme)
   let diceMaterial = new CustomMaterial(theme,scene);
 	let diceTexture
 	// console.log("color totals",(color.r*256*0.299 + color.g*256*0.587 + color.b*256*0.114))
 	if ((color.r*256*0.299 + color.g*256*0.587 + color.b*256*0.114) > 175){
-		diceTexture = await importTextureAsync(`${assetPath}themes/transparent/albedo-dark.png`,engine)
+		diceTexture = await importTextureAsync(`${assetPath}themes/transparent/albedo-dark.png`,scene)
 	} else {
-		diceTexture = await importTextureAsync(`${assetPath}themes/transparent/albedo-light.png`,engine)
+		diceTexture = await importTextureAsync(`${assetPath}themes/transparent/albedo-light.png`,scene)
 	}
 	diceMaterial.diffuseTexture = diceTexture
 	// diceMaterial.diffuseTexture.hasAlpha = true;
@@ -49,7 +49,7 @@ async function loadColorMaterial(theme,assetPath,scene,engine) {
 		baseColor.rgb = mix(vec3(${color.r},${color.g},${color.b}), baseColor.rgb, baseColor.a);
 	`)
 
-  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/transparent/normal.jpg`,engine)
+  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/transparent/normal.jpg`,scene)
   diceMaterial.bumpTexture = diceBumpTexture
 
 	sharedSettings(diceMaterial)
@@ -75,11 +75,11 @@ const sharedSettings = (material) => {
 
 
 
-async function importTextureAsync(url, engine) {
+async function importTextureAsync(url, scene) {
   return new Promise((resolve, reject) => {
     let texture = new Texture(
       url + '?' + Date.now(), // url: Nullable<string>
-      engine, // sceneOrEngine: Nullable<Scene | ThinEngine>
+      scene, // sceneOrEngine: Nullable<Scene | ThinEngine>
       undefined, // noMipmapOrOptions?: boolean | ITextureCreationOptions
       false, // invertY?: boolean
       undefined, // samplingMode?: number
@@ -89,20 +89,20 @@ async function importTextureAsync(url, engine) {
   })
 }
 
-const loadTheme = async (theme,assetPath,scene,engine) => {
+const loadTheme = async (theme,assetPath,scene) => {
   let material;
   switch (theme) {
     case 'purpleRock':
     case 'molten':
-      material = await loadStandardMaterial(theme,assetPath,scene,engine)
+      material = await loadStandardMaterial(theme,assetPath,scene)
       // material = await loadPBRMaterial(theme)
       return material
 		case 'glass':
-			material = await loadSemiTransparentMaterial(theme,assetPath,scene,engine)
+			material = await loadSemiTransparentMaterial(theme,assetPath,scene)
       // material = await loadPBRMaterial(theme)
       return material
     default:
-      material = await loadColorMaterial(theme,assetPath,scene,engine)
+      material = await loadColorMaterial(theme,assetPath,scene)
       return material
   }
 }

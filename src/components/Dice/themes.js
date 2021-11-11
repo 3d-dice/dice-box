@@ -3,7 +3,9 @@ import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { CustomMaterial } from '@babylonjs/materials/custom/customMaterial';
 
+
 async function loadStandardMaterial(theme,assetPath,scene) {
+  console.log("loadStandardMaterial")
   let diceMaterial = new StandardMaterial(theme,scene);
   let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,scene)
   let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal.jpg`,scene)
@@ -11,6 +13,8 @@ async function loadStandardMaterial(theme,assetPath,scene) {
   diceMaterial.bumpTexture = diceBumpTexture
 
 	sharedSettings(diceMaterial)
+
+  console.log("done loadStandardMaterial")
 
   return diceMaterial
 }
@@ -74,37 +78,38 @@ const sharedSettings = (material) => {
 }
 
 
-
 async function importTextureAsync(url, scene) {
+  console.log("importTextureAsync")
   return new Promise((resolve, reject) => {
     let texture = new Texture(
-      url + '?' + Date.now(), // url: Nullable<string>
+      url, // url: Nullable<string>
       scene, // sceneOrEngine: Nullable<Scene | ThinEngine>
       undefined, // noMipmapOrOptions?: boolean | ITextureCreationOptions
       false, // invertY?: boolean
       undefined, // samplingMode?: number
-      () => resolve(texture), // onLoad?: Nullable<() => void>
+      () => {
+        console.log("done importTextureAsync", texture)
+        return resolve(texture)
+      }, // onLoad?: Nullable<() => void>
       () => reject("Unable to load texture") // onError?: Nullable<(message?: string
     )
   })
 }
 
-const loadTheme = async (theme,assetPath,scene) => {
-  let material;
-  switch (theme) {
-    case 'purpleRock':
-    case 'molten':
-      material = await loadStandardMaterial(theme,assetPath,scene)
-      // material = await loadPBRMaterial(theme)
-      return material
-		case 'glass':
-			material = await loadSemiTransparentMaterial(theme,assetPath,scene)
-      // material = await loadPBRMaterial(theme)
-      return material
-    default:
-      material = await loadColorMaterial(theme,assetPath,scene)
-      return material
+const loadTheme = async (theme,p,s) => {
+  let material
+  if(theme.startsWith("#")){
+    material = await loadColorMaterial(theme,p,s)
+  } 
+  else if(theme.toLowerCase().startsWith("trans")) {
+    material = await loadSemiTransparentMaterial(theme,p,s)
   }
+  else {
+    console.log("load standard material")
+    material = await loadStandardMaterial(theme,p,s)
+    console.log("done loading standard material")
+  }
+  return material
 }
 
 export { loadTheme, importTextureAsync }

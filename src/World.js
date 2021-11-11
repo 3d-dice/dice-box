@@ -258,10 +258,10 @@ class World {
 
 		// loop through the number of dice in the group and roll each one
 		parsedNotation.forEach(notation => {
-			// console.log(`notation`, notation)
 			const rolls = {}
 			const index = hasGroupId ? groupId : this.#groupIndex
 
+			// load the theme prior to adding all the dice => give textures a chance to load so you don't see a flash of naked dice
 			this.#DiceWorld.loadTheme(this.config.theme).then((resp) => {
 				
 				for (var i = 0, len = notation.qty; i < len; i++) {

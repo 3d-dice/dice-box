@@ -1,96 +1,90 @@
-import worldWorker from './offscreenCanvas.worker?worker'
+import worldWorker from './offscreenCanvas.worker?worker' // using vits.js worker import - this will be compiled away
 
-class WorldOffScreen{
+class WorldOffScreen {
+	initialized = false
+	#offscreenCanvas
+	#OffscreenWorker
+	onInitComplete = () => {} // init callback
+	onRollResult = () => {} // individual die callback
+	onRollComplete = () => {} // roll group callback
+
 	constructor(options){
-		this.initialized = false
-		this.onInitComplete = () => {}
-		this.onRollResult = () => {}
-		this.onRollComplete = () => {}
 
-
-		this.offscreenCanvas = options.canvas.transferControlToOffscreen()
+		// transfer control offscreen
+		this.#offscreenCanvas = options.canvas.transferControlToOffscreen()
 
 		// initialize 3D World in which BabylonJS runs
-		this.offscreenWorker = new worldWorker()
+		this.#OffscreenWorker = new worldWorker()
 		// need to initialize the web worker and get confirmation that initialization is complete before other scripts can run
 		// set a property on the worker to a promise that is resolve when the proper message is returned from the worker
-		this.offscreenWorker.init = new Promise((resolve, reject) => {
+		this.#OffscreenWorker.init = new Promise((resolve, reject) => {
 			this.offscreenWorkerInit = resolve
 		})
 
-		this.initScene(options)
+		this.initialized = this.#initScene(options)
 	}
 
 	// initialize the babylon scene
-	async initScene(options) {
-		let canvas = options.canvas
-	
-		// set the config from World
-		this.config = options.options
-
+	async #initScene(config) {
 		// initalize the offscreen worker
-		this.offscreenWorker.postMessage({
+		this.#OffscreenWorker.postMessage({
 			action: "init",
-			canvas: this.offscreenCanvas,
-			width: canvas.clientWidth,
-			height: canvas.clientHeight,
-			options: this.config,
-		}, [this.offscreenCanvas])
+			canvas: this.#offscreenCanvas,
+			width: config.canvas.clientWidth,
+			height: config.canvas.clientHeight,
+			options: config.options,
+		}, [this.#offscreenCanvas])
 
 		// handle messages from offscreen BabylonJS World
-		this.offscreenWorker.onmessage = (e) => {
+		this.#OffscreenWorker.onmessage = (e) => {
 			switch( e.data.action ) {
 				case "init-complete":
 					this.offscreenWorkerInit() //fulfill promise so other things can run
 					break;
 				case 'roll-result':
 					const die = e.data.die
-					// map die results back to our rollData
-					// this.rollData[die.groupId].rolls[die.rollId].result = die.result
 					// TODO: die should have 'sides' or is that unnecessary data passed between workers?
 					this.onRollResult(die)
 					break;
 				case 'roll-complete':
-					// this.onRollComplete(this.getRollResults())
 					this.onRollComplete()
 					break;
 			}
 		}
-		await Promise.all([this.offscreenWorker.init])
+		await Promise.all([this.#OffscreenWorker.init])
 
 		this.onInitComplete(true)
+
+		return true
 	}
 
 	connect(port){
-		// Setup the connection: Port 1 is for this.offscreenWorker
-		this.offscreenWorker.postMessage({
+		// Setup the connection: Port 1 is for this.#OffscreenWorker
+		this.#OffscreenWorker.postMessage({
 			action : "connect",
 			port
 		},[ port ])
 	}
 
 	updateConfig(options){
-		this.offscreenWorker.postMessage({action: "updateConfig", options});
+		this.#OffscreenWorker.postMessage({action: "updateConfig", options});
 	}
 
 	resize(options){
-		this.offscreenWorker.postMessage({action: "resize", ...options});
+		this.#OffscreenWorker.postMessage({action: "resize", options});
 	}
 
 	clear(){
-		this.offscreenWorker.postMessage({action: "clearDice"})
+		this.#OffscreenWorker.postMessage({action: "clearDice"})
 	}
 
 	add(options){
-		this.offscreenWorker.postMessage({
-			action: "addDie",
-			options // TODO: other methods do not pass options object. Instead they are spread out
-		})
+		this.#OffscreenWorker.postMessage({action: "addDie", options})
 	}
 
 	remove(options){
 		// remove the die from the render
-		this.offscreenWorker.postMessage({action: "removeDie", ...options})
+		this.#OffscreenWorker.postMessage({action: "removeDie", options})
 	}
 }
 

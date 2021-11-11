@@ -1,149 +1,126 @@
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader'
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
+import { Vector3 } from '@babylonjs/core/Maths/math'
+import { Ray } from "@babylonjs/core/Culling/ray";
 import '../../helpers/babylonFileLoader'
 import '@babylonjs/core/Meshes/instancedMesh'
+import { meshFaceIds } from './meshFaceIds';
 
 import { loadTheme } from './themes'
 
-// caching some variables here
-let meshes = {}, themes = {}, diceCombos = {}, count = 0
+let times = []
+const average = (array) => array.reduce((a, b) => a + b) / array.length;
+let timer
+let averageTimer = ()=>{
+  console.log(`average`, average(times))
+}
+
 const defaultOptions = {
-	theme: 'nebula',
+  assetPath: '',
+  enableShadows: false,
+  groupId: null,
+  id: null,
 	lights: [],
-	enableShadows: false
+  rollId: null,
+  scene: null,
+  sides: 6,
+  theme: 'purpleRock'
 }
 
 class Dice {
+  mesh = null
+  result = 0
+  asleep = false
   constructor(options) {
-		// const {dieType = 'd20', theme = defaultTheme, ...rest}, sceneLights, enableShadows = options
-		Object.assign(this, defaultOptions, options)
-    this.count = 0
-    // this.id = options.id !== undefined ? options.id : this.count++
-		// this.dieType = `d${this.sides}`
-    // this.mesh = null
-    this.meshes = {}
-    this.themes = {}
-    this.diceCombos = {}
-    // this._result = null
-    // this.asleep = false
-    // this.comboKey = `${this.dieType}_${this.theme}`
-    // this.createInstance()
+    this.config = {...defaultOptions, ...options}
+    this.id = this.config.id !== undefined ? this.config.id : Date.now()
+		this.dieType = `d${this.config.sides}`
+    this.comboKey = `${this.dieType}_${this.config.theme}`
+
+    this.createInstance()
+    
   }
 
-	// get result() {
-  //   return this._result
-  // }
+  createInstance() {
+    const t1 = performance.now()
 
-  // set result(val) {
-  //   this._result = val
-  // }
+    const dieInstance = this.config.scene.getMeshByName(this.comboKey).createInstance(`${this.dieType}-instance-${this.id}`)
+    const dieHitbox = this.config.scene.getMeshByName(`${this.dieType}_hitbox`).createInstance(`${this.dieType}-hitbox-${this.id}`)
 
-	resetCount(){
-		this.count = 0
-	}
-
-  createInstance(options) {
-
-    // console.log(`dice options:`, options)
-
-    const config = {...defaultOptions, ...options}
-
-    // why id?
-    const die = {
-      ...config,
-      id: config.id !== undefined ? config.id : this.count++,
-      dieType: `d${config.sides}`
-    }
-    // const id = config.id !== undefined ? config.id : this.count++
-    const dieType = `d${config.sides}`
-    const comboKey = `d${config.sides}_${config.theme}`
-    // create die instance
-    const dieInstance = this.diceCombos[comboKey].createInstance(`${dieType}-instance-${this.count}`)
-
-    this.meshes[die.dieType].getChildTransformNodes().map(child => {
-      const locator = child.clone(child.id)
-      locator.setAbsolutePosition(child.getAbsolutePosition())
-      dieInstance.addChild(locator)
-    })
+    dieInstance.addChild(dieHitbox)
 
 		// start the instance under the floor, out of camera view
 		dieInstance.position.y = -100
-		dieInstance.position.x = this.count * -2.5
 		
-		//TODO: die is loading in the middle of the screen. flashes before animation starts
-		// hide the die, reveal when it's ready to toss or after first update from physics
-    if(config.enableShadows){
-      for (const key in config.lights) {
+    if(this.config.enableShadows){
+      for (const key in this.config.lights) {
         if(key !== 'hemispheric' ) {
-          config.lights[key].shadowGenerator.addShadowCaster(dieInstance)
+          this.config.lights[key].shadowGenerator.addShadowCaster(dieInstance)
         }
       }
     }
 
     // attach the instance to the class object
-    die.mesh = dieInstance
+    this.mesh = dieInstance
 
-    // console.log(`count`, count)
-    this.count++
+    const t2 = performance.now()
+    times.push(t2 - t1)
+    clearTimeout(timer)
+    timer = setTimeout(averageTimer,1000)
 
-    return die
+
+    // return die
   }
 
   // TODO: add themeOptions for colored materials, must ensure theme and themeOptions are unique somehow
-  async loadDie(options) {
-    const { sides, theme = defaultOptions.theme, scene, engine} = options
+  static async loadDie(options) {
+    console.log("start loading die")
+    const { sides, theme = 'purpleRock', assetPath, scene} = options
 		let dieType = 'd' + sides
     // create a key for this die type and theme combo for caching and instance creation
     const comboKey = `${dieType}_${theme}`
 
     // load the theme first - each theme should contain the textures for all dice types
-    if (!Object.keys(this.themes).includes(theme)) {
-      this.themes[theme] = await loadTheme(theme, this.assetPath, scene, engine)
+    if (!scene.getMaterialByName(theme)) {
+      console.log("load theme")
+      await loadTheme(theme, assetPath, scene)
+      console.log("done loading theme")
     }
 
-    // cache die and theme combo for instances
-    if (!Object.keys(this.diceCombos).includes(comboKey)) {
-      const die = this.meshes[dieType].clone(comboKey)
+    if (!scene.getMeshByName(comboKey)) {
+      const die = scene.getMeshByName(dieType).clone(comboKey)
       die.material = scene.getMaterialByName(theme)
       // die.material.freeze()
-      this.diceCombos[comboKey] = die
     }
+
+    console.log("done loading die")
 
     return options
   }
 
   // load all the dice models
-  async loadModels(assetPath,scene) {
-		this.assetPath = assetPath
+  static async loadModels(options) {
+    const {assetPath, scene} = options
     const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "diceMeshes.babylon", scene)
 
     models.meshes.forEach(model => {
+
       if(model.id === "__root__") return
-      model.setEnabled(false)
-      // model.receiveShadows = true
-      model.freezeNormals()
-      // model.scaling = new Vector3(1, 1, 1)
-      this.meshes[model.id] = model
+        model.setEnabled(false)
+        model.freezeNormals()
+        // meshes[model.id] = model
     })
-    // return models
   }
 
   static async getRollResult(die) {
     const getDieRoll = (d=die) => new Promise((resolve,reject) => {
-    // const getDieRoll = (d = die) => {
-      let highestDot = -1
-      let highestLocator
-      for (let locator of d.mesh.getChildTransformNodes()) {
-        const dot = locator.up.y
-        if (dot > highestDot) {
-          highestDot = dot
-          highestLocator = locator
-        }
-      }
 
-      // locators may have crazy names after being instanced, but they all end in '_##' for the face they are on
-			const result = parseInt(highestLocator.name.slice(highestLocator.name.lastIndexOf('_')+1))
-			die.result = result
-      return resolve(result)
+			const vector = d.dieType === 'd4' ? new Vector3(0, -1, 0) : new Vector3(0, 1, 0)
+			const picked = d.config.scene.pickWithRay(new Ray(d.mesh.position, vector, 3))
+
+			d.result = meshFaceIds[d.dieType][picked.faceId]
+
+      return resolve(d.result)
     })
     return await getDieRoll()
   }

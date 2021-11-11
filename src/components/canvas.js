@@ -1,8 +1,4 @@
-const defaultOptions = {
-  id: `canvas-${Date.now()}`
-}
-
-function createCanvas(options = defaultOptions) {
+function createCanvas(options) {
   const { selector, id } = options
 
   if (!selector) {

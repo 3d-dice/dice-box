@@ -98,63 +98,62 @@ self.onmessage = (e) => {
 // runs when the worker loads to set up the Ammo physics world and load our colliders
 // loaded colliders will be cached and added to the world in a later post message
 const init = async (data) => {
-		width = data.width
-		height = data.height
-		aspect = width / height
-		config = {...config,...data.options}
+	width = data.width
+	height = data.height
+	aspect = width / height
+	config = {...config,...data.options}
 
-		const ammoWASM = {
-			// locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
-			locateFile: () => `${config.assetPath}ammo/ammo.wasm.wasm`
-		}
+	const ammoWASM = {
+		// locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
+		locateFile: () => `${config.assetPath}ammo/ammo.wasm.wasm`
+	}
 
-		Ammo = await new AmmoJS(ammoWASM)
+	Ammo = await new AmmoJS(ammoWASM)
 
-		tmpBtTrans = new Ammo.btTransform()
-		sharedVector3 = new Ammo.btVector3(0, 0, 0)
+	tmpBtTrans = new Ammo.btTransform()
+	sharedVector3 = new Ammo.btVector3(0, 0, 0)
 
-		setStartPosition(aspect)
-		
-		// load our collider data
-		// perhaps we don't await this, let it run and resolve it later
-		const modelData = await fetch(`${config.assetPath}models/diceColliders.json`).then(resp => {
-			if(resp.ok) {
-				const contentType = resp.headers.get("content-type")
+	setStartPosition(aspect)
+	
+	// load our collider data
+	// perhaps we don't await this, let it run and resolve it later
+	const modelData = await fetch(`${config.assetPath}models/diceColliders.json`).then(resp => {
+		if(resp.ok) {
+			const contentType = resp.headers.get("content-type")
 
-				if (contentType && contentType.indexOf("application/json") !== -1) {
-					return resp.json()
-				} 
-				else if (resp.type && resp.type === 'basic') {
-					return resp.json()
-				}
-				else {
-					return resp
-				}
-			} else {
-				throw new Error(`Request rejected with status ${resp.status}: ${resp.statusText}`)
+			if (contentType && contentType.indexOf("application/json") !== -1) {
+				return resp.json()
+			} 
+			else if (resp.type && resp.type === 'basic') {
+				return resp.json()
 			}
-		})
-		.then(data => {
-			return data.meshes
-		})
-		.catch(error => {
-			console.error(error)
-			return error
-		})
-		
-		physicsWorld = setupPhysicsWorld()
+			else {
+				return resp
+			}
+		} else {
+			throw new Error(`Request rejected with status ${resp.status}: ${resp.statusText}`)
+		}
+	})
+	.then(data => {
+		// console.log(`data`, data)
+		return data.meshes
+	})
+	.catch(error => {
+		console.error(error)
+		return error
+	})
+	
+	physicsWorld = setupPhysicsWorld()
 
-		// turn our model data into convex hull items for the physics world
-		modelData.forEach((model,i) => {
-			model.convexHull = createConvexHull(model)
-			// model.physicsBody = createRigidBody(model.convexHull, {mass: model.mass})
+	// turn our model data into convex hull items for the physics world
+	modelData.forEach((model,i) => {
+		model.convexHull = createConvexHull(model)
+		// model.physicsBody = createRigidBody(model.convexHull, {mass: model.mass})
 
-			colliders[model.id] = model
-		})
+		colliders[model.id] = model
+	})
 
-		addBoxToWorld(zoom[config.zoomLevel])
-
-		// loop()
+	addBoxToWorld(zoom[config.zoomLevel])
 
 }
 

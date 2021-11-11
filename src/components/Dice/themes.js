@@ -3,6 +3,7 @@ import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { CustomMaterial } from '@babylonjs/materials/custom/customMaterial';
 
+
 async function loadStandardMaterial(theme,assetPath,scene) {
   let diceMaterial = new StandardMaterial(theme,scene);
   let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,scene)
@@ -74,11 +75,10 @@ const sharedSettings = (material) => {
 }
 
 
-
 async function importTextureAsync(url, scene) {
   return new Promise((resolve, reject) => {
     let texture = new Texture(
-      url + '?' + Date.now(), // url: Nullable<string>
+      url, // url: Nullable<string>
       scene, // sceneOrEngine: Nullable<Scene | ThinEngine>
       undefined, // noMipmapOrOptions?: boolean | ITextureCreationOptions
       false, // invertY?: boolean
@@ -89,22 +89,18 @@ async function importTextureAsync(url, scene) {
   })
 }
 
-const loadTheme = async (theme,assetPath,scene) => {
-  let material;
-  switch (theme) {
-    case 'purpleRock':
-    case 'molten':
-      material = await loadStandardMaterial(theme,assetPath,scene)
-      // material = await loadPBRMaterial(theme)
-      return material
-		case 'glass':
-			material = await loadSemiTransparentMaterial(theme,assetPath,scene)
-      // material = await loadPBRMaterial(theme)
-      return material
-    default:
-      material = await loadColorMaterial(theme,assetPath,scene)
-      return material
+const loadTheme = async (theme,p,s) => {
+  let material
+  if(theme.startsWith("#")){
+    material = await loadColorMaterial(theme,p,s)
+  } 
+  else if(theme.toLowerCase().startsWith("trans")) {
+    material = await loadSemiTransparentMaterial(theme,p,s)
   }
+  else {
+    material = await loadStandardMaterial(theme,p,s)
+  }
+  return material
 }
 
 export { loadTheme, importTextureAsync }

@@ -4,6 +4,7 @@ import { createCamera } from './camera'
 import DiceBox from './DiceBox'
 import { createLights } from './lights'
 import Dice from './Dice'
+import { loadTheme } from './Dice/themes'
 
 class WorldOnscreen {
 	config
@@ -133,6 +134,10 @@ class WorldOnscreen {
 		}
 	}
 
+	async loadTheme(theme) {
+		await loadTheme(theme, this.config.assetPath, this.#scene)
+	}
+
 	clear() {
 		if(!this.#dieCache.length && !this.#sleeperCache.length) {
 			return
@@ -154,55 +159,31 @@ class WorldOnscreen {
 	}
 
 	add(options) {
-		// space out adding the dice so they don't lump together too much
-		
-		// this.#dieRollTimer.push(setTimeout(() => {
-		// 	this._add({...options},count)
-		// }, this.#count++ * this.config.delay))
-		const dieOptions = {
+		// loadDie allows you to specify sides(dieType) and theme and returns the options you passed in
+		Dice.loadDie({
+			...options,
+			scene: this.#scene
+		}).then(resp => {
+			// space out adding the dice so they don't lump together too much
+			this.#dieRollTimer.push(setTimeout(() => {
+				this.#add(resp)
+			}, this.#count++ * this.config.delay))
+		})
+	}
+
+	// add a die to the scene
+	async #add(options) {
+		if(this.#engine.activeRenderLoops.length === 0) {
+			this.render()
+		}
+		const diceOptions = {
 			...options,
 			assetPath: this.config.assetPath,
 			enableShadows: this.config.enableShadows,
 			lights: this.#lights,
-			scene: this.#scene
 		}
-		let count = this.#count
-		console.log("await loadDie", count)
-		this.#dieRollTimer.push(setTimeout(() => {
-		Dice.loadDie(dieOptions).then(resp => {
-				this._add({...resp},count)
-			})
-		}, this.#count++ * this.config.delay))
-		console.log("die loaded", count)
-
-	}
-
-	// add a die to the scene
-	async _add(options,count) {
-		if(this.#engine.activeRenderLoops.length === 0) {
-			this.render()
-		}
-		// const themes = ['galaxy','gemstone','glass','iron','nebula','sunrise','sunset','walnut']
-		// options.theme = themes[Math.floor(Math.random() * themes.length)]
-		// loadDie allows you to specify sides(dieType) and theme and returns the options you passed in
-		// console.log("await loadDie", count)
-		// const newDie = await Dice.loadDie({
-		// 	...options,
-		// 	assetPath: this.config.assetPath,
-		// 	enableShadows: this.config.enableShadows,
-		// 	lights: this.#lights,
-		// 	scene: this.#scene
-		// }).then( (response) =>  {
-		// 	// after the die model and textures have loaded we can add the die to the scene for rendering
-		// 	console.log(`creating die`, count)
-		// 	return new Dice(response)
-		// })
-
-		console.log(`creating die`, count)
-
-		const newDie = new Dice(options)
-
-		console.log("die created", count)
+		
+		const newDie = new Dice(diceOptions)
 		
 		// save the die just created to the cache
 		this.#dieCache.push(newDie)
@@ -217,7 +198,7 @@ class WorldOnscreen {
 		// for d100's we need to add an additional d10 and pair it up with the d100 just created
 		if(options.sides === 100) {
 			// assign the new die to a property on the d100 - spread the options in order to pass a matching theme
-			newDie.d10Instance = await Dice.loadDie({...options, sides: 10}).then( response =>  {
+			newDie.d10Instance = await Dice.loadDie({...diceOptions, sides: 10}).then( response =>  {
 				const d10Instance = new Dice(response)
 				// identify the parent of this d10 so we can calculate the roll result later
 				d10Instance.dieParent = newDie

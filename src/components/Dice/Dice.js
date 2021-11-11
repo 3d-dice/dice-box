@@ -1,12 +1,9 @@
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader'
-import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import { Vector3 } from '@babylonjs/core/Maths/math'
 import { Ray } from "@babylonjs/core/Culling/ray";
 import '../../helpers/babylonFileLoader'
 import '@babylonjs/core/Meshes/instancedMesh'
 import { meshFaceIds } from './meshFaceIds';
-
-import { loadTheme } from './themes'
 
 let times = []
 const average = (array) => array.reduce((a, b) => a + b) / array.length;
@@ -14,6 +11,7 @@ let timer
 let averageTimer = ()=>{
   console.log(`average`, average(times))
 }
+let count = 0
 
 const defaultOptions = {
   assetPath: '',
@@ -67,33 +65,20 @@ class Dice {
     times.push(t2 - t1)
     clearTimeout(timer)
     timer = setTimeout(averageTimer,1000)
-
-
-    // return die
   }
 
   // TODO: add themeOptions for colored materials, must ensure theme and themeOptions are unique somehow
   static async loadDie(options) {
-    console.log("start loading die")
-    const { sides, theme = 'purpleRock', assetPath, scene} = options
+    const { sides, theme = 'purpleRock', scene} = options
 		let dieType = 'd' + sides
     // create a key for this die type and theme combo for caching and instance creation
     const comboKey = `${dieType}_${theme}`
-
-    // load the theme first - each theme should contain the textures for all dice types
-    if (!scene.getMaterialByName(theme)) {
-      console.log("load theme")
-      await loadTheme(theme, assetPath, scene)
-      console.log("done loading theme")
-    }
 
     if (!scene.getMeshByName(comboKey)) {
       const die = scene.getMeshByName(dieType).clone(comboKey)
       die.material = scene.getMaterialByName(theme)
       // die.material.freeze()
     }
-
-    console.log("done loading die")
 
     return options
   }

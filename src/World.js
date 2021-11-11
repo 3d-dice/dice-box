@@ -262,33 +262,36 @@ class World {
 			const rolls = {}
 			const index = hasGroupId ? groupId : this.#groupIndex
 
-			for (var i = 0, len = notation.qty; i < len; i++) {
-				// id's start at zero and zero can be falsy, so we check for undefined
-				let rollId = notation.rollId !== undefined ? notation.rollId : this.#rollIndex++
-				let id = notation.id !== undefined ? notation.id : this.#idIndex++
-
-				const roll = {
-					sides: notation.sides,
-					groupId: index,
-					rollId,
-					id,
-					theme: this.config.theme
-				}
-	
-				rolls[rollId] = roll
-
-				this.#DiceWorld.add(roll)
+			this.#DiceWorld.loadTheme(this.config.theme).then((resp) => {
 				
-			}
+				for (var i = 0, len = notation.qty; i < len; i++) {
+					// id's start at zero and zero can be falsy, so we check for undefined
+					let rollId = notation.rollId !== undefined ? notation.rollId : this.#rollIndex++
+					let id = notation.id !== undefined ? notation.id : this.#idIndex++
 	
-			if(hasGroupId) {
-				Object.assign(this.rollData[groupId].rolls, rolls)
-			} else {
-				// save this roll group for later
-				notation.rolls = rolls
-				this.rollData[index] = notation
-				++this.#groupIndex
-			}
+					const roll = {
+						sides: notation.sides,
+						groupId: index,
+						rollId,
+						id,
+						theme: this.config.theme
+					}
+		
+					rolls[rollId] = roll
+	
+					this.#DiceWorld.add(roll)
+					
+				}
+		
+				if(hasGroupId) {
+					Object.assign(this.rollData[groupId].rolls, rolls)
+				} else {
+					// save this roll group for later
+					notation.rolls = rolls
+					this.rollData[index] = notation
+					++this.#groupIndex
+				}
+			})
 		})
 	}
 

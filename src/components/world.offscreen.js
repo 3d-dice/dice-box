@@ -2,6 +2,7 @@ import worldWorker from './offscreenCanvas.worker?worker' // using vits.js worke
 
 class WorldOffScreen {
 	initialized = false
+	themeLoaded
 	#offscreenCanvas
 	#OffscreenWorker
 	onInitComplete = () => {} // init callback
@@ -41,6 +42,9 @@ class WorldOffScreen {
 				case "init-complete":
 					this.offscreenWorkerInit() //fulfill promise so other things can run
 					break;
+				case "theme-loaded":
+					this.themeLoaded()
+					break;
 				case 'roll-result':
 					const die = e.data.die
 					// TODO: die should have 'sides' or is that unnecessary data passed between workers?
@@ -72,6 +76,13 @@ class WorldOffScreen {
 
 	resize(options){
 		this.#OffscreenWorker.postMessage({action: "resize", options});
+	}
+
+	async loadTheme(theme) {
+		return new Promise((resolve, reject) => {
+			this.#OffscreenWorker.postMessage({action: "loadTheme", theme})
+			this.themeLoaded = resolve
+		})
 	}
 
 	clear(){

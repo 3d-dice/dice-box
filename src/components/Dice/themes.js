@@ -5,7 +5,6 @@ import { CustomMaterial } from '@babylonjs/materials/custom/customMaterial';
 
 
 async function loadStandardMaterial(theme,assetPath,scene) {
-  console.log("loadStandardMaterial")
   let diceMaterial = new StandardMaterial(theme,scene);
   let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,scene)
   let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal.jpg`,scene)
@@ -13,8 +12,6 @@ async function loadStandardMaterial(theme,assetPath,scene) {
   diceMaterial.bumpTexture = diceBumpTexture
 
 	sharedSettings(diceMaterial)
-
-  console.log("done loadStandardMaterial")
 
   return diceMaterial
 }
@@ -79,7 +76,6 @@ const sharedSettings = (material) => {
 
 
 async function importTextureAsync(url, scene) {
-  console.log("importTextureAsync")
   return new Promise((resolve, reject) => {
     let texture = new Texture(
       url, // url: Nullable<string>
@@ -87,10 +83,7 @@ async function importTextureAsync(url, scene) {
       undefined, // noMipmapOrOptions?: boolean | ITextureCreationOptions
       false, // invertY?: boolean
       undefined, // samplingMode?: number
-      () => {
-        console.log("done importTextureAsync", texture)
-        return resolve(texture)
-      }, // onLoad?: Nullable<() => void>
+      () => resolve(texture), // onLoad?: Nullable<() => void>
       () => reject("Unable to load texture") // onError?: Nullable<(message?: string
     )
   })
@@ -105,9 +98,7 @@ const loadTheme = async (theme,p,s) => {
     material = await loadSemiTransparentMaterial(theme,p,s)
   }
   else {
-    console.log("load standard material")
     material = await loadStandardMaterial(theme,p,s)
-    console.log("done loading standard material")
   }
   return material
 }

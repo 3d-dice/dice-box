@@ -90,7 +90,6 @@ class WorldOffScreen {
 	}
 
 	add(options){
-		console.log("passing through world.offscreen", options)
 		this.#OffscreenWorker.postMessage({action: "addDie", options})
 	}
 

@@ -79,7 +79,7 @@ class WorldOffScreen {
 	}
 
 	async loadTheme(theme) {
-		await new Promise((resolve, reject) => {
+		new Promise((resolve, reject) => {
 			this.#OffscreenWorker.postMessage({action: "loadTheme", theme})
 			this.themeLoaded = resolve
 		})

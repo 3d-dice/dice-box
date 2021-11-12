@@ -5,14 +5,6 @@ import '../../helpers/babylonFileLoader'
 import '@babylonjs/core/Meshes/instancedMesh'
 import { meshFaceIds } from './meshFaceIds';
 
-let times = []
-const average = (array) => array.reduce((a, b) => a + b) / array.length;
-let timer
-let averageTimer = ()=>{
-  console.log(`average`, average(times))
-}
-let count = 0
-
 const defaultOptions = {
   assetPath: '',
   enableShadows: false,
@@ -40,8 +32,6 @@ class Dice {
   }
 
   createInstance() {
-    const t1 = performance.now()
-
     const dieInstance = this.config.scene.getMeshByName(this.comboKey).createInstance(`${this.dieType}-instance-${this.id}`)
     const dieHitbox = this.config.scene.getMeshByName(`${this.dieType}_hitbox`).createInstance(`${this.dieType}-hitbox-${this.id}`)
 
@@ -60,11 +50,6 @@ class Dice {
 
     // attach the instance to the class object
     this.mesh = dieInstance
-
-    const t2 = performance.now()
-    times.push(t2 - t1)
-    clearTimeout(timer)
-    timer = setTimeout(averageTimer,1000)
   }
 
   // TODO: add themeOptions for colored materials, must ensure theme and themeOptions are unique somehow
@@ -89,11 +74,9 @@ class Dice {
     const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "diceMeshes.babylon", scene)
 
     models.meshes.forEach(model => {
-
       if(model.id === "__root__") return
-        model.setEnabled(false)
-        model.freezeNormals()
-        // meshes[model.id] = model
+      model.setEnabled(false)
+      model.freezeNormals()
     })
   }
 

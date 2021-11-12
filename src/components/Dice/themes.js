@@ -3,6 +3,9 @@ import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { CustomMaterial } from '@babylonjs/materials/custom/customMaterial';
 
+function sleeper(ms) {
+  return new Promise(resolve => setTimeout(() => resolve(), ms));
+}
 
 async function loadStandardMaterial(theme,assetPath,scene) {
   let diceMaterial = new StandardMaterial(theme,scene);
@@ -98,7 +101,9 @@ const loadTheme = async (theme,p,s) => {
     material = await loadSemiTransparentMaterial(theme,p,s)
   }
   else {
+    // await sleeper(3000).then(async ()=>{
     material = await loadStandardMaterial(theme,p,s)
+    // })
   }
   return material
 }

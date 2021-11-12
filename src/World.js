@@ -19,6 +19,7 @@ const defaultOptions = {
 
 class World {
 	rollData = []
+	themeData = []
 	#groupIndex = 0
 	#rollIndex = 0
 	#idIndex = 0
@@ -252,46 +253,56 @@ class World {
 		return this
   }
 
+	async loadTheme(){
+		if(this.themeData.includes(this.config.theme)){
+			return
+		} else {
+			await this.#DiceWorld.loadTheme(this.config.theme)
+			this.themeData.push(this.config.theme)
+		}
+	}
+
 	// used by both .add and .roll - .roll clears the box and .add does not
-	#makeRoll(parsedNotation, groupId){
+	async #makeRoll(parsedNotation, groupId){
 		const hasGroupId = groupId !== undefined
+
+		// load the theme prior to adding all the dice => give textures a chance to load so you don't see a flash of naked dice
+		await this.loadTheme()
 
 		// loop through the number of dice in the group and roll each one
 		parsedNotation.forEach(notation => {
 			const rolls = {}
-			const index = hasGroupId ? groupId : this.#groupIndex
+			// let index = hasGroupId ? groupId : this.#groupIndex
+			let index
 
-			// load the theme prior to adding all the dice => give textures a chance to load so you don't see a flash of naked dice
-			this.#DiceWorld.loadTheme(this.config.theme).then((resp) => {
-				
-				for (var i = 0, len = notation.qty; i < len; i++) {
-					// id's start at zero and zero can be falsy, so we check for undefined
-					let rollId = notation.rollId !== undefined ? notation.rollId : this.#rollIndex++
-					let id = notation.id !== undefined ? notation.id : this.#idIndex++
-	
-					const roll = {
-						sides: notation.sides,
-						groupId: index,
-						rollId,
-						id,
-						theme: this.config.theme
-					}
-		
-					rolls[rollId] = roll
-	
-					this.#DiceWorld.add(roll)
-					
+			for (var i = 0, len = notation.qty; i < len; i++) {
+				// id's start at zero and zero can be falsy, so we check for undefined
+				let rollId = notation.rollId !== undefined ? notation.rollId : this.#rollIndex++
+				let id = notation.id !== undefined ? notation.id : this.#idIndex++
+				index = hasGroupId ? groupId : this.#groupIndex
+
+				const roll = {
+					sides: notation.sides,
+					groupId: index,
+					rollId,
+					id,
+					theme: this.config.theme
 				}
-		
-				if(hasGroupId) {
-					Object.assign(this.rollData[groupId].rolls, rolls)
-				} else {
-					// save this roll group for later
-					notation.rolls = rolls
-					this.rollData[index] = notation
-					++this.#groupIndex
-				}
-			})
+
+				rolls[rollId] = roll
+
+				this.#DiceWorld.add(roll)
+
+			}
+
+			if(hasGroupId) {
+				Object.assign(this.rollData[groupId].rolls, rolls)
+			} else {
+				// save this roll group for later
+				notation.rolls = rolls
+				this.rollData[index] = notation
+				++this.#groupIndex
+			}
 		})
 	}
 

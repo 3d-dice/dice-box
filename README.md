@@ -19,14 +19,14 @@ This is an ES module intended to be part of a build system. To import the module
 import DiceBox from '@3d-dice/dice-box'
 ```
 
-Then create a new instance of the `DiceBox` class. Be sure to set the path to the assets folder copied earlier.
+Then create a new instance of the `DiceBox` class. The arguments are first a selector for the target DOM node followed by an object of config options. Be sure to set the path to the assets folder copied earlier. It's the only required config option.
 ```javascript
-const diceBox = new DiceBox({
+const diceBox = new DiceBox("#dice-box", {
   assetPath: '/assets/'
 })
 ```
 
-After you initialize the class then it will be ready to roll some dice. The `init` method is an async method so it can be awaited or followed by a `.then()` method.
+Next you initialize the class object then it will be ready to roll some dice. The `init` method is an async method so it can be awaited or followed by a `.then()` method.
 ```javascript
 diceBox.init().then(()=>{
   diceBox.roll('2d20')
@@ -54,7 +54,7 @@ Dice-Box can only accept simple dice notations and a modifier such as `2d20` or 
 |offscreen|true|If offscreenCanvas is available it will be used|
 |delay|10|The delay between dice being generate. If they're all generated at the same time they instantly collide with each other which doesn't look very natural.|
 |enableShadows|true|Do the dice cast a shadow? Turn off for a performance bump|
-|theme|'nebula'| Options are 'galaxy', 'gemstone', 'glass', 'iron', 'nebula', 'sunrise','sunset', and 'walnut' or you can assign a HEX color value.|
+|theme|'purpleRock'| The only named theme currently is 'purpleRock', or you can assign a HEX color value.|
 |zoomLevel|3| Options are 0-7. The higher the number the larger the dice.|
 
 ### Results Object
@@ -143,4 +143,79 @@ diceBox.hide()
 This will show the canvas element that the dice box is rendered to.
 ```javascript
 diceBox.show()
+```
+
+## Other setup options
+In my demo project I have it set up as seen below. You probably won't need the `BoxControls` but they're fun to play with.
+```javascript
+import './style.css'
+import DiceBox from '@3d-dice/dice-box'
+import { DisplayResults, AdvancedRoller, BoxControls } from '@3d-dice/fui'
+
+let Box = new DiceBox("#dice-box",{
+  assetPath: '/assets/dice-box/',
+})
+
+document.addEventListener("DOMContentLoaded", async() => {
+
+  Box.init().then(()=>{
+    const Controls = new BoxControls({
+      onUpdate: (updates) => {
+        Box.updateConfig(updates)
+      }
+    })	
+    // create display overlay
+    const Display = new DisplayResults("#dice-box")	
+
+    // create Roller Input
+    const Roller = new AdvancedRoller({
+      target: '#dice-box',
+      onSubmit: (notation) => Box.roll(notation),
+      onClear: () => {
+        Box.clear()
+        Display.clear()
+      },
+      onReroll: (rolls) => {
+        // loop through parsed roll notations and send them to the Box
+        rolls.forEach(roll => Box.add(roll,roll.groupId))
+      },
+      onResults: (results) => {
+        Display.showResults(results)
+      }
+    })
+
+    // pass dice rolls to Advanced Roller to handle
+    Box.onRollComplete = (results) => {
+      Roller.handleResults(results)
+    }
+
+  })
+```
+
+```css
+html,
+body {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#dice-box {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  background-image: url(./assets/woodgrain2.jpg);
+  background-size: cover;
+}
+
+#dice-box canvas {
+  width: 100%;
+  height: 100%;
+}
 ```

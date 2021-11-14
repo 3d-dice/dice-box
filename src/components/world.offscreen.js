@@ -1,9 +1,11 @@
 import worldWorker from './offscreenCanvas.worker?worker' // using vits.js worker import - this will be compiled away
+import { createUUID } from '../helpers'
 
 class WorldOffScreen {
 	initialized = false
 	offscreenWorkerInit = false
 	themeLoadedInit = false
+	pendingThemePromises = []
 	#offscreenCanvas
 	#OffscreenWorker
 	onInitComplete = () => {} // init callback
@@ -44,7 +46,7 @@ class WorldOffScreen {
 					this.offscreenWorkerInit() //fulfill promise so other things can run
 					break;
 				case "theme-loaded":
-					this.themeLoadedInit()
+					this.pendingThemePromises[e.data.id]()
 					break;
 				case 'roll-result':
 					const die = e.data.die
@@ -80,9 +82,12 @@ class WorldOffScreen {
 	}
 
 	async loadTheme(theme) {
+		const id = createUUID()
+
 		return new Promise((resolve, reject) => {
-			this.#OffscreenWorker.postMessage({action: "loadTheme", theme})
-			this.themeLoadedInit = resolve
+			this.#OffscreenWorker.postMessage({action: "loadTheme", id, theme})
+			// this.themeLoadedInit = resolve
+			this.pendingThemePromises[id] = resolve
 		})
 	}
 

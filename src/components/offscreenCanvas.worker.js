@@ -34,7 +34,7 @@ self.onmessage = (e) => {
 			add({...e.data.options})
       break
 		case "loadTheme":
-			loadThemes(e.data.theme)
+			loadThemes(e.data.id,e.data.theme)
 			break
     case "clearDice":
 			clear()
@@ -165,9 +165,9 @@ const renderLoop = () => {
   }
 }
 
-const loadThemes = async (theme) => {
+const loadThemes = async (id,theme) => {
 	await loadTheme(theme, config.assetPath, scene)
-	self.postMessage({action:"theme-loaded"})
+	self.postMessage({action:"theme-loaded",id})
 }
 
 const clear = () => {

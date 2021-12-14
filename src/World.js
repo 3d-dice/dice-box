@@ -1,9 +1,7 @@
 import { createCanvas } from './components/canvas'
-import WorldOffscreen from './components/world.offscreen'
-import physicsWorker from './components/physics.worker.js?worker'
+// import WorldOffscreen from './components/world.offscreen'
+import physicsWorker from './components/physics.worker.js?worker&inline'
 import { debounce } from './helpers'
-
-console.log(`import.meta`, import.meta)
 
 const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
@@ -16,7 +14,8 @@ const defaultOptions = {
 	zoomLevel: 3, // 0-7, can we round it out to 9? And reverse it because higher zoom means closer
 	theme: '#0974e6', // can be a hex color or a pre-defined theme such as 'purpleRock'
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
-	assetPath: '/assets/dice-box/' // path to 'ammo', 'models', 'themes' folders and web workers
+	assetPath: '/assets/dice-box/', // path to 'ammo', 'models', 'themes' folders and web workers
+	origin: location.origin,
 }
 
 class World {
@@ -46,7 +45,7 @@ class World {
 	async #loadWorld(){
 		if ("OffscreenCanvas" in window && "transferControlToOffscreen" in this.canvas && this.config.offscreen) { 
 			// Ok to use offscreen canvas - transfer controll offscreen
-			// const WorldOffscreen = await import('./components/world.offscreen').then(module => module.default)
+			const WorldOffscreen = await import('./components/world.offscreen').then(module => module.default)
 			// WorldOffscreen is just a container class that passes all method calls to the Offscreen Canvas worker
 			this.#DiceWorld = new WorldOffscreen({
 				canvas: this.canvas,

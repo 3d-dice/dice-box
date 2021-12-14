@@ -54,7 +54,7 @@ class WorldOnscreen {
 		// loading all our dice models
 		// we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
 		await Dice.loadModels({
-			assetPath: this.config.assetPath,
+			assetPath: this.config.origin + this.config.assetPath,
 			scene: this.#scene
 		})
 
@@ -141,7 +141,7 @@ class WorldOnscreen {
 	}
 
 	async loadTheme(theme) {
-		await loadTheme(theme, this.config.assetPath, this.#scene)
+		await loadTheme(theme, this.config.origin + this.config.assetPath, this.#scene)
 	}
 
 	clear() {

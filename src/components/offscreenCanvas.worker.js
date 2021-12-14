@@ -97,7 +97,7 @@ const initScene = async (data) => {
   // loading all our dice models
   // we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
   await Dice.loadModels({
-		assetPath: config.assetPath,
+		assetPath: config.origin + config.assetPath,
 		scene
 	})
 
@@ -166,7 +166,7 @@ const renderLoop = () => {
 }
 
 const loadThemes = async (id,theme) => {
-	await loadTheme(theme, config.assetPath, scene)
+	await loadTheme(theme, config.origin + config.assetPath, scene)
 	self.postMessage({action:"theme-loaded",id})
 }
 

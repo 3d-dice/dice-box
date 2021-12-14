@@ -143,7 +143,7 @@ const init = async (data) => {
 
 	const ammoWASM = {
 		// locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
-		locateFile: () => `${config.assetPath}ammo/ammo.wasm.wasm`
+		locateFile: () => `${config.origin + config.assetPath}ammo/ammo.wasm.wasm`
 	}
 
 	Ammo = await new AmmoJS(ammoWASM)
@@ -156,7 +156,7 @@ const init = async (data) => {
 	
 	// load our collider data
 	// perhaps we don't await this, let it run and resolve it later
-	const modelData = await fetch(`${config.assetPath}models/diceColliders.json`).then(resp => {
+	const modelData = await fetch(`${config.origin + config.assetPath}models/diceColliders.json`).then(resp => {
 		if(resp.ok) {
 			const contentType = resp.headers.get("content-type")
 

@@ -1,6 +1,7 @@
 const path = require('path')
 const { defineConfig } = require('vite')
 const copy = require('rollup-plugin-copy')
+// const { visualizer } = require('rollup-plugin-visualizer');
 
 module.exports = defineConfig({
 	base: process.env.NODE_ENV === 'production' ? './' : './src',
@@ -12,12 +13,15 @@ module.exports = defineConfig({
     },
 		assetsDir: 'assets/dice-box',
     rollupOptions: {
+			preserveEntrySignatures: "allow-extension",
       input: {
 				main: path.resolve(__dirname, 'src/index.js')
 			},
 			output: [{
 				format: "es",
-				manualChunks: {},
+				manualChunks: {
+					// babylon: ['@babylonjs/core','@babylonjs/loaders','@babylonjs/materials']
+				},
 				sourcemap: false,
 			}],
 			plugins: [
@@ -34,7 +38,11 @@ module.exports = defineConfig({
 						}
 					],
 					hook: "writeBundle"
-				})
+				}),
+				// visualizer({
+				// 	open: true,
+				// 	brotliSize: true
+				// })
 			]
     },
   }

@@ -1,8 +1,8 @@
 import { createEngine } from './engine'
 import { createScene } from './scene'
 import { createCamera } from './camera'
-import DiceBox from './DiceBox'
 import { createLights } from './lights'
+import DiceBox from './DiceBox'
 import Dice from './Dice'
 import { loadTheme } from './Dice/themes'
 

@@ -3,6 +3,8 @@ import WorldOffscreen from './components/world.offscreen'
 import physicsWorker from './components/physics.worker.js?worker'
 import { debounce } from './helpers'
 
+console.log(`import.meta`, import.meta)
+
 const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
   enableShadows: true, // do dice cast shadows onto DiceBox mesh?

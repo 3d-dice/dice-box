@@ -4,7 +4,7 @@
 		"name": "Frank Ali"
 	},
 	"description": "A 3D environment for rolling game dice",
-	"version": "0.4.19",
+	"version": "0.4.20",
 	"keywords": [
 		"3D",
 		"dice",
@@ -45,14 +45,14 @@
 		"postinstall": "node copyAssets.js"
 	},
 	"dependencies": {
-		"@babylonjs/core": "5.0.0-alpha.22",
-		"@babylonjs/loaders": "5.0.0-alpha.22",
-		"@babylonjs/materials": "5.0.0-alpha.22",
+		"@babylonjs/core": "^5.0.0-beta.5",
+		"@babylonjs/loaders": "^5.0.0-beta.5",
+		"@babylonjs/materials": "^5.0.0-beta.5",
 		"copy-dir": "^1.3.0"
 	},
 	"devDependencies": {
 		"rollup-plugin-copy": "^3.4.0",
-		"vite": "^2.7.2"
+		"vite": "^2.7.13"
 	},
 	"browserslist": {
 		"production": [

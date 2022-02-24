@@ -15,11 +15,13 @@ const defaultOptions = {
 	theme: '#0974e6', // can be a hex color or a pre-defined theme such as 'purpleRock'
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
 	assetPath: '/assets/dice-box/', // path to 'ammo', 'models', 'themes' folders and web workers
-	origin: location.origin,
+	origin: location.origin.includes('localhost') ? location.origin : '',
 }
 
 class World {
 	rollData = []
+	rollPromiseResolve
+	rollPromiseReject
 	themeData = []
 	#groupIndex = 0
 	#rollIndex = 0
@@ -124,6 +126,8 @@ class World {
 				// add the modifier
 				rollGroup.value += rollGroup.modifier ? rollGroup.modifier : 0
 			})
+			// resolve promise
+			this.rollPromiseResolve(this.rollData)
 			// trigger callback passing the grouped roll data
 			this.onRollComplete(this.rollData)
 		}
@@ -197,16 +201,20 @@ class World {
 		return this
 	}
 
-	// add a die to another group. groupId should be included
+	// add a die. Use groupId to add a die to a specific roll group
+	// when looking at the roll results object, the groupId on an individual roll corresponds to the groups' index value in the rollData array
   add(notation, groupId, theme) {
-		if(typeof groupId === 'string' || theme) {
+		// if the given groupId does not exist in the rollData array then reset groupId
+		// the added roll will be safely added to the rollData in a new group instead
+		if(this.rollData[groupId] === undefined){
+			groupId = undefined
+		}
+		if(theme) {
 			this.config.theme = theme
 		}
 		let parsedNotation = this.createNotationArray(notation)
-		this.#makeRoll(parsedNotation, groupId)
-
-		// make this method chainable
-		return this
+		// returns a Promise that is resolved in onRollComplete
+		return this.#makeRoll(parsedNotation, groupId)
   }
 
 	reroll(die) {
@@ -215,10 +223,9 @@ class World {
 		// TODO: reroll array
 		this.remove(die)
 		die.qty = 1
-		this.add(die, die.groupId)
+		// returns a Promise that is resolved in onRollComplete
+		return this.add(die, die.groupId)
 
-		// make this method chainable
-		return this
 	}
 
 	remove(die) {
@@ -240,6 +247,7 @@ class World {
 		return this
 	}
 
+	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
   roll(notation, theme) {
 		// to add to a roll on screen use .add method
     // reset the offscreen worker and physics worker with each new roll
@@ -248,10 +256,8 @@ class World {
 			this.config.theme = theme
 		}
 		let parsedNotation = this.createNotationArray(notation)
-		this.#makeRoll(parsedNotation)
-
-		// make this method chainable
-		return this
+		// returns a Promise that is resolved in onRollComplete
+		return this.#makeRoll(parsedNotation)
   }
 
 	async loadTheme(){
@@ -304,7 +310,14 @@ class World {
 				this.rollData[index] = notation
 				++this.#groupIndex
 			}
+			
 		})
+
+		return new Promise((resolve,reject) => {
+			this.rollPromiseResolve = resolve
+			this.rollPromiseReject = reject
+		})
+
 	}
 
 	// accepts simple notations eg: 4d6

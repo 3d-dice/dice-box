@@ -211,18 +211,13 @@ class World {
 	reroll(dice) {
 		// TODO: add hide if you want to keep the die result for an external parser
 		// TODO: reroll group
-		if ( Array.isArray(dice) ) {
-			const groupId = dice[0].groupId
-			const addQty = dice.map(r => ( {...r, qty: 1} ) )
-
-			dice.forEach(r =>  this.remove( r ) )
-
-			this.add(addQty, groupId)
-		} else {
-			const addDie = { ...dice, qty: 1 }
-			this.remove( dice )
-			this.add(addDie, addDie.groupId)
-		}
+		const rollArray = Array.isArray(dice) ? dice : [dice]
+		const groupId = rollArray[0].groupId
+		const addQty = rollArray.map(r => ( {...r, qty: 1} ) )
+		
+		rollArray.forEach(r =>  this.remove( r ) )
+	
+		this.add(addQty, groupId)
 		// make this method chainable
 		return this
 	}

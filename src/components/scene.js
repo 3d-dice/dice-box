@@ -9,6 +9,11 @@ function createScene(options) {
   // scene.useRightHandedSystem = true
   scene.clearColor = new Color4(0,0,0,0);
 
+  scene.pointerMovePredicate = () => false;
+  scene.pointerDownPredicate = () => false;
+  scene.pointerUpPredicate = () => false;
+  scene.clearCachedVertexData();
+
   const optimizationSettings = SceneOptimizerOptions.LowDegradationAllowed()
   optimizationSettings.optimizations = optimizationSettings.optimizations.splice(1)
   optimizationSettings.targetFrameRate = 60

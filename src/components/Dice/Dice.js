@@ -77,6 +77,8 @@ class Dice {
       if(model.id === "__root__") return
       model.setEnabled(false)
       model.freezeNormals()
+      model.isPickable = false;
+      model.doNotSyncBoundingInfo = true;
     })
   }
 

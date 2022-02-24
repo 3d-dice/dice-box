@@ -199,9 +199,8 @@ class World {
 
 	// add a die to another group. groupId should be included
   add(notation, groupId, theme) {
-		if(typeof groupId === 'string' || theme) {
-			this.config.theme = theme
-		}
+		if(theme) this.config.theme = theme
+
 		let parsedNotation = this.createNotationArray(notation)
 		this.#makeRoll(parsedNotation, groupId)
 
@@ -209,14 +208,21 @@ class World {
 		return this
   }
 
-	reroll(die) {
+	reroll(dice) {
 		// TODO: add hide if you want to keep the die result for an external parser
 		// TODO: reroll group
-		// TODO: reroll array
-		this.remove(die)
-		die.qty = 1
-		this.add(die, die.groupId)
+		if ( Array.isArray(dice) ) {
+			const groupId = dice[0].groupId
+			const addQty = dice.map(r => ( {...r, qty: 1} ) )
 
+			dice.forEach(r =>  this.remove( r ) )
+
+			this.add(addQty, groupId)
+		} else {
+			const addDie = { ...dice, qty: 1 }
+			this.remove( dice )
+			this.add(addDie, addDie.groupId)
+		}
 		// make this method chainable
 		return this
 	}

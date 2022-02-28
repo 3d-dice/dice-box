@@ -226,8 +226,11 @@ class World {
 		// this will remove a roll from workers and rolldata
 		// TODO: hide if you want to keep the die result for an external parser
 		// delete the roll from cache
-		// TODO: rollId should be the literal rollId on the rolls object, not pointing to an array index
-		delete this.rollData[groupId].rolls[rollId]
+		const rolls = this.rollData[groupId].rolls
+		const filtered = rolls.filter(roll => roll.rollId !== rollId)
+	
+		this.rollData[groupId].rolls = filtered
+
 		// remove the die from the render
 		this.#DiceWorld.remove(die)
 		// remove the die from the physics bodies - we do this in case there's a reroll. Don't want new dice interacting with a hidden physics body

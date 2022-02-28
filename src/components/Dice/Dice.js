@@ -1,6 +1,7 @@
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader'
 import { Vector3 } from '@babylonjs/core/Maths/math'
 import { Ray } from "@babylonjs/core/Culling/ray";
+// import { RayHelper } from '@babylonjs/core/Debug';
 import '../../helpers/babylonFileLoader'
 import '@babylonjs/core/Meshes/instancedMesh'
 import { meshFaceIds } from './meshFaceIds';
@@ -70,7 +71,7 @@ class Dice {
 
   // load all the dice models
   static async loadModels(options) {
-    const {assetPath, scene} = options
+    const {assetPath, scene, scale} = options
     const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "diceMeshes.babylon", scene)
 
     models.meshes.forEach(model => {
@@ -79,6 +80,9 @@ class Dice {
       model.freezeNormals()
       model.isPickable = false;
       model.doNotSyncBoundingInfo = true;
+
+      // set the base model scale
+      model.scaling = new Vector3(scale,scale,scale)
     })
   }
 

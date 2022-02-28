@@ -93,12 +93,13 @@ const initScene = async (data) => {
     lights,
 		scene
 	})
-  
+
   // loading all our dice models
   // we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
   await Dice.loadModels({
 		assetPath: config.origin + config.assetPath,
-		scene
+		scene,
+		scale: config.scale
 	})
 
 	physicsWorkerPort.postMessage({
@@ -216,6 +217,7 @@ const _add = async (options) => {
 		...options,
 		assetPath: config.assetPath,
 		enableShadows: config.enableShadows,
+		scale: config.scale,
 		lights,
 	}
 
@@ -228,6 +230,7 @@ const _add = async (options) => {
 	physicsWorkerPort.postMessage({
 		action: "addDie",
 		sides: options.sides,
+		scale: config.scale,
 		id: newDie.id
 	})
 

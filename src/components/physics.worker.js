@@ -21,7 +21,7 @@ let zoom = [43,37,32,26.5,23,20.5,18,15.75]
 const defaultOptions = {
 	zoomLevel: 3,
 	startingHeight: 12,
-	spinForce: 6,
+	spinForce: 3,
 	throwForce: 2,
 	gravity: 4,
 	mass: 3,
@@ -39,27 +39,27 @@ let config = {...defaultOptions}
 const diceDefaults = {
 	c4: {
 		mass: .7,
-		scaling: [1,1,-1]
+		scaling: [-1,1,1]
 	},
 	c6: {
 		mass: .8,
-		scaling: [1,1,-1]
+		scaling: [-1,1,1]
 	},
 	c8: {
 		mass: .82,
-		scaling: [1,1,-1]
+		scaling: [-1,1,1]
 	},
 	c10: {
 		mass: .85,
-		scaling: [1,1,-1]
+		scaling: [-1,1,1]
 	},
 	c12: {
 		mass: .9,
-		scaling: [1,1,-1]
+		scaling: [-1,1,1]
 	},
 	c20: {
 		mass: 1,
-		scaling: [1,1,-1]
+		scaling: [-1,1,1]
 	}
 }
 
@@ -140,6 +140,14 @@ const init = async (data) => {
 	height = data.height
 	aspect = width / height
 	config = {...config,...data.options}
+	// console.log('config.spinForce', config.spinForce)
+	// console.log('config.throwForce', config.throwForce)
+
+	config.spinForce = config.spinForce * (config.scale * (config.scale < 1 ? .5 : 2))
+	config.throwForce = config.throwForce * (config.scale < 1 ? 2 - (config.scale ** config.scale) : 1 + config.scale/6)
+
+	// console.log('config.spinForce', config.spinForce)
+	// console.log('config.throwForce', config.throwForce)
 
 	const ammoWASM = {
 		// locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
@@ -256,7 +264,7 @@ const createConvexHull = (mesh) => {
 		convexMesh.addPoint(v, true)
 	}
 
-	convexMesh.setLocalScaling(setVector3(-mesh.scaling[0],mesh.scaling[1],-mesh.scaling[2]))
+	convexMesh.setLocalScaling(setVector3(mesh.scaling[0] * config.scale, mesh.scaling[1] * config.scale, mesh.scaling[2] * config.scale))
 
 	return convexMesh
 }
@@ -291,6 +299,8 @@ const createRigidBody = (collisionShape, params) => {
 	)
 	// collisionShape.setLocalScaling(new Ammo.btVector3(1.1, -1.1, 1.1))
 	// transform.ScalingToRef()
+	// set the scale of the collider
+	// collisionShape.setLocalScaling(new Ammo.btVector3(scale[0],scale[1],scale[2]))
 
 	// create the rigid body
 	const motionState = new Ammo.btDefaultMotionState(transform)
@@ -477,7 +487,9 @@ const update = (delta) => {
 	// step world
 	const deltaTime = delta / 1000
 	
+	// console.time("stepSimulation")
 	physicsWorld.stepSimulation(deltaTime, 2, 1 / 90) // higher number = slow motion
+	// console.timeEnd("stepSimulation")
 
 	diceBufferView[0] = bodies.length
 
@@ -528,7 +540,9 @@ const loop = () => {
 	last = now
 
 	if(!stopLoop && diceBufferView.byteLength) {
+		// console.time("physics")
 		update(delta)
+		// console.timeEnd("physics")
 			worldWorkerPort.postMessage({
 				action: 'updates',
 				diceBuffer: diceBufferView.buffer

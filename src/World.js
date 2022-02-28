@@ -8,10 +8,11 @@ const defaultOptions = {
   enableShadows: true, // do dice cast shadows onto DiceBox mesh?
   delay: 10, // delay between dice being generated - 0 causes stuttering and physics popping
 	gravity: 3, // TODO: high gravity will cause dice piles to jiggle
-	startingHeight: 15, // height to drop the dice from - will not exceed the DiceBox height set by zoom
+	startingHeight: 45, // height to drop the dice from - will not exceed the DiceBox height set by zoom
 	spinForce: 6, // passed on to physics as an impulse force
-	throwForce: 2.5, // passed on to physics as linear velocity
-	zoomLevel: 3, // 0-7, can we round it out to 9? And reverse it because higher zoom means closer
+	throwForce: 2, // passed on to physics as linear velocity
+	zoomLevel: 0, // 0-7, can we round it out to 9? And reverse it because higher zoom means closer
+	scale: 2, // scale the dice
 	theme: '#0974e6', // can be a hex color or a pre-defined theme such as 'purpleRock'
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
 	assetPath: '/assets/dice-box/', // path to 'ammo', 'models', 'themes' folders and web workers

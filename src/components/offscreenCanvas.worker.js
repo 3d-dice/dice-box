@@ -91,7 +91,7 @@ const initScene = async (data) => {
     aspect: canvas.width / canvas.height,
     lights,
 		scene,
-		enableDebugging: true
+		enableDebugging: false
 	})
 
   // loading all our dice models

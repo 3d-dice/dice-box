@@ -34,9 +34,6 @@ class Dice {
 
   createInstance() {
     const dieInstance = this.config.scene.getMeshByName(this.comboKey).createInstance(`${this.dieType}-instance-${this.id}`)
-    const dieHitbox = this.config.scene.getMeshByName(`${this.dieType}_hitbox`).createInstance(`${this.dieType}-hitbox-${this.id}`)
-
-    dieInstance.addChild(dieHitbox)
 
 		// start the instance under the floor, out of camera view
 		dieInstance.position.y = -100
@@ -88,12 +85,40 @@ class Dice {
     })
   }
 
+  static ray = new Ray(Vector3.Zero(), Vector3.Zero(), 10)
+  static vector3 = new Vector3.Zero()
+
+  static setVector3(x,y,z) {
+    return Dice.vector3.set(x,y,z)
+  }
+  
+  static getVector3() {
+    return Dice.vector3
+  }
+
   static async getRollResult(die) {
     const getDieRoll = (d=die) => new Promise((resolve,reject) => {
 
-			const vector = d.dieType === 'd4' ? new Vector3(0, -1, 0) : new Vector3(0, 1, 0)
-			const picked = d.config.scene.pickWithRay(new Ray(d.mesh.position, vector, 3))
+      const dieHitbox = d.config.scene.getMeshByName(`${d.dieType}_hitbox`).createInstance(`${d.dieType}-hitbox-${d.id}`)
+      dieHitbox.isPickable = true
+      dieHitbox.isVisible = true
+      dieHitbox.setEnabled(true)
+      dieHitbox.position = d.mesh.position
+      dieHitbox.rotationQuaternion = d.mesh.rotationQuaternion
 
+      // TODO: ray y vector should extend with config scale - otherwise it could come up short of dice hitbox inner wall
+			const vector = d.dieType === 'd4' ? Dice.setVector3(0, -1, 0) : Dice.setVector3(0, 1, 0)
+      // const ray = new Ray(d.mesh.position, vector, 10)
+
+      Dice.ray.direction = vector
+      Dice.ray.origin = d.mesh.position
+
+      const picked = d.config.scene.pickWithRay(Dice.ray)
+
+      dieHitbox.dispose()
+
+      // let rayHelper = new RayHelper(Dice.ray)
+      // rayHelper.show(d.config.scene)
 			d.result = meshFaceIds[d.dieType][picked.faceId]
 
       return resolve(d.result)

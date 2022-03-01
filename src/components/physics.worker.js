@@ -25,8 +25,8 @@ const defaultOptions = {
 	gravity: 1,
 	mass: 1,
 	friction: .8,
-	restitution: 0,
-	linearDamping: .5,
+	restitution: .1,
+	linearDamping: .4,
 	angularDamping: .4,
 	settleTimeout: 5000,
 	// runTime: 15000, // TODO: force dice to sleep after specific time
@@ -34,37 +34,6 @@ const defaultOptions = {
 }
 
 let config = {...defaultOptions}
-
-const diceDefaults = {
-	'd4_collider': {
-		mass: .7,
-		scaling: [-1,1,1]
-	},
-	'd6_collider': {
-		mass: .8,
-		scaling: [-1,1,1]
-	},
-	'd8_collider': {
-		mass: .82,
-		scaling: [-1,1,1]
-	},
-	'd10_collider': {
-		mass: .85,
-		scaling: [-1,1,1]
-	},
-	'd12_collider': {
-		mass: .9,
-		scaling: [-1,1,1]
-	},
-	'd20_collider': {
-		mass: 1,
-		scaling: [-1,1,1]
-	},
-	'd100_collider': {
-		mass: .85,
-		scaling: [-1,1,1]
-	},
-}
 
 let emptyVector
 let diceBufferView
@@ -147,8 +116,11 @@ const init = async (data) => {
 	// console.log('config.spinForce', config.spinForce)
 	// console.log('config.throwForce', config.throwForce)
 
-	config.spinForce = config.spinForce * (config.scale * (config.scale < 1 ? .5 : 2))
-	config.throwForce = config.throwForce * (config.scale < 1 ? 2 - (config.scale ** config.scale) : 1 + config.scale/6)
+
+	config.spinForce = config.spinForce/250
+	config.throwForce = config.throwForce / 2 * (1 + config.scale / 6)
+	// config.spinForce = (config.spinForce/100) * (config.scale * (config.scale < 1 ? .5 : 2))
+	// config.throwForce = config.throwForce * (config.scale < 1 ? 2 - (config.scale ** config.scale) : 1 + config.scale/6)
 	// ensure minimum startingHeight of 1
 	config.startingHeight = config.startingHeight < 1 ? 1 : config.startingHeight
 
@@ -194,8 +166,6 @@ const init = async (data) => {
 	.then(data => {
 		data.meshes.forEach(mesh => {
 			if(mesh.id.includes("collider") === false) return
-			mesh.physicsMass = diceDefaults[mesh.id].mass
-			// mesh.scaling = diceDefaults[mesh.id].scaling
 		})
 		return data.meshes
 	})
@@ -283,7 +253,7 @@ const createConvexHull = (mesh) => {
 const createRigidBody = (collisionShape, params) => {
 	// apply params
 	const {
-		mass = 1,
+		mass = .1,
 		collisionFlags = 0,
 		// pos = { x: 0, y: 0, z: 0 },
 		// quat = { x: 0, y: 0, z: 0, w: 1 }
@@ -445,8 +415,10 @@ const rollDie = (die) => {
 		lerp(-config.spinForce, config.spinForce, Math.random()),
 		lerp(-config.spinForce, config.spinForce, Math.random())
 	)
+
+	const scale = config.scale * config.scale
 	
-	die.applyImpulse(force, setVector3(4,4,4))
+	die.applyImpulse(force, setVector3(scale, scale, scale))
 
 }
 

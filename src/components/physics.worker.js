@@ -91,7 +91,7 @@ self.onmessage = (e) => {
 			width = e.data.width
 			height = e.data.height
 			aspect = width / height
-			addBoxToWorld(config.size)
+			addBoxToWorld(config.size, config.startingHeight + 10)
 			break
 		case "updateConfig":
 			updateConfig(e.data.options)
@@ -149,6 +149,8 @@ const init = async (data) => {
 
 	config.spinForce = config.spinForce * (config.scale * (config.scale < 1 ? .5 : 2))
 	config.throwForce = config.throwForce * (config.scale < 1 ? 2 - (config.scale ** config.scale) : 1 + config.scale/6)
+	// ensure minimum startingHeight of 1
+	config.startingHeight = config.startingHeight < 1 ? 1 : config.startingHeight
 
 	// console.log('config.spinForce', config.spinForce)
 	// console.log('config.throwForce', config.throwForce)
@@ -212,14 +214,14 @@ const init = async (data) => {
 		colliders[model.id] = model
 	})
 
-	addBoxToWorld(config.size)
+	addBoxToWorld(config.size, config.startingHeight + 10)
 
 }
 
 const updateConfig = (options) => {
 	config = {...config,...options}
 	removeBoxFromWorld()
-	addBoxToWorld(config.size)
+	addBoxToWorld(config.size, config.startingHeight + 10)
 	physicsWorld.setGravity(setVector3(0, -9.81 * config.gravity, 0))
 
 }
@@ -232,7 +234,7 @@ const setVector3 = (x,y,z) => {
 const setStartPosition = () => {
 	let size = config.size
 	// let envelopeSize = size * .6 / 2
-	let edgeOffset = 2
+	let edgeOffset = 1.5
 	let xMin = size * aspect / 2 - edgeOffset
 	let xMax = size * aspect / -2 + edgeOffset
 	let yMin = size / 2 - edgeOffset
@@ -256,7 +258,7 @@ const setStartPosition = () => {
 		// tossing on x axis then z should be locked to top or bottom
 		// not tossing on x axis then x should be locked to the left or right
 		tossX ? xEnvelope : tossFromLeft ? xMax : xMin,
-		config.startingHeight > config.size ? config.size : config.startingHeight, // start height can't be over size height
+		config.startingHeight,
 		tossX ? tossFromTop ? yMax : yMin : yEnvelope
 	]
 
@@ -281,7 +283,7 @@ const createConvexHull = (mesh) => {
 const createRigidBody = (collisionShape, params) => {
 	// apply params
 	const {
-		mass = 10,
+		mass = 1,
 		collisionFlags = 0,
 		// pos = { x: 0, y: 0, z: 0 },
 		// quat = { x: 0, y: 0, z: 0, w: 1 }
@@ -338,7 +340,7 @@ const createRigidBody = (collisionShape, params) => {
 }
 // cache for box parts so it can be removed after a new one has been made
 let boxParts = []
-const addBoxToWorld = (size) => {
+const addBoxToWorld = (size, height) => {
 	const tempParts = []
 	// ground
 	const localInertia = setVector3(0, 0, 0);
@@ -357,7 +359,7 @@ const addBoxToWorld = (size) => {
 	const wallTopTransform = new Ammo.btTransform()
 	wallTopTransform.setIdentity()
 	wallTopTransform.setOrigin(setVector3(0, 0, (size/-2) - .5))
-	const wallTopShape = new Ammo.btBoxShape(setVector3(size * aspect, size, 1))
+	const wallTopShape = new Ammo.btBoxShape(setVector3(size * aspect, height, 1))
 	const topMotionState = new Ammo.btDefaultMotionState(wallTopTransform)
 	const topInfo = new Ammo.btRigidBodyConstructionInfo(0, topMotionState, wallTopShape, localInertia)
 	const topBody = new Ammo.btRigidBody(topInfo)
@@ -369,7 +371,7 @@ const addBoxToWorld = (size) => {
 	const wallBottomTransform = new Ammo.btTransform()
 	wallBottomTransform.setIdentity()
 	wallBottomTransform.setOrigin(setVector3(0, 0, (size/2) + .5))
-	const wallBottomShape = new Ammo.btBoxShape(setVector3(size * aspect, size, 1))
+	const wallBottomShape = new Ammo.btBoxShape(setVector3(size * aspect, height, 1))
 	const bottomMotionState = new Ammo.btDefaultMotionState(wallBottomTransform)
 	const bottomInfo = new Ammo.btRigidBodyConstructionInfo(0, bottomMotionState, wallBottomShape, localInertia)
 	const bottomBody = new Ammo.btRigidBody(bottomInfo)
@@ -381,7 +383,7 @@ const addBoxToWorld = (size) => {
 	const wallRightTransform = new Ammo.btTransform()
 	wallRightTransform.setIdentity()
 	wallRightTransform.setOrigin(setVector3((size * aspect / -2) - .5, 0, 0))
-	const wallRightShape = new Ammo.btBoxShape(setVector3(1, size, size))
+	const wallRightShape = new Ammo.btBoxShape(setVector3(1, height, size))
 	const rightMotionState = new Ammo.btDefaultMotionState(wallRightTransform)
 	const rightInfo = new Ammo.btRigidBodyConstructionInfo(0, rightMotionState, wallRightShape, localInertia)
 	const rightBody = new Ammo.btRigidBody(rightInfo)
@@ -393,7 +395,7 @@ const addBoxToWorld = (size) => {
 	const wallLeftTransform = new Ammo.btTransform()
 	wallLeftTransform.setIdentity()
 	wallLeftTransform.setOrigin(setVector3((size * aspect / 2) + .5, 0, 0))
-	const wallLeftShape = new Ammo.btBoxShape(setVector3(1, size, size))
+	const wallLeftShape = new Ammo.btBoxShape(setVector3(1, height, size))
 	const leftMotionState = new Ammo.btDefaultMotionState(wallLeftTransform)
 	const leftInfo = new Ammo.btRigidBodyConstructionInfo(0, leftMotionState, wallLeftShape, localInertia)
 	const leftBody = new Ammo.btRigidBody(leftInfo)

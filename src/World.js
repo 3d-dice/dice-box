@@ -312,7 +312,7 @@ class World {
 	// accepts array of notations eg: ['4d6','2d10']
 	// accepts array of objects eg: [{sides:int, qty:int, mods:[]}]
 	// accepts object {sides:int, qty:int}
-	createNotationArray(notation){
+	createNotationArray(input){
 		const notation = Array.isArray( input ) ? input : [ input ]
 		let parsedNotation = []
 
@@ -332,7 +332,7 @@ class World {
 		notation.forEach(roll => {
 			// if notation is an array of strings
 			if ( typeof roll === 'string' ) {
-				parsedNotation.push( parseStringNotation( roll ) )
+				parsedNotation.push( parse( roll ) )
 			} else if ( typeof notation === 'object' ) {
 				verifyObject( roll ) && parsedNotation.push( roll )
 			}

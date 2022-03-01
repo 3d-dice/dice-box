@@ -39,7 +39,7 @@ var BabylonFileLoaderConfiguration = /** @class */ (function () {
      * Unfortunately in ES6, we need to manually inject them into the plugin.
      * So you could set this variable to your engine import to make it work.
      */
-    BabylonFileLoaderConfiguration.LoaderInjectedPhysicsEngine = undefined;
+    BabylonFileLoaderConfiguration.LoaderInjectedPhysicsEngine = false;
     return BabylonFileLoaderConfiguration;
 }());
 export { BabylonFileLoaderConfiguration };
@@ -462,7 +462,12 @@ SceneLoader.RegisterPlugin({
         var log = "importMesh has failed JSON parse";
         try {
             var parsedData = JSON.parse(data);
+            // Force physics off
+            parsedData.physicsEnabled = false
+            parsedData?.meshes.map(mesh => delete mesh.physicsImpostor)
+
             log = "";
+
             var fullDetails = SceneLoader.loggingLevel === SceneLoader.DETAILED_LOGGING;
             if (!meshesNames) {
                 meshesNames = null;
@@ -472,8 +477,8 @@ SceneLoader.RegisterPlugin({
             }
             var hierarchyIds = new Array();
             if (parsedData.meshes !== undefined && parsedData.meshes !== null) {
-                var loadedSkeletonsIds = [];
-                var loadedMaterialsIds = [];
+                // var loadedSkeletonsIds = [];
+                // var loadedMaterialsIds = [];
                 var index;
                 var cache;
                 for (index = 0, cache = parsedData.meshes.length; index < cache; index++) {

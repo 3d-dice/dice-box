@@ -6,17 +6,15 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { ShadowOnlyMaterial } from '@babylonjs/materials/shadowOnly/shadowOnlyMaterial'
 
 const defaultOptions = {
-  size: 6,
+  size: 9.5,
   aspect: 300 / 150,
   enableDebugging: false,
   enableShadows: true,
-	zoomLevel: 0
 }
 
 class DiceBox{
 	constructor(options){
 		this.config = {...defaultOptions, ...options}
-		this.zoom = [43,37,32,26.5,23,20.5,18,15.75]
 		this.create()
 	}
 	create(options){
@@ -24,9 +22,8 @@ class DiceBox{
 		this.destroy()
 		// extend config with options on create
 		Object.assign(this.config,options)
-		const { aspect, zoomLevel, enableDebugging = true, enableShadows } = this.config
+		const { aspect, enableDebugging = true, enableShadows } = this.config
 		const wallHeight = 30
-		const size = this.zoom[zoomLevel]
 		let boxMaterial
 
 		this.box = new TransformNode("diceBox");
@@ -47,9 +44,9 @@ class DiceBox{
 
 		// Bottom of the Box
 		const ground = BoxBuilder.CreateBox("ground",{
-			width: size, 
+			width: this.config.size, 
 			height: 1,
-			depth: size
+			depth: this.config.size
 		}, this.config.scene)
 		ground.scaling = new Vector3(aspect, 1, 1)
 		ground.material = boxMaterial
@@ -58,12 +55,12 @@ class DiceBox{
 
 		// North Wall
 		const wallTop = BoxBuilder.CreateBox("wallTop",{
-			width: size,
+			width: this.config.size,
 			height: wallHeight,
 			depth: 1
 		}, this.config.scene)
 		wallTop.position.y = wallHeight / 2
-		wallTop.position.z = size / -2
+		wallTop.position.z = this.config.size / -2
 		wallTop.scaling = new Vector3(aspect, 1, 1)
 		wallTop.material = boxMaterial
 		// wallTop.receiveShadows = true
@@ -73,9 +70,9 @@ class DiceBox{
 		const wallRight = BoxBuilder.CreateBox("wallRight",{
 			width: 1, 
 			height: wallHeight,
-			depth: size
+			depth: this.config.size
 		}, this.config.scene )
-		wallRight.position.x = size * aspect / 2
+		wallRight.position.x = this.config.size * aspect / 2
 		wallRight.position.y = wallHeight / 2
 		wallRight.material = boxMaterial
 		// wallRight.receiveShadows = true
@@ -83,12 +80,12 @@ class DiceBox{
 
 		// South Wall
 		const wallBottom = BoxBuilder.CreateBox("wallBottom",{
-			width: size, 
+			width: this.config.size, 
 			height: wallHeight,
 			depth: 1
 		}, this.config.scene)
 		wallBottom.position.y = wallHeight / 2
-		wallBottom.position.z = size / 2
+		wallBottom.position.z = this.config.size / 2
 		wallBottom.scaling = new Vector3(aspect, 1, 1)
 		wallBottom.material = boxMaterial
 		// wallBottom.receiveShadows = true
@@ -98,9 +95,9 @@ class DiceBox{
 		const wallLeft = BoxBuilder.CreateBox("wallLeft",{
 			width: 1, 
 			height: wallHeight,
-			depth: size
+			depth: this.config.size
 		}, this.config.scene)
-		wallLeft.position.x = size * aspect / -2
+		wallLeft.position.x = this.config.size * aspect / -2
 		wallLeft.position.y = wallHeight / 2
 		wallLeft.material = boxMaterial
 		// wallLeft.receiveShadows = true

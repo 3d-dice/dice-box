@@ -39,13 +39,12 @@ class WorldOnscreen {
 		// setup babylonJS scene
 		this.#engine  = createEngine(this.#canvas )
 		this.#scene = createScene({engine:this.#engine })
-		this.#camera  = createCamera({engine:this.#engine , zoomLevel:this.config.zoomLevel, scene: this.#scene})
+		this.#camera  = createCamera({engine:this.#engine, scene: this.#scene})
 		this.#lights  = createLights({enableShadows: this.config.enableShadows, scene: this.#scene})
 	
 		// create the box that provides surfaces for shadows to render on
 		this.#diceBox  = new DiceBox({
 			enableShadows: this.config.enableShadows,
-			zoomLevel: this.config.zoomLevel,
 			aspect: this.#canvas.width / this.#canvas.height,
 			lights: this.#lights,
 			scene: this.#scene
@@ -88,21 +87,6 @@ class WorldOnscreen {
 	updateConfig(options){
 		const prevConfig = this.config
 		this.config = options
-		// check if zoom level has changed
-		if(prevConfig.zoomLevel !== this.config.zoomLevel){
-			// redraw the DiceBox for shadows shader
-			this.#diceBox.destroy()
-			this.#diceBox  = new DiceBox({
-				enableShadows: this.config.enableShadows,
-				zoomLevel: this.config.zoomLevel,
-				aspect: this.#canvas.width / this.#canvas.height,
-				lights: this.#lights ,
-				scene: this.#scene
-			})
-			// redraw the camera which changes position based on zoomLevel value
-			this.#camera.dispose()
-			this.#camera  = createCamera({engine:this.#engine , zoomLevel: this.config.zoomLevel})
-		}
 		// check if shadows setting has changed
 		if(prevConfig.enableShadows !== this.config.enableShadows) {
 			// regenerate the lights

@@ -72,10 +72,12 @@ class Dice {
   // load all the dice models
   static async loadModels(options) {
     const {assetPath, scene, scale} = options
-    const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "diceMeshes.babylon", scene)
+    const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "dice-revised.babylon", scene)
 
     models.meshes.forEach(model => {
-      if(model.id === "__root__") return
+      if(model.id === "__root__" || model.id.includes("collider")) {
+        model.dispose()
+      }
       model.setEnabled(false)
       model.freezeNormals()
       model.isPickable = false;

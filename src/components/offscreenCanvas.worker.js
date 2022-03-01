@@ -82,16 +82,16 @@ const initScene = async (data) => {
 	// setup babylonJS scene
 	engine = createEngine(canvas)
   scene = createScene({engine})
-  camera = createCamera({engine, zoomLevel: config.zoomLevel})
+  camera = createCamera({engine})
   lights = createLights({enableShadows: config.enableShadows})
 
   // create the box that provides surfaces for shadows to render on
 	diceBox = new DiceBox({
 		enableShadows: config.enableShadows,
-    zoomLevel: config.zoomLevel,
     aspect: canvas.width / canvas.height,
     lights,
-		scene
+		scene,
+		enableDebugging: true
 	})
 
   // loading all our dice models
@@ -114,21 +114,6 @@ const initScene = async (data) => {
 const updateConfig = (options) => {
 	const prevConfig = config
 	config = options
-	// check if zoom level has changed
-	if(prevConfig.zoomLevel !== config.zoomLevel){
-		// redraw the DiceBox for shadows shader
-		diceBox.destroy()
-		diceBox = new DiceBox({
-			...config,
-			zoomLevel: config.zoomLevel,
-			aspect: canvas.width / canvas.height,
-			lights,
-			scene
-		})
-		// redraw the camera which changes position based on zoomLevel value
-		camera.dispose()
-		camera = createCamera({engine, zoomLevel: config.zoomLevel})
-	}
 	// check if shadows setting has changed
 	if(prevConfig.enableShadows !== config.enableShadows) {
 		Object.values(lights).forEach(light => light.dispose())

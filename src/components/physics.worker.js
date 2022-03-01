@@ -16,15 +16,14 @@ let width = 150
 let height = 150
 let aspect = 1
 let stopLoop = false
-let zoom = [43,37,32,26.5,23,20.5,18,15.75]
 
 const defaultOptions = {
-	zoomLevel: 3,
+	size: 9.5,
 	startingHeight: 12,
 	spinForce: 3,
 	throwForce: 2,
-	gravity: 4,
-	mass: 3,
+	gravity: 1,
+	mass: 1,
 	friction: .8,
 	restitution: 0,
 	linearDamping: .5,
@@ -37,30 +36,34 @@ const defaultOptions = {
 let config = {...defaultOptions}
 
 const diceDefaults = {
-	c4: {
+	'd4_collider': {
 		mass: .7,
 		scaling: [-1,1,1]
 	},
-	c6: {
+	'd6_collider': {
 		mass: .8,
 		scaling: [-1,1,1]
 	},
-	c8: {
+	'd8_collider': {
 		mass: .82,
 		scaling: [-1,1,1]
 	},
-	c10: {
+	'd10_collider': {
 		mass: .85,
 		scaling: [-1,1,1]
 	},
-	c12: {
+	'd12_collider': {
 		mass: .9,
 		scaling: [-1,1,1]
 	},
-	c20: {
+	'd20_collider': {
 		mass: 1,
 		scaling: [-1,1,1]
-	}
+	},
+	'd100_collider': {
+		mass: .85,
+		scaling: [-1,1,1]
+	},
 }
 
 let emptyVector
@@ -88,7 +91,7 @@ self.onmessage = (e) => {
 			width = e.data.width
 			height = e.data.height
 			aspect = width / height
-			addBoxToWorld(zoom[config.zoomLevel])
+			addBoxToWorld(config.size)
 			break
 		case "updateConfig":
 			updateConfig(e.data.options)
@@ -139,6 +142,7 @@ const init = async (data) => {
 	width = data.width
 	height = data.height
 	aspect = width / height
+
 	config = {...config,...data.options}
 	// console.log('config.spinForce', config.spinForce)
 	// console.log('config.throwForce', config.throwForce)
@@ -164,7 +168,11 @@ const init = async (data) => {
 	
 	// load our collider data
 	// perhaps we don't await this, let it run and resolve it later
-	const modelData = await fetch(`${config.origin + config.assetPath}models/diceColliders.json`).then(resp => {
+	const modelData = await fetch(`${config.origin + config.assetPath}models/dice-revised.babylon`, {
+		headers: {
+      'Content-Type': 'application/json'
+		}
+	}).then(resp => {
 		if(resp.ok) {
 			const contentType = resp.headers.get("content-type")
 
@@ -183,8 +191,9 @@ const init = async (data) => {
 	})
 	.then(data => {
 		data.meshes.forEach(mesh => {
+			if(mesh.id.includes("collider") === false) return
 			mesh.physicsMass = diceDefaults[mesh.id].mass
-			mesh.scaling = diceDefaults[mesh.id].scaling
+			// mesh.scaling = diceDefaults[mesh.id].scaling
 		})
 		return data.meshes
 	})
@@ -203,14 +212,14 @@ const init = async (data) => {
 		colliders[model.id] = model
 	})
 
-	addBoxToWorld(zoom[config.zoomLevel])
+	addBoxToWorld(config.size)
 
 }
 
 const updateConfig = (options) => {
 	config = {...config,...options}
 	removeBoxFromWorld()
-	addBoxToWorld(zoom[config.zoomLevel])
+	addBoxToWorld(config.size)
 	physicsWorld.setGravity(setVector3(0, -9.81 * config.gravity, 0))
 
 }
@@ -221,7 +230,7 @@ const setVector3 = (x,y,z) => {
 }
 
 const setStartPosition = () => {
-	let size = zoom[config.zoomLevel]
+	let size = config.size
 	// let envelopeSize = size * .6 / 2
 	let edgeOffset = 2
 	let xMin = size * aspect / 2 - edgeOffset
@@ -247,7 +256,7 @@ const setStartPosition = () => {
 		// tossing on x axis then z should be locked to top or bottom
 		// not tossing on x axis then x should be locked to the left or right
 		tossX ? xEnvelope : tossFromLeft ? xMax : xMin,
-		config.startingHeight > zoom[config.zoomLevel] ? zoom[config.zoomLevel] : config.startingHeight, // start height can't be over size height
+		config.startingHeight > config.size ? config.size : config.startingHeight, // start height can't be over size height
 		tossX ? tossFromTop ? yMax : yMin : yEnvelope
 	]
 
@@ -347,7 +356,7 @@ const addBoxToWorld = (size) => {
 
 	const wallTopTransform = new Ammo.btTransform()
 	wallTopTransform.setIdentity()
-	wallTopTransform.setOrigin(setVector3(0, 0, size/-2))
+	wallTopTransform.setOrigin(setVector3(0, 0, (size/-2) - .5))
 	const wallTopShape = new Ammo.btBoxShape(setVector3(size * aspect, size, 1))
 	const topMotionState = new Ammo.btDefaultMotionState(wallTopTransform)
 	const topInfo = new Ammo.btRigidBodyConstructionInfo(0, topMotionState, wallTopShape, localInertia)
@@ -359,7 +368,7 @@ const addBoxToWorld = (size) => {
 
 	const wallBottomTransform = new Ammo.btTransform()
 	wallBottomTransform.setIdentity()
-	wallBottomTransform.setOrigin(setVector3(0, 0, size/2))
+	wallBottomTransform.setOrigin(setVector3(0, 0, (size/2) + .5))
 	const wallBottomShape = new Ammo.btBoxShape(setVector3(size * aspect, size, 1))
 	const bottomMotionState = new Ammo.btDefaultMotionState(wallBottomTransform)
 	const bottomInfo = new Ammo.btRigidBodyConstructionInfo(0, bottomMotionState, wallBottomShape, localInertia)
@@ -371,7 +380,7 @@ const addBoxToWorld = (size) => {
 
 	const wallRightTransform = new Ammo.btTransform()
 	wallRightTransform.setIdentity()
-	wallRightTransform.setOrigin(setVector3(size * aspect / -2, 0, 0))
+	wallRightTransform.setOrigin(setVector3((size * aspect / -2) - .5, 0, 0))
 	const wallRightShape = new Ammo.btBoxShape(setVector3(1, size, size))
 	const rightMotionState = new Ammo.btDefaultMotionState(wallRightTransform)
 	const rightInfo = new Ammo.btRigidBodyConstructionInfo(0, rightMotionState, wallRightShape, localInertia)
@@ -383,7 +392,7 @@ const addBoxToWorld = (size) => {
 
 	const wallLeftTransform = new Ammo.btTransform()
 	wallLeftTransform.setIdentity()
-	wallLeftTransform.setOrigin(setVector3(size * aspect / 2, 0, 0))
+	wallLeftTransform.setOrigin(setVector3((size * aspect / 2) + .5, 0, 0))
 	const wallLeftShape = new Ammo.btBoxShape(setVector3(1, size, size))
 	const leftMotionState = new Ammo.btDefaultMotionState(wallLeftTransform)
 	const leftInfo = new Ammo.btRigidBodyConstructionInfo(0, leftMotionState, wallLeftShape, localInertia)
@@ -404,7 +413,7 @@ const removeBoxFromWorld = () => {
 }
 
 const addDie = (sides, id) => {
-	let cType = `c${sides}`
+	let cType = `d${sides}_collider`
 	cType = cType.replace('100','10')
 	// clone the collider
 	const newDie = createRigidBody(colliders[cType].convexHull, {

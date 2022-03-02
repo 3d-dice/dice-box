@@ -5,10 +5,10 @@ import { TargetCamera } from '@babylonjs/core/Cameras/targetCamera'
 function createCamera(options) {
   const { scene } = options
   let camera
-  const cameraDistance = 58
+  const cameraDistance = 36.5
 
 	camera = new TargetCamera("TargetCamera1", new Vector3(0, cameraDistance, 0), scene)
-	camera.fov = .16
+	camera.fov = .25
 	camera.minZ = 5
 	camera.maxZ = cameraDistance + 1
   camera.setTarget(Vector3.Zero())

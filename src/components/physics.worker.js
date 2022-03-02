@@ -16,6 +16,7 @@ let width = 150
 let height = 150
 let aspect = 1
 let stopLoop = false
+let spinScale = 60
 
 const defaultOptions = {
 	size: 9.5,
@@ -113,19 +114,14 @@ const init = async (data) => {
 	aspect = width / height
 
 	config = {...config,...data.options}
-	// console.log('config.spinForce', config.spinForce)
-	// console.log('config.throwForce', config.throwForce)
-
-
-	config.spinForce = config.spinForce/250
-	config.throwForce = config.throwForce / 2 * (1 + config.scale / 6)
+	config.gravity === 0 ? 0 : config.gravity + config.mass / 3
+	config.mass = 1 + config.mass / 3
+	config.spinForce = config.spinForce/spinScale
+	config.throwForce = config.throwForce / 2 / config.mass * (1 + config.scale / 6)
 	// config.spinForce = (config.spinForce/100) * (config.scale * (config.scale < 1 ? .5 : 2))
 	// config.throwForce = config.throwForce * (config.scale < 1 ? 2 - (config.scale ** config.scale) : 1 + config.scale/6)
 	// ensure minimum startingHeight of 1
 	config.startingHeight = config.startingHeight < 1 ? 1 : config.startingHeight
-
-	// console.log('config.spinForce', config.spinForce)
-	// console.log('config.throwForce', config.throwForce)
 
 	const ammoWASM = {
 		// locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
@@ -164,10 +160,9 @@ const init = async (data) => {
 		}
 	})
 	.then(data => {
-		data.meshes.forEach(mesh => {
-			if(mesh.id.includes("collider") === false) return
+		return data.meshes.filter(mesh => {
+			return mesh.id.includes("collider")
 		})
-		return data.meshes
 	})
 	.catch(error => {
 		console.error(error)
@@ -190,9 +185,17 @@ const init = async (data) => {
 
 const updateConfig = (options) => {
 	config = {...config,...options}
+	config.mass = 1 + config.mass / 3
+	config.gravity = config.gravity === 0 ? 0 : config.gravity + config.mass / 3
+	config.spinForce = config.spinForce/spinScale
+	config.throwForce = config.throwForce / 2 / config.mass * (1 + config.scale / 6)
+	config.startingHeight = config.startingHeight < 1 ? 1 : config.startingHeight
 	removeBoxFromWorld()
 	addBoxToWorld(config.size, config.startingHeight + 10)
 	physicsWorld.setGravity(setVector3(0, -9.81 * config.gravity, 0))
+	Object.values(colliders).map((collider) => {
+		collider.convexHull.setLocalScaling(setVector3(config.scale, config.scale, config.scale))
+	})
 
 }
 
@@ -204,7 +207,7 @@ const setVector3 = (x,y,z) => {
 const setStartPosition = () => {
 	let size = config.size
 	// let envelopeSize = size * .6 / 2
-	let edgeOffset = 1.5
+	let edgeOffset = .5
 	let xMin = size * aspect / 2 - edgeOffset
 	let xMax = size * aspect / -2 + edgeOffset
 	let yMin = size / 2 - edgeOffset
@@ -386,16 +389,17 @@ const removeBoxFromWorld = () => {
 
 const addDie = (sides, id) => {
 	let cType = `d${sides}_collider`
-	cType = cType.replace('100','10')
+	const mass = colliders[cType].physicsMass * config.mass * config.scale // feature? mass should go up with scale, but it throws off the throwForce and spinForce scaling
 	// clone the collider
 	const newDie = createRigidBody(colliders[cType].convexHull, {
-		mass: colliders[cType].physicsMass * config.mass,
+		mass,
 		scaling: colliders[cType].scaling,
 		pos: config.startPosition,
 		// quat: colliders[cType].rotationQuaternion,
 	})
 	newDie.id = id
 	newDie.timeout = config.settleTimeout
+	newDie.mass = mass
 	physicsWorld.addRigidBody(newDie)
 	bodies.push(newDie)
 	// console.log(`added collider for `, type)
@@ -416,7 +420,11 @@ const rollDie = (die) => {
 		lerp(-config.spinForce, config.spinForce, Math.random())
 	)
 
-	const scale = config.scale * config.scale
+	// attempting to create an envelope for the force influence based on scale and mass
+	// linear scale was no good - this creates a nice power curve
+	const scale = Math.abs(config.scale - 1) + config.scale * config.scale * (die.mass/config.mass) * .75
+
+	// console.log('scale', scale)
 	
 	die.applyImpulse(force, setVector3(scale, scale, scale))
 

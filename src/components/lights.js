@@ -18,14 +18,14 @@ function createLights(options = defaultOptions) {
   h_light.intensity = .2
   
   if(enableShadows){
-    // d_light.shadowMinZ = 1
-    // d_light.shadowMaxZ = 40
-		d_light.autoCalcShadowZBounds = true
+    d_light.shadowMinZ = 1
+    d_light.shadowMaxZ = 70
+		// d_light.autoCalcShadowZBounds = true
     d_light.shadowGenerator = new ShadowGenerator(2048, d_light);
-    // d_light.shadowGenerator.useCloseExponentialShadowMap = true; // best
+    d_light.shadowGenerator.useCloseExponentialShadowMap = true; // best
     d_light.shadowGenerator.darkness = .8
-    d_light.shadowGenerator.usePoissonSampling = true
-    d_light.shadowGenerator.bias = .01
+    // d_light.shadowGenerator.usePoissonSampling = true
+    // d_light.shadowGenerator.bias = .01
   }
 
   return {directional: d_light, hemispheric: h_light}

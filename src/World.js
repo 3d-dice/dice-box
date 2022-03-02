@@ -199,9 +199,8 @@ class World {
 
 	// add a die to another group. groupId should be included
   add(notation, groupId, theme) {
-		if(typeof groupId === 'string' || theme) {
-			this.config.theme = theme
-		}
+		if(theme) this.config.theme = theme
+
 		let parsedNotation = this.createNotationArray(notation)
 		this.#makeRoll(parsedNotation, groupId)
 
@@ -209,14 +208,16 @@ class World {
 		return this
   }
 
-	reroll(die) {
+	reroll(dice) {
 		// TODO: add hide if you want to keep the die result for an external parser
 		// TODO: reroll group
-		// TODO: reroll array
-		this.remove(die)
-		die.qty = 1
-		this.add(die, die.groupId)
-
+		const rollArray = Array.isArray(dice) ? dice : [dice]
+		const groupId = rollArray[0].groupId
+		const addQty = rollArray.map(r => ( {...r, qty: 1} ) )
+		
+		rollArray.forEach(r =>  this.remove( r ) )
+	
+		this.add(addQty, groupId)
 		// make this method chainable
 		return this
 	}
@@ -314,29 +315,32 @@ class World {
 	// accepts array of notations eg: ['4d6','2d10']
 	// accepts array of objects eg: [{sides:int, qty:int, mods:[]}]
 	// accepts object {sides:int, qty:int}
-	createNotationArray(notation){
+	createNotationArray(input){
+		const notation = Array.isArray( input ) ? input : [ input ]
 		let parsedNotation = []
 
-		if(typeof notation === 'string') {
-			parsedNotation.push(this.parse(notation))
+		const verifyObject = ( object ) => {
+			const checkSidesAndQty =  object.sides && object.qty ? true : false
+	
+			if ( checkSidesAndQty ) {
+				return true
+			} else {
+				const err = "Roll notation is missing sides and/or qty"
+				throw new Error(err);
+			}
 		}
+	
 
 		// notation is an array of strings or objects
-		if(Array.isArray(notation)) {
-			notation.forEach(roll => {
-				// if notation is an array of strings
-				if(typeof roll === 'string') {
-					parsedNotation.push(this.parse(roll))
-				}
-				else {
-					// TODO: ensure that there is a 'sides' and 'qty' value on the object - required for making a roll
-					parsedNotation.push(roll)
-				}
-			})
-		} else if(typeof notation === 'object'){
-			// TODO: ensure that there is a 'sides' and 'qty' value on the object - required for making a roll
-			parsedNotation.push(notation)
-		}
+		notation.forEach(roll => {
+			// if notation is an array of strings
+			if ( typeof roll === 'string' ) {
+				parsedNotation.push( this.parse( roll ) )
+			} else if ( typeof notation === 'object' ) {
+				verifyObject( roll ) && parsedNotation.push( roll )
+			}
+		})
+
 
 		return parsedNotation
 	}

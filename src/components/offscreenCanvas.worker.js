@@ -239,6 +239,7 @@ const _add = async (options) => {
     physicsWorkerPort.postMessage({
       action: "addDie",
       sides: 10,
+			scale: config.scale,
 			id: newDie.d10Instance.id
     })
   }

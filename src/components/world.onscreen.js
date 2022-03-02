@@ -95,7 +95,7 @@ class WorldOnscreen {
 			Object.values(this.#lights ).forEach(light => light.dispose())
 			this.#lights  = createLights({enableShadows: this.config.enableShadows})
 		}
-		if(prevConfig.scale !== config.scale) {
+		if(prevConfig.scale !== this.config.scale) {
 			Object.values(this.#dieCache).forEach(({mesh}) => {
 				mesh.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
 			})

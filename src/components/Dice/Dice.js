@@ -37,6 +37,7 @@ class Dice {
 
 		// start the instance under the floor, out of camera view
 		dieInstance.position.y = -100
+    dieInstance.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
 		
     if(this.config.enableShadows){
       for (const key in this.config.lights) {
@@ -72,20 +73,24 @@ class Dice {
     const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "dice-revised.babylon", scene)
 
     models.meshes.forEach(model => {
-      if(model.id === "__root__" || model.id.includes("collider")) {
+      if(model.id === "__root__") {
         model.dispose()
+      }
+      if( model.id.includes("collider")) {
+        model.scaling = new Vector3(.7,.7,.7)
       }
       model.setEnabled(false)
       model.freezeNormals()
       model.isPickable = false;
       model.doNotSyncBoundingInfo = true;
-
-      // set the base model scale
-      model.scaling = new Vector3(scale,scale,scale)
     })
   }
 
-  static ray = new Ray(Vector3.Zero(), Vector3.Zero(), 10)
+  updateConfig(option) {
+    this.config = {...this.config, ...option}
+  }
+
+  static ray = new Ray(Vector3.Zero(), Vector3.Zero(), 1)
   static vector3 = new Vector3.Zero()
 
   static setVector3(x,y,z) {
@@ -99,7 +104,7 @@ class Dice {
   static async getRollResult(die) {
     const getDieRoll = (d=die) => new Promise((resolve,reject) => {
 
-      const dieHitbox = d.config.scene.getMeshByName(`${d.dieType}_hitbox`).createInstance(`${d.dieType}-hitbox-${d.id}`)
+      const dieHitbox = d.config.scene.getMeshByName(`${d.dieType}_collider`).createInstance(`${d.dieType}-hitbox-${d.id}`)
       dieHitbox.isPickable = true
       dieHitbox.isVisible = true
       dieHitbox.setEnabled(true)

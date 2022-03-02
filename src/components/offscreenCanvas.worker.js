@@ -5,6 +5,7 @@ import { createLights } from './lights'
 import DiceBox from './DiceBox'
 import Dice from './Dice'
 import { loadTheme } from './Dice/themes'
+import { Vector3 } from '@babylonjs/core/Maths/math'
 
 let 
 	config,
@@ -118,6 +119,11 @@ const updateConfig = (options) => {
 	if(prevConfig.enableShadows !== config.enableShadows) {
 		Object.values(lights).forEach(light => light.dispose())
 		lights = createLights({enableShadows: config.enableShadows})
+	}
+	if(prevConfig.scale !== config.scale) {
+		Object.values(dieCache).forEach(({mesh}) => {
+			mesh.scaling = new Vector3(config.scale,config.scale,config.scale)
+		})
 	}
 }
 
@@ -265,6 +271,10 @@ const updatesFromPhysics = (buffer) => {
 			continue
 		}
 		const die = dieCache[`${diceBufferView[bufferIndex]}`]
+		if(!die) {
+			console.log("Error: die not available in scene to animate")
+			break
+		}
 		// if the first position index is -1 then this die has been flagged as asleep
 		if(diceBufferView[bufferIndex + 1] === -1) {
 			handleAsleep(die)

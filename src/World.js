@@ -332,7 +332,7 @@ class World {
 		notation.forEach(roll => {
 			// if notation is an array of strings
 			if ( typeof roll === 'string' ) {
-				parsedNotation.push( parse( roll ) )
+				parsedNotation.push( this.parse( roll ) )
 			} else if ( typeof notation === 'object' ) {
 				verifyObject( roll ) && parsedNotation.push( roll )
 			}

@@ -111,9 +111,7 @@ class Dice {
       dieHitbox.position = d.mesh.position
       dieHitbox.rotationQuaternion = d.mesh.rotationQuaternion
 
-      // TODO: ray y vector should extend with config scale - otherwise it could come up short of dice hitbox inner wall
 			const vector = d.dieType === 'd4' ? Dice.setVector3(0, -1, 0) : Dice.setVector3(0, 1, 0)
-      // const ray = new Ray(d.mesh.position, vector, 10)
 
       Dice.ray.direction = vector
       Dice.ray.origin = d.mesh.position

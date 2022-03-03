@@ -5,6 +5,7 @@ import { createLights } from './lights'
 import DiceBox from './DiceBox'
 import Dice from './Dice'
 import { loadTheme } from './Dice/themes'
+import { Vector3 } from '@babylonjs/core/Maths/math'
 
 let 
 	config,
@@ -82,23 +83,24 @@ const initScene = async (data) => {
 	// setup babylonJS scene
 	engine = createEngine(canvas)
   scene = createScene({engine})
-  camera = createCamera({engine, zoomLevel: config.zoomLevel})
+  camera = createCamera({engine})
   lights = createLights({enableShadows: config.enableShadows})
 
   // create the box that provides surfaces for shadows to render on
 	diceBox = new DiceBox({
 		enableShadows: config.enableShadows,
-    zoomLevel: config.zoomLevel,
     aspect: canvas.width / canvas.height,
     lights,
-		scene
+		scene,
+		enableDebugging: false
 	})
-  
+
   // loading all our dice models
   // we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
   await Dice.loadModels({
 		assetPath: config.origin + config.assetPath,
-		scene
+		scene,
+		scale: config.scale
 	})
 
 	physicsWorkerPort.postMessage({
@@ -113,25 +115,15 @@ const initScene = async (data) => {
 const updateConfig = (options) => {
 	const prevConfig = config
 	config = options
-	// check if zoom level has changed
-	if(prevConfig.zoomLevel !== config.zoomLevel){
-		// redraw the DiceBox for shadows shader
-		diceBox.destroy()
-		diceBox = new DiceBox({
-			...config,
-			zoomLevel: config.zoomLevel,
-			aspect: canvas.width / canvas.height,
-			lights,
-			scene
-		})
-		// redraw the camera which changes position based on zoomLevel value
-		camera.dispose()
-		camera = createCamera({engine, zoomLevel: config.zoomLevel})
-	}
 	// check if shadows setting has changed
 	if(prevConfig.enableShadows !== config.enableShadows) {
 		Object.values(lights).forEach(light => light.dispose())
 		lights = createLights({enableShadows: config.enableShadows})
+	}
+	if(prevConfig.scale !== config.scale) {
+		Object.values(dieCache).forEach(({mesh}) => {
+			mesh.scaling = new Vector3(config.scale,config.scale,config.scale)
+		})
 	}
 }
 
@@ -216,6 +208,7 @@ const _add = async (options) => {
 		...options,
 		assetPath: config.assetPath,
 		enableShadows: config.enableShadows,
+		scale: config.scale,
 		lights,
 	}
 
@@ -228,6 +221,7 @@ const _add = async (options) => {
 	physicsWorkerPort.postMessage({
 		action: "addDie",
 		sides: options.sides,
+		scale: config.scale,
 		id: newDie.id
 	})
 
@@ -245,6 +239,7 @@ const _add = async (options) => {
     physicsWorkerPort.postMessage({
       action: "addDie",
       sides: 10,
+			scale: config.scale,
 			id: newDie.d10Instance.id
     })
   }
@@ -277,6 +272,10 @@ const updatesFromPhysics = (buffer) => {
 			continue
 		}
 		const die = dieCache[`${diceBufferView[bufferIndex]}`]
+		if(!die) {
+			console.log("Error: die not available in scene to animate")
+			break
+		}
 		// if the first position index is -1 then this die has been flagged as asleep
 		if(diceBufferView[bufferIndex + 1] === -1) {
 			handleAsleep(die)

@@ -1,3 +1,4 @@
+import { Vector3 } from '@babylonjs/core/Maths/math'
 import { createEngine } from './engine'
 import { createScene } from './scene'
 import { createCamera } from './camera'
@@ -39,13 +40,12 @@ class WorldOnscreen {
 		// setup babylonJS scene
 		this.#engine  = createEngine(this.#canvas )
 		this.#scene = createScene({engine:this.#engine })
-		this.#camera  = createCamera({engine:this.#engine , zoomLevel:this.config.zoomLevel, scene: this.#scene})
+		this.#camera  = createCamera({engine:this.#engine, scene: this.#scene})
 		this.#lights  = createLights({enableShadows: this.config.enableShadows, scene: this.#scene})
 	
 		// create the box that provides surfaces for shadows to render on
 		this.#diceBox  = new DiceBox({
 			enableShadows: this.config.enableShadows,
-			zoomLevel: this.config.zoomLevel,
 			aspect: this.#canvas.width / this.#canvas.height,
 			lights: this.#lights,
 			scene: this.#scene
@@ -55,7 +55,8 @@ class WorldOnscreen {
 		// we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
 		await Dice.loadModels({
 			assetPath: this.config.origin + this.config.assetPath,
-			scene: this.#scene
+			scene: this.#scene,
+			scale: this.config.scale
 		})
 
 		this.#physicsWorkerPort.postMessage({
@@ -88,26 +89,16 @@ class WorldOnscreen {
 	updateConfig(options){
 		const prevConfig = this.config
 		this.config = options
-		// check if zoom level has changed
-		if(prevConfig.zoomLevel !== this.config.zoomLevel){
-			// redraw the DiceBox for shadows shader
-			this.#diceBox.destroy()
-			this.#diceBox  = new DiceBox({
-				enableShadows: this.config.enableShadows,
-				zoomLevel: this.config.zoomLevel,
-				aspect: this.#canvas.width / this.#canvas.height,
-				lights: this.#lights ,
-				scene: this.#scene
-			})
-			// redraw the camera which changes position based on zoomLevel value
-			this.#camera.dispose()
-			this.#camera  = createCamera({engine:this.#engine , zoomLevel: this.config.zoomLevel})
-		}
 		// check if shadows setting has changed
 		if(prevConfig.enableShadows !== this.config.enableShadows) {
 			// regenerate the lights
 			Object.values(this.#lights ).forEach(light => light.dispose())
 			this.#lights  = createLights({enableShadows: this.config.enableShadows})
+		}
+		if(prevConfig.scale !== this.config.scale) {
+			Object.values(this.#dieCache).forEach(({mesh}) => {
+				mesh.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
+			})
 		}
 	}
 
@@ -188,6 +179,7 @@ class WorldOnscreen {
 			...options,
 			assetPath: this.config.assetPath,
 			enableShadows: this.config.enableShadows,
+			scale: this.config.scale,
 			lights: this.#lights,
 		}
 		
@@ -200,6 +192,7 @@ class WorldOnscreen {
 		this.#physicsWorkerPort.postMessage({
 			action: "addDie",
 			sides: options.sides,
+			scale: this.config.scale,
 			id: newDie.id
 		})
 	
@@ -217,6 +210,7 @@ class WorldOnscreen {
 			this.#physicsWorkerPort.postMessage({
 				action: "addDie",
 				sides: 10,
+				scale: this.config.scale,
 				id: newDie.d10Instance.id
 			})
 		}
@@ -249,6 +243,10 @@ class WorldOnscreen {
 			continue
 		}
 		const die = this.#dieCache[`${this.diceBufferView[bufferIndex]}`]
+		if(!die) {
+			console.log("Error: die not available in scene to animate")
+			break
+		}
 		// if the first position index is -1 then this die has been flagged as asleep
 		if(this.diceBufferView[bufferIndex + 1] === -1) {
 			this.handleAsleep(die)

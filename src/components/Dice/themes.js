@@ -10,9 +10,12 @@ function sleeper(ms) {
 async function loadStandardMaterial(theme,assetPath,scene) {
   let diceMaterial = new StandardMaterial(theme,scene);
   let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,scene)
-  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal.jpg`,scene)
+  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal-dx.jpg`,scene)
+  // let diceSpecTexture = await importTextureAsync(`${assetPath}themes/${theme}/specularity.jpg`,scene)
 	diceMaterial.diffuseTexture = diceTexture
   diceMaterial.bumpTexture = diceBumpTexture
+  // diceMaterial.specularTexture = diceSpecTexture
+  // diceMaterial.specularPower = 1
 
 	sharedSettings(diceMaterial)
 
@@ -22,7 +25,7 @@ async function loadStandardMaterial(theme,assetPath,scene) {
 async function loadSemiTransparentMaterial(theme,assetPath,scene) {
   let diceMaterial = new StandardMaterial(theme,scene);
   let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,scene)
-  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal.jpg`,scene)
+  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal-dx.jpg`,scene)
   let diceOpacityTexture = await importTextureAsync(`${assetPath}themes/${theme}/mask.png`,scene)
 	diceMaterial.diffuseTexture = diceTexture
 	diceMaterial.opacityTexture = diceOpacityTexture
@@ -53,7 +56,7 @@ async function loadColorMaterial(theme,assetPath,scene) {
 		baseColor.rgb = mix(vec3(${color.r},${color.g},${color.b}), baseColor.rgb, baseColor.a);
 	`)
 
-  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/transparent/normal.jpg`,scene)
+  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/transparent/normal-dx.jpg`,scene)
   diceMaterial.bumpTexture = diceBumpTexture
 
 	sharedSettings(diceMaterial)
@@ -63,13 +66,13 @@ async function loadColorMaterial(theme,assetPath,scene) {
 
 const sharedSettings = (material) => {
 	material.diffuseTexture.level = 1.3
-  material.bumpTexture.level = 2
+  // material.bumpTexture.level = 2
   // material.invertNormalMapY = true
-  material.invertNormalMapX = true
+  // material.invertNormalMapX = true
 
 	// additional settings for .babylon file settings with Preserve Z-up right handed coordinate
-	material.diffuseTexture.vScale = -1
-  material.bumpTexture.vScale = -1
+	// material.diffuseTexture.vScale = -1
+  // material.bumpTexture.vScale = -1
 	// material.diffuseTexture.uScale = -1
   // material.bumpTexture.uScale = -1
 
@@ -84,7 +87,7 @@ async function importTextureAsync(url, scene) {
       url, // url: Nullable<string>
       scene, // sceneOrEngine: Nullable<Scene | ThinEngine>
       undefined, // noMipmapOrOptions?: boolean | ITextureCreationOptions
-      false, // invertY?: boolean
+      true, // invertY?: boolean
       undefined, // samplingMode?: number
       () => resolve(texture), // onLoad?: Nullable<() => void>
       () => reject("Unable to load texture") // onError?: Nullable<(message?: string

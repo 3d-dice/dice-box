@@ -310,7 +310,7 @@ const handleAsleep = async (die) => {
 
 	// get the roll result for this die
 	let result = await Dice.getRollResult(die)
-	// TODO: results are based on which mesh face is pointing up. Not all of them are mapped to number values such as edges (especially d10 and d100)
+	// TODO: catch error if no result is found
 	if(result === undefined) {
 		console.log("No result. This die needs a reroll.")
 	}

@@ -50,7 +50,6 @@ class WorldOffScreen {
 					break;
 				case 'roll-result':
 					const die = e.data.die
-					// TODO: die should have 'sides' or is that unnecessary data passed between workers?
 					this.onRollResult(die)
 					break;
 				case 'roll-complete':

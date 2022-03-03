@@ -30,7 +30,6 @@ const defaultOptions = {
 	linearDamping: .4,
 	angularDamping: .4,
 	settleTimeout: 5000,
-	// runTime: 15000, // TODO: force dice to sleep after specific time
 	// TODO: toss: "center", "edge", "allEdges"
 }
 

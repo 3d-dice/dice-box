@@ -15,7 +15,7 @@ const defaultOptions = {
 	theme: 'diceOfRolling', // can be a hex color or a pre-defined theme such as 'purpleRock'
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
 	assetPath: '/assets/dice-box/', // path to 'ammo', 'models', 'themes' folders and web workers
-	origin: location.origin.includes('localhost') ? location.origin : '',
+	origin: location.origin,
 }
 
 class World {

@@ -44,9 +44,9 @@ var logOperation = function (operation, producer) {
 
 SceneLoader.RegisterPlugin({
     name: "babylon.js",
-    extensions: ".babylon",
+    extensions: ".json",
     canDirectLoad: function (data) {
-        if (data.indexOf("babylon") !== -1) {
+        if (data.indexOf("json") !== -1) {
             return true;
         }
         return false;

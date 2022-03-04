@@ -137,11 +137,7 @@ const init = async (data) => {
 	
 	// load our collider data
 	// perhaps we don't await this, let it run and resolve it later
-	const modelData = await fetch(`${config.origin + config.assetPath}models/dice-revised.babylon`, {
-		headers: {
-      'Content-Type': 'application/json'
-		}
-	}).then(resp => {
+	const modelData = await fetch(`${config.origin + config.assetPath}models/dice-revised.json`).then(resp => {
 		if(resp.ok) {
 			const contentType = resp.headers.get("content-type")
 

@@ -70,7 +70,7 @@ class Dice {
   // load all the dice models
   static async loadModels(options) {
     const {assetPath, scene, scale} = options
-    const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "dice-revised.babylon", scene)
+    const models = await SceneLoader.ImportMeshAsync(null,`${assetPath}models/`, "dice-revised.json", scene)
 
     models.meshes.forEach(model => {
       if(model.id === "__root__") {

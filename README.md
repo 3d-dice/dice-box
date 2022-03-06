@@ -2,6 +2,7 @@
 High performance 3D dice roller made with BabylonJS, AmmoJS and implemented with web workers and offscreenCanvas.
 
 ## Demo
+New demo for version 0.5!
 Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html
 
 This demo includes other `@3d-dice` modules such as [dice-roller-parser](https://github.com/3d-dice/dice-roller-parser), [FUI](https://github.com/3d-dice/FUI), and [FDP](https://github.com/3d-dice/FDP). Advanced dice notation is supported here such as `4d6dl1` or `4d6!r<2`
@@ -54,10 +55,25 @@ Dice-Box can only accept simple dice notations and a modifier such as `2d20` or 
 |offscreen|true|If offscreenCanvas is available it will be used|
 |delay|10|The delay between dice being generate. If they're all generated at the same time they instantly collide with each other which doesn't look very natural.|
 |enableShadows|true|Do the dice cast a shadow? Turn off for a performance bump|
-|theme|'purpleRock'| The only named theme currently is 'purpleRock', or you can assign a HEX color value.|
-|zoomLevel|3| Options are 0-7. The higher the number the larger the dice.|
+|theme|'purpleRock'|HEX color value or one of 'purpleRock', 'diceOfRolling', 'galvanized'.|
+|scale|4| Options are best between 2-9. The higher the number the larger the dice. Accepts decimal numbers |
 
-### Results Object
+
+### Promised based rolls
+The methods `.roll()`,`.add()`, and `.reroll()` are all methods that return a promise that is resolved when the `dieRollComplete` event is triggered. So it is possible to write `DiceBox.roll('4d6').then(results => console.log(results))`. Results can also be retrieved from the `onRollComplete` callback event.
+
+### Die Result Object
+The result for an individual die will look something like this
+```json
+{
+  "groupId": 5,
+  "rollId": 29,
+  "id": 29,
+  "result": 4
+}
+```
+
+### Roll Results Array Objects
 The result object for `3d6` will look something like this
 ```json
 [
@@ -96,6 +112,34 @@ The result object for `3d6` will look something like this
 ]
 ```
 
+#### What's the difference between `groupId`, `rollId` and `id`?
+_groupId_: the roll group this die is a part of. This becomes more useful with the advanced dice roller that accepts notations such as `2d10+2d6`. In this case `groupId: 0` would be assigned to the 2d10 and `groupId: 1` would be assigned to the 2d6
+_rollId_: the id of the die within the group. By default this is incremented automatically by the dice roller, however there are cases where the rollId is assigned, such as exploding die. In this case, in order to make an association between the 'exploder' and the 'explodee' the rollId of the added die is set to a decimal value of the triggering die. For example with 1d6 that explodes twice: 
+```json
+rolls:[
+  {
+    "groupId": 0,
+    "rollId": 0,
+    "id": 0,
+    "result": 6
+  },
+  {
+    "groupId": 0,
+    "rollId": "0.1",
+    "id": 1,
+    "result": 6
+  },
+  {
+    "groupId": 0,
+    "rollId": "0.2",
+    "id": 1,
+    "result": 3
+  }
+]
+```
+_id_: an auto-incremented number assigned to dice as they are added to the simulation. This id is used to keep the physics simulation synced with the scene being rendered on the canvas. It should never be changed. The id counter is reset on clear.
+
+## Methods
 ### Roll
 A roll will clear current dice and start a new roll. 
 ```javascript
@@ -143,6 +187,19 @@ diceBox.hide()
 This will show the canvas element that the dice box is rendered to.
 ```javascript
 diceBox.show()
+```
+
+## Callbacks
+### onDieComplete
+This callback is triggered whenever an individual die has completed rolling and contains the die result object as it's argument. It contains the result object for that die
+```javascript
+Box.onDieComplete = (dieResult) => console.log('die result', dieResult)
+```
+
+### onRollComplete
+This callback is triggered whenever all the dice have finished rolling and/or the physics simulation has been stopped and contains the roll result object as it's argument.
+```javascript
+Box.onRollComplete = (rollResult) => console.log('roll results', rollResult)
 ```
 
 ## Other setup options

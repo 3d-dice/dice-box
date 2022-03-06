@@ -2,7 +2,7 @@
 High performance 3D dice roller made with BabylonJS, AmmoJS and implemented with web workers and offscreenCanvas.
 
 ## Demo
-New demo for version 0.5!
+New demo for version 0.5! <br>
 Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html
 
 This demo includes other `@3d-dice` modules such as [dice-roller-parser](https://github.com/3d-dice/dice-roller-parser), [FUI](https://github.com/3d-dice/FUI), and [FDP](https://github.com/3d-dice/FDP). Advanced dice notation is supported here such as `4d6dl1` or `4d6!r<2`
@@ -113,10 +113,11 @@ The result object for `3d6` will look something like this
 ```
 
 #### What's the difference between `groupId`, `rollId` and `id`?
-_groupId_: the roll group this die is a part of. This becomes more useful with the advanced dice roller that accepts notations such as `2d10+2d6`. In this case `groupId: 0` would be assigned to the 2d10 and `groupId: 1` would be assigned to the 2d6
-_rollId_: the id of the die within the group. By default this is incremented automatically by the dice roller, however there are cases where the rollId is assigned, such as exploding die. In this case, in order to make an association between the 'exploder' and the 'explodee' the rollId of the added die is set to a decimal value of the triggering die. For example with 1d6 that explodes twice: 
+__groupId__: the roll group this die is a part of. This becomes more useful with the advanced dice roller that accepts notations such as `2d10+2d6`. In this case `groupId: 0` would be assigned to the 2d10 and `groupId: 1` would be assigned to the 2d6
+
+__rollId__: the id of the die within the group. By default this is incremented automatically by the dice roller, however there are cases where the rollId is assigned, such as exploding die. In this case, in order to make an association between the 'exploder' and the 'explodee' the rollId of the added die is set to a decimal value of the triggering die. For example with 1d6 that explodes twice: 
 ```json
-rolls:[
+[
   {
     "groupId": 0,
     "rollId": 0,
@@ -137,7 +138,7 @@ rolls:[
   }
 ]
 ```
-_id_: an auto-incremented number assigned to dice as they are added to the simulation. This id is used to keep the physics simulation synced with the scene being rendered on the canvas. It should never be changed. The id counter is reset on clear.
+__id__: an auto-incremented number assigned to dice as they are added to the simulation. This id is used to keep the physics simulation synced with the scene being rendered on the canvas. It should never be changed. The id counter is reset on clear.
 
 ## Methods
 ### Roll

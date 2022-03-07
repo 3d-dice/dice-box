@@ -282,4 +282,4 @@ body {
 ```
 
 ## Other Projects
-If you're looking for a 3D dice roller that works with [three.js](https://github.com/mrdoob/three.js/) than I would recommend looking into [Dice So Nice](https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/tree/master)
+If you're looking for a 3D dice roller that works with [three.js](https://threejs.org/) than I would recommend looking into [Dice So Nice](https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/tree/master)

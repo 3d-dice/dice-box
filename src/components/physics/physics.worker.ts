@@ -1,48 +1,65 @@
-import { lerp } from '../helpers'
-import AmmoJS from "../ammo/ammo.wasm.es.js"
+import { lerp } from '../../helpers'
+import AmmoJS from "../../ammo/ammo.js"
+import findObjectByKey from '../../helpers/findObjectByKey'
+import { diceDefaults, defaultOptions, colliderDefault } from "./physicsDefaults"
+import { 
+	dataType,
+	eventDataType,
+	meshDataType,
+	meshType,
+	workWorkerEventType,
+	optionsType,
+	physicsWorldType,
+	sharedVector3Type,
+	physicWokrerConfigType as configType,
+	collisionShapeType,
+	createRigidBodyParamsType,
+	sideType,
+	collidersType,
+	colliderType,
+	removeDieDataType,
+	rollDieType,
+	sleepingBodyType,
+	bodyType,
+	tmpBtTransType,
+} from "../../types"
 
 // Firefox limitation: https://github.com/vitejs/vite/issues/4586
 
 // there's probably a better place for these variables
-let bodies = []
-let sleepingBodies = []
-let colliders = {}
-let physicsWorld
-let Ammo
-let worldWorkerPort
-let tmpBtTrans
-let sharedVector3
-let width = 150
-let height = 150
+let Ammo: unknown
 let aspect = 1
+let bodies: bodyType[] = []
+let colliders: collidersType = {
+  c4: { id: 'c4', name: 'c4', ...colliderDefault },
+  c6: { id: 'c6', name: 'c6', ...colliderDefault },
+  c8: { id: 'c8', name: 'c8', ...colliderDefault },
+  c10: { id: 'c10', name: 'c10', ...colliderDefault },
+  c12: { id: 'c12', name: 'c12', ...colliderDefault },
+  c20: { id: 'c20', name: 'c20', ...colliderDefault }
+}
+let height = 150
+let physicsWorld: physicsWorldType
+let sharedVector3: sharedVector3Type
+let sleepingBodies: sleepingBodyType[] = []
 let stopLoop = false
-let spinScale = 60
+let tmpBtTrans: tmpBtTransType
+let width = 150
+let worldWorkerPort: MessagePort
+let zoom = [43,37,32,26.5,23,20.5,18,15.75]
 
-const defaultOptions = {
-	size: 9.5,
-	startingHeight: 12,
-	spinForce: 3,
-	throwForce: 2,
-	gravity: 1,
-	mass: 1,
-	friction: .8,
-	restitution: .1,
-	linearDamping: .4,
-	angularDamping: .4,
-	settleTimeout: 5000,
-	// TODO: toss: "center", "edge", "allEdges"
+let config: configType = { 
+	...defaultOptions,
+	origin: '',
+	assetPath: '',
+	startPosition: []
 }
 
-let config = {...defaultOptions}
+let emptyVector: sharedVector3Type
+let diceBufferView: Float32Array
 
-let emptyVector
-let diceBufferView
-
-self.onmessage = (e) => {
+self.onmessage = (e: MessageEvent<eventDataType>) => {
   switch (e.data.action) {
-    case "rollDie":
-      rollDie(e.data.sides)
-      break;
     case "init":
       init(e.data).then(()=>{
         self.postMessage({
@@ -51,7 +68,7 @@ self.onmessage = (e) => {
       })
       break
     case "clearDice":
-			clearDice(e.data)
+			clearDice()
       break
 		case "removeDie":
 			removeDie(e.data)
@@ -60,14 +77,14 @@ self.onmessage = (e) => {
 			width = e.data.width
 			height = e.data.height
 			aspect = width / height
-			addBoxToWorld(config.size, config.startingHeight + 10)
+			addBoxToWorld(zoom[config.zoomLevel])
 			break
 		case "updateConfig":
 			updateConfig(e.data.options)
 			break
     case "connect":
       worldWorkerPort = e.ports[0]
-      worldWorkerPort.onmessage = (e) => {
+      worldWorkerPort.onmessage = ((e: MessageEvent<workWorkerEventType>) => {
         switch (e.data.action) {
 					case "initBuffer":
 						diceBufferView = new Float32Array(e.data.diceBuffer)
@@ -75,16 +92,10 @@ self.onmessage = (e) => {
 						break;
           case "addDie":
 						// toss from all edges
-						// setStartPosition()
             addDie(e.data.sides, e.data.id)
-            break;
-          case "rollDie":
-						// TODO: this won't work, need a die object
-            rollDie(e.data.id)
             break;
           case "stopSimulation":
             stopLoop = true
-						
             break;
           case "resumeSimulation":
 						setStartPosition()
@@ -98,46 +109,38 @@ self.onmessage = (e) => {
           default:
             console.error("action not found in physics worker from worldOffscreen worker:", e.data.action)
         }
-      }
+      })
       break
     default:
       console.error("action not found in physics worker:", e.data.action)
   }
 }
-
 // runs when the worker loads to set up the Ammo physics world and load our colliders
 // loaded colliders will be cached and added to the world in a later post message
-const init = async (data) => {
+const init = async ( data: dataType ) => {
 	width = data.width
 	height = data.height
 	aspect = width / height
-
-	config = {...config,...data.options}
-	config.gravity === 0 ? 0 : config.gravity + config.mass / 3
-	config.mass = 1 + config.mass / 3
-	config.spinForce = config.spinForce/spinScale
-	config.throwForce = config.throwForce / 2 / config.mass * (1 + config.scale / 6)
-	// config.spinForce = (config.spinForce/100) * (config.scale * (config.scale < 1 ? .5 : 2))
-	// config.throwForce = config.throwForce * (config.scale < 1 ? 2 - (config.scale ** config.scale) : 1 + config.scale/6)
-	// ensure minimum startingHeight of 1
-	config.startingHeight = config.startingHeight < 1 ? 1 : config.startingHeight
+	config = {...config, ...data.options}
 
 	const ammoWASM = {
-		// locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
 		locateFile: () => `${config.origin + config.assetPath}ammo/ammo.wasm.wasm`
 	}
 
+  //TS says this await is unnecessary. It is wrong.
 	Ammo = await new AmmoJS(ammoWASM)
 
+	//@ts-expect-error Ammo not typed
 	tmpBtTrans = new Ammo.btTransform()
+	//@ts-expect-error Ammo not typed
 	sharedVector3 = new Ammo.btVector3(0, 0, 0)
 	emptyVector = setVector3(0,0,0)
 
-	setStartPosition(aspect)
+	setStartPosition()
 	
 	// load our collider data
 	// perhaps we don't await this, let it run and resolve it later
-	const modelData = await fetch(`${config.origin + config.assetPath}models/dice-revised.json`).then(resp => {
+	const modelData: meshType[] = await fetch(`${config.origin + config.assetPath}models/diceColliders.json`).then(resp => {
 		if(resp.ok) {
 			const contentType = resp.headers.get("content-type")
 
@@ -154,10 +157,24 @@ const init = async (data) => {
 			throw new Error(`Request rejected with status ${resp.status}: ${resp.statusText}`)
 		}
 	})
-	.then(data => {
-		return data.meshes.filter(mesh => {
-			return mesh.id.includes("collider")
+	.then(( data: meshDataType ) => {
+		const meshWithScalingAndMass: meshType[] = []
+
+		data.meshes.forEach(( mesh ) => {
+			const object = findObjectByKey(diceDefaults, mesh.id)
+
+			if (object) {
+				const { mass, scaling } = object
+					
+				meshWithScalingAndMass.push({
+					...mesh,
+					scaling,
+					physicsMass: mass,
+				})
+			}
 		})
+
+		return meshWithScalingAndMass
 	})
 	.catch(error => {
 		console.error(error)
@@ -167,73 +184,50 @@ const init = async (data) => {
 	physicsWorld = setupPhysicsWorld()
 
 	// turn our model data into convex hull items for the physics world
-	modelData.forEach((model,i) => {
+	modelData.forEach((model: meshType ) => {
 		model.convexHull = createConvexHull(model)
-		// model.physicsBody = createRigidBody(model.convexHull, {mass: model.mass})
-
 		colliders[model.id] = model
 	})
 
-	addBoxToWorld(config.size, config.startingHeight + 10)
-
+	addBoxToWorld(zoom[config.zoomLevel])
 }
 
-const updateConfig = (options) => {
-	config = {...config,...options}
-	config.mass = 1 + config.mass / 3
-	config.gravity = config.gravity === 0 ? 0 : config.gravity + config.mass / 3
-	config.spinForce = config.spinForce/spinScale
-	config.throwForce = config.throwForce / 2 / config.mass * (1 + config.scale / 6)
-	config.startingHeight = config.startingHeight < 1 ? 1 : config.startingHeight
+const updateConfig = (options: optionsType) => {
+	config = {...config, ...options}
 	removeBoxFromWorld()
-	addBoxToWorld(config.size, config.startingHeight + 10)
-	physicsWorld.setGravity(setVector3(0, -9.81 * config.gravity, 0))
-	Object.values(colliders).map((collider) => {
-		collider.convexHull.setLocalScaling(setVector3(config.scale, config.scale, config.scale))
-	})
-
+	addBoxToWorld(zoom[config.zoomLevel])
+	physicsWorld.setGravity( setVector3(0, -9.81 * config.gravity, 0) )
 }
 
-const setVector3 = (x,y,z) => {
+const setVector3 = (x: number,y: number,z: number) => {
 	sharedVector3.setValue(x,y,z)
 	return sharedVector3
 }
 
 const setStartPosition = () => {
-	let size = config.size
-	// let envelopeSize = size * .6 / 2
-	let edgeOffset = .5
+	let size = zoom[config.zoomLevel]
+	let edgeOffset = 2
 	let xMin = size * aspect / 2 - edgeOffset
 	let xMax = size * aspect / -2 + edgeOffset
 	let yMin = size / 2 - edgeOffset
 	let yMax = size / -2 + edgeOffset
-	// let xEnvelope = lerp(envelopeSize * aspect - edgeOffset * aspect, -envelopeSize * aspect + edgeOffset * aspect, Math.random())
 	let xEnvelope = lerp(xMin, xMax, Math.random())
 	let yEnvelope = lerp(yMin, yMax, Math.random())
 	let tossFromTop = Math.round(Math.random())
 	let tossFromLeft = Math.round(Math.random())
 	let tossX = Math.round(Math.random())
-	// console.log(`throw coming from`, tossX ? tossFromTop ? "top" : "bottom" : tossFromLeft ? "left" : "right")
-
-	// forces = {
-	// 	xMinForce: tossX ? -config.throwForce * aspect : tossFromLeft ? config.throwForce * aspect * .3 : -config.throwForce * aspect * .3,
-	// 	xMaxForce: tossX ? config.throwForce * aspect : tossFromLeft ? config.throwForce * aspect * 1 : -config.throwForce * aspect * 1,
-	// 	zMinForce: tossX ? tossFromTop ? config.throwForce * .3 : -config.throwForce * .3 : -config.throwForce,
-	// 	zMaxForce: tossX ? tossFromTop ? config.throwForce * 1 : -config.throwForce * 1 : config.throwForce,
-	// }
 
 	config.startPosition = [
 		// tossing on x axis then z should be locked to top or bottom
 		// not tossing on x axis then x should be locked to the left or right
 		tossX ? xEnvelope : tossFromLeft ? xMax : xMin,
-		config.startingHeight,
+		config.startingHeight > zoom[config.zoomLevel] ? zoom[config.zoomLevel] : config.startingHeight, // start height can't be over size height
 		tossX ? tossFromTop ? yMax : yMin : yEnvelope
 	]
-
-	// console.log(`startPosition`, config.startPosition)
 }
 
-const createConvexHull = (mesh) => {
+const createConvexHull = (mesh: meshType) => {
+	//@ts-expect-error Ammo not typed
 	const convexMesh = new Ammo.btConvexHullShape()
 
 	let count = mesh.positions.length
@@ -243,20 +237,20 @@ const createConvexHull = (mesh) => {
 		convexMesh.addPoint(v, true)
 	}
 
-	convexMesh.setLocalScaling(setVector3(mesh.scaling[0] * config.scale, mesh.scaling[1] * config.scale, mesh.scaling[2] * config.scale))
+	convexMesh.setLocalScaling(setVector3(-mesh.scaling[0],mesh.scaling[1],-mesh.scaling[2]))
 
 	return convexMesh
 }
 
-const createRigidBody = (collisionShape, params) => {
+const createRigidBody = ( 
+	collisionShape: collisionShapeType, 
+	params: createRigidBodyParamsType 
+) => {
 	// apply params
 	const {
-		mass = .1,
+		mass = 10,
 		collisionFlags = 0,
-		// pos = { x: 0, y: 0, z: 0 },
-		// quat = { x: 0, y: 0, z: 0, w: 1 }
 		pos = [0,0,0],
-		// quat = [0,0,0,-1],
 		quat = [
 			lerp(-1.5, 1.5, Math.random()),
 			lerp(-1.5, 1.5, Math.random()),
@@ -269,28 +263,32 @@ const createRigidBody = (collisionShape, params) => {
 	} = params
 
 	// apply position and rotation
+	//@ts-expect-error Ammo not typed
 	const transform = new Ammo.btTransform()
-	// console.log(`collisionShape scaling `, collisionShape.getLocalScaling().x(),collisionShape.getLocalScaling().y(),collisionShape.getLocalScaling().z())
 	transform.setIdentity()
 	transform.setOrigin(setVector3(pos[0], pos[1], pos[2]))
 	transform.setRotation(
+		//@ts-expect-error Ammo not typed
 		new Ammo.btQuaternion(quat[0], quat[1], quat[2], quat[3])
 	)
-	// collisionShape.setLocalScaling(new Ammo.btVector3(1.1, -1.1, 1.1))
-	// transform.ScalingToRef()
-	// set the scale of the collider
-	// collisionShape.setLocalScaling(new Ammo.btVector3(scale[0],scale[1],scale[2]))
 
 	// create the rigid body
+	//@ts-expect-error Ammo not typed
 	const motionState = new Ammo.btDefaultMotionState(transform)
 	const localInertia = setVector3(0, 0, 0)
-	if (mass > 0) collisionShape.calculateLocalInertia(mass, localInertia)
+
+	if (mass > 0 && collisionShape.calculateLocalInertia) {
+		collisionShape.calculateLocalInertia(mass, localInertia)
+	}
+
+	//@ts-expect-error Ammo not typed
 	const rbInfo = new Ammo.btRigidBodyConstructionInfo(
 		mass,
 		motionState,
 		collisionShape,
 		localInertia
 	)
+	//@ts-expect-error Ammo not typed
 	const rigidBody = new Ammo.btRigidBody(rbInfo)
 	
 	// rigid body properties
@@ -300,72 +298,90 @@ const createRigidBody = (collisionShape, params) => {
 	rigidBody.setRestitution(restitution)
 	rigidBody.setDamping(config.linearDamping, config.angularDamping)
 
-	// ad rigid body to physics world
-	// physicsWorld.addRigidBody(rigidBody)
-
 	return rigidBody
-
 }
 // cache for box parts so it can be removed after a new one has been made
-let boxParts = []
-const addBoxToWorld = (size, height) => {
+let boxParts: unknown[] = []
+const addBoxToWorld = (size: number) => {
 	const tempParts = []
 	// ground
 	const localInertia = setVector3(0, 0, 0);
+	//@ts-expect-error Ammo not typed
 	const groundTransform = new Ammo.btTransform()
 	groundTransform.setIdentity()
 	groundTransform.setOrigin(setVector3(0, -.5, 0))
+	//@ts-expect-error Ammo not typed
 	const groundShape = new Ammo.btBoxShape(setVector3(size * aspect, 1, size))
+	//@ts-expect-error Ammo not typed
 	const groundMotionState = new Ammo.btDefaultMotionState(groundTransform)
+	//@ts-expect-error Ammo not typed
 	const groundInfo = new Ammo.btRigidBodyConstructionInfo(0, groundMotionState, groundShape, localInertia)
+	//@ts-expect-error Ammo not typed
 	const groundBody = new Ammo.btRigidBody(groundInfo)
 	groundBody.setFriction(config.friction)
 	groundBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(groundBody)
 	tempParts.push(groundBody)
 
+	//@ts-expect-error Ammo not typed
 	const wallTopTransform = new Ammo.btTransform()
 	wallTopTransform.setIdentity()
-	wallTopTransform.setOrigin(setVector3(0, 0, (size/-2) - .5))
-	const wallTopShape = new Ammo.btBoxShape(setVector3(size * aspect, height, 1))
+	wallTopTransform.setOrigin(setVector3(0, 0, size/-2))
+	//@ts-expect-error Ammo not typed
+	const wallTopShape = new Ammo.btBoxShape(setVector3(size * aspect, size, 1))
+	//@ts-expect-error Ammo not typed
 	const topMotionState = new Ammo.btDefaultMotionState(wallTopTransform)
+	//@ts-expect-error Ammo not typed
 	const topInfo = new Ammo.btRigidBodyConstructionInfo(0, topMotionState, wallTopShape, localInertia)
+	//@ts-expect-error Ammo not typed
 	const topBody = new Ammo.btRigidBody(topInfo)
 	topBody.setFriction(config.friction)
 	topBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(topBody)
 	tempParts.push(topBody)
-
+	//@ts-expect-error Ammo not typed
 	const wallBottomTransform = new Ammo.btTransform()
 	wallBottomTransform.setIdentity()
-	wallBottomTransform.setOrigin(setVector3(0, 0, (size/2) + .5))
-	const wallBottomShape = new Ammo.btBoxShape(setVector3(size * aspect, height, 1))
+	wallBottomTransform.setOrigin(setVector3(0, 0, size/2))
+	//@ts-expect-error Ammo not typed
+	const wallBottomShape = new Ammo.btBoxShape(setVector3(size * aspect, size, 1))
+	//@ts-expect-error Ammo not typed
 	const bottomMotionState = new Ammo.btDefaultMotionState(wallBottomTransform)
+	//@ts-expect-error Ammo not typed
 	const bottomInfo = new Ammo.btRigidBodyConstructionInfo(0, bottomMotionState, wallBottomShape, localInertia)
+	//@ts-expect-error Ammo not typed
 	const bottomBody = new Ammo.btRigidBody(bottomInfo)
 	bottomBody.setFriction(config.friction)
 	bottomBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(bottomBody)
 	tempParts.push(bottomBody)
-
+	//@ts-expect-error Ammo not typed
 	const wallRightTransform = new Ammo.btTransform()
 	wallRightTransform.setIdentity()
-	wallRightTransform.setOrigin(setVector3((size * aspect / -2) - .5, 0, 0))
-	const wallRightShape = new Ammo.btBoxShape(setVector3(1, height, size))
+	wallRightTransform.setOrigin(setVector3(size * aspect / -2, 0, 0))
+	//@ts-expect-error Ammo not typed
+	const wallRightShape = new Ammo.btBoxShape(setVector3(1, size, size))
+	//@ts-expect-error Ammo not typed
 	const rightMotionState = new Ammo.btDefaultMotionState(wallRightTransform)
+	//@ts-expect-error Ammo not typed
 	const rightInfo = new Ammo.btRigidBodyConstructionInfo(0, rightMotionState, wallRightShape, localInertia)
+	//@ts-expect-error Ammo not typed
 	const rightBody = new Ammo.btRigidBody(rightInfo)
 	rightBody.setFriction(config.friction)
 	rightBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(rightBody)
 	tempParts.push(rightBody)
-
+	//@ts-expect-error Ammo not typed
 	const wallLeftTransform = new Ammo.btTransform()
 	wallLeftTransform.setIdentity()
-	wallLeftTransform.setOrigin(setVector3((size * aspect / 2) + .5, 0, 0))
-	const wallLeftShape = new Ammo.btBoxShape(setVector3(1, height, size))
+	wallLeftTransform.setOrigin(setVector3(size * aspect / 2, 0, 0))
+	//@ts-expect-error Ammo not typed
+	const wallLeftShape = new Ammo.btBoxShape(setVector3(1, size, size))
+	//@ts-expect-error Ammo not typed
 	const leftMotionState = new Ammo.btDefaultMotionState(wallLeftTransform)
+	//@ts-expect-error Ammo not typed
 	const leftInfo = new Ammo.btRigidBodyConstructionInfo(0, leftMotionState, wallLeftShape, localInertia)
+	//@ts-expect-error Ammo not typed
 	const leftBody = new Ammo.btRigidBody(leftInfo)
 	leftBody.setFriction(config.friction)
 	leftBody.setRestitution(config.restitution)
@@ -382,61 +398,62 @@ const removeBoxFromWorld = () => {
 	boxParts.forEach(part => physicsWorld.removeRigidBody(part))
 }
 
-const addDie = (sides, id) => {
-	let cType = `d${sides}_collider`
-	const mass = colliders[cType].physicsMass * config.mass * config.scale // feature? mass should go up with scale, but it throws off the throwForce and spinForce scaling
-	// clone the collider
-	const newDie = createRigidBody(colliders[cType].convexHull, {
-		mass,
-		scaling: colliders[cType].scaling,
-		pos: config.startPosition,
-		// quat: colliders[cType].rotationQuaternion,
-	})
-	newDie.id = id
-	newDie.timeout = config.settleTimeout
-	newDie.mass = mass
-	physicsWorld.addRigidBody(newDie)
-	bodies.push(newDie)
-	// console.log(`added collider for `, type)
-	rollDie(newDie)
+const addDie = (sides: sideType, id: unknown) => {
+	const cType = sides === 100 ? `c10` : `c${sides}`
+
+	const findCollider = (): colliderType | undefined => {
+		return findObjectByKey(colliders, cType)
+	}
+
+	const collider = findCollider()
+
+	if ( collider ) {
+		// clone the collider
+		const newDie = createRigidBody(collider.convexHull, {
+			mass: collider.physicsMass * config.mass,
+			scaling: collider.scaling,
+			pos: config.startPosition,
+		})
+
+
+		newDie.id = id
+		newDie.timeout = config.settleTimeout
+		physicsWorld.addRigidBody(newDie)
+		bodies.push(newDie)
+
+		rollDie(newDie)
+	} else {
+		throw new Error("Physics Worker: Collider was not found.")
+	}
 }
 
-const rollDie = (die) => {
-	die.setLinearVelocity(setVector3(
-		lerp(-config.startPosition[0] * .5, -config.startPosition[0] * config.throwForce, Math.random()),
-		// lerp(-config.startPosition[1] * .5, -config.startPosition[1] * config.throwForce, Math.random()),
-		lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random()),
-		lerp(-config.startPosition[2] * .5, -config.startPosition[2] * config.throwForce, Math.random()),
-	))
-
+const rollDie = (die: rollDieType) => {
+	die.setLinearVelocity(  
+			setVector3(
+				lerp(-config.startPosition[0] * .5, -config.startPosition[0] * config.throwForce, Math.random()),
+				lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random()),
+				lerp(-config.startPosition[2] * .5, -config.startPosition[2] * config.throwForce, Math.random()),
+			)
+		)
+	//@ts-expect-error Ammo not typed
 	const force = new Ammo.btVector3(
 		lerp(-config.spinForce, config.spinForce, Math.random()),
 		lerp(-config.spinForce, config.spinForce, Math.random()),
 		lerp(-config.spinForce, config.spinForce, Math.random())
 	)
-
-	// attempting to create an envelope for the force influence based on scale and mass
-	// linear scale was no good - this creates a nice power curve
-	const scale = Math.abs(config.scale - 1) + config.scale * config.scale * (die.mass/config.mass) * .75
-
-	// console.log('scale', scale)
 	
-	die.applyImpulse(force, setVector3(scale, scale, scale))
-
+	die.applyImpulse(force, setVector3(4,4,4))
 }
 
-const removeDie = (data) => {
+const removeDie = ( data: removeDieDataType ) => {
 	sleepingBodies = sleepingBodies.filter((die) => {
 		let match = die.id === data.id
-		if(match){
+		if (match){
 			// remove the mesh from the scene
 			physicsWorld.removeRigidBody(die)
 		}
 		return !match
 	})
-
-	// step the animation forward
-	// requestAnimationFrame(loop)
 }
 
 const clearDice = () => {
@@ -454,10 +471,15 @@ const clearDice = () => {
 
 
 const setupPhysicsWorld = () => {
+	//@ts-expect-error Ammo not typed
 	const collisionConfiguration = new Ammo.btDefaultCollisionConfiguration()
+	//@ts-expect-error Ammo not typed
 	const broadphase = new Ammo.btDbvtBroadphase()
+	//@ts-expect-error Ammo not typed
 	const solver = new Ammo.btSequentialImpulseConstraintSolver()
+	//@ts-expect-error Ammo not typed
 	const dispatcher = new Ammo.btCollisionDispatcher(collisionConfiguration)
+	//@ts-expect-error Ammo not typed
 	const World = new Ammo.btDiscreteDynamicsWorld(
 		dispatcher,
 		broadphase,
@@ -469,39 +491,40 @@ const setupPhysicsWorld = () => {
 	return World
 }
 
-const update = (delta) => {
+const update = (delta: number) => {
 	// step world
 	const deltaTime = delta / 1000
 	
-	// console.time("stepSimulation")
 	physicsWorld.stepSimulation(deltaTime, 2, 1 / 90) // higher number = slow motion
-	// console.timeEnd("stepSimulation")
 
 	diceBufferView[0] = bodies.length
 
 	// looping backwards since bodies are removed as they are put to sleep
 	for (let i = bodies.length - 1; i >= 0; i--) {
 		const rb = bodies[i]
-		const speed = rb.getLinearVelocity().length()
-		const tilt = rb.getAngularVelocity().length()
+		const speed = rb.getLinearVelocity && rb.getLinearVelocity().length()
+		const tilt = rb.getAngularVelocity && rb.getAngularVelocity().length()
 
-		if(speed < .01 && tilt < .01 || rb.timeout < 0) {
+		if ( !speed ) throw new Error("Physics Worker: Speed was not found.")
+		if ( !tilt ) throw new Error("Physics Worker: Tilt was not found")
+
+		if (speed < .01 && tilt < .01 || rb.timeout < 0) {
 			// flag the second param for this body so it can be processed in World, first param will be the roll.id
 			diceBufferView[(i*8) + 1] = rb.id
 			diceBufferView[(i*8) + 2] = -1
 			rb.asleep = true
-			rb.setMassProps(0)
-			rb.forceActivationState(3)
+			rb.setMassProps && rb.setMassProps(0)
+			rb.forceActivationState && rb.forceActivationState(3)
 			// zero out anything left
-			rb.setLinearVelocity(emptyVector)
-			rb.setAngularVelocity(emptyVector)
+			rb.setLinearVelocity && rb.setLinearVelocity(emptyVector)
+			rb.setAngularVelocity && rb.setAngularVelocity(emptyVector)
 			sleepingBodies.push(bodies.splice(i,1)[0])
 			continue
 		}
 		// tick down the movement timeout on this die
 		rb.timeout -= delta
-		const ms = rb.getMotionState()
-		if (ms) {
+		const ms = rb.getMotionState && rb.getMotionState()
+		if ( ms ) {
 			ms.getWorldTransform(tmpBtTrans)
 			let p = tmpBtTrans.getOrigin()
 			let q = tmpBtTrans.getRotation()
@@ -526,9 +549,7 @@ const loop = () => {
 	last = now
 
 	if(!stopLoop && diceBufferView.byteLength) {
-		// console.time("physics")
 		update(delta)
-		// console.timeEnd("physics")
 			worldWorkerPort.postMessage({
 				action: 'updates',
 				diceBuffer: diceBufferView.buffer

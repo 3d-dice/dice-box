@@ -4,8 +4,8 @@ High performance 3D dice roller made with BabylonJS, AmmoJS and implemented with
 ## Demo
 New demo for version 0.5! <br>
 Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html <br>
-See the kitchen sink code demo here: https://codesandbox.io/s/3d-dice-demo-2bily5
-Here's a simple React Demo for rolling attributes (using 3d6): https://codesandbox.io/s/react-roller-attributes-6jjiod
+See the kitchen sink code demo here: https://codesandbox.io/s/3d-dice-demo-2bily5 <br>
+Here's a simple React Demo for rolling attributes (using 3d6): https://codesandbox.io/s/react-roller-attributes-6jjiod <br>
 Here's a React Demo with support for advanced dice notation: https://codesandbox.io/s/react-roller-advanced-notation-xl8foh
 
 Note: Some demos includes other `@3d-dice` modules such as [dice-roller-parser](https://github.com/3d-dice/dice-roller-parser), [FUI](https://github.com/3d-dice/FUI), and [FDP](https://github.com/3d-dice/FDP). Advanced dice notation is supported here such as `4d6dl1` or `4d6!r<2`

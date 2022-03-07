@@ -1,5 +1,5 @@
 # Dice-Box
-High performance 3D dice roller made with BabylonJS, AmmoJS and implemented with web workers and offscreenCanvas.
+High performance 3D dice roller made with [BabylonJS](https://www.babylonjs.com/), [AmmoJS](https://github.com/kripken/ammo.js/) and implemented with [web workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers) and [offscreenCanvas](https://doc.babylonjs.com/divingDeeper/scene/offscreenCanvas).
 
 ## Demo
 New demo for version 0.5! <br>
@@ -280,3 +280,6 @@ body {
   height: 100%;
 }
 ```
+
+## Other Projects
+If you're looking for a 3D dice roller that works with [three.js](https://github.com/mrdoob/three.js/) than I would recommend looking into [Dice So Nice](https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/tree/master)

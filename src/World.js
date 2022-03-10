@@ -7,11 +7,11 @@ const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
   enableShadows: true, // do dice cast shadows onto DiceBox mesh?
   delay: 10, // delay between dice being generated - 0 causes stuttering and physics popping
-	gravity: 1, // note: high gravity will cause dice piles to jiggle
-	startingHeight: 15, // height to drop the dice from - will not exceed the DiceBox height set by zoom
+	gravity: 2, // note: high gravity will cause dice piles to jiggle
+	startingHeight: 8, // height to drop the dice from - will not exceed the DiceBox height set by zoom
 	spinForce: 4, // passed on to physics as an impulse force
-	throwForce: 3, // passed on to physics as linear velocity
-	scale: 5, // scale the dice
+	throwForce: 5, // passed on to physics as linear velocity
+	scale: 4, // scale the dice
 	theme: 'diceOfRolling', // can be a hex color or a pre-defined theme such as 'purpleRock'
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
 	assetPath: '/assets/dice-box/', // path to 'ammo', 'models', 'themes' folders and web workers
@@ -19,10 +19,11 @@ const defaultOptions = {
 }
 
 class World {
-	rollData = []
-	rollPromiseResolve
-	rollPromiseReject
+	rollCollectionData = {}
+	rollGroupData = {}
+	rollDiceData = {}
 	themeData = []
+	#collectionIndex = 0
 	#groupIndex = 0
 	#rollIndex = 0
 	#idIndex = 0
@@ -111,25 +112,52 @@ class World {
 		}
 		// now that DiceWorld is ready we can attach our callbacks
 		this.#DiceWorld.onRollResult = (die) => {
+			const group = this.rollGroupData[die.groupId]
+			const collection = this.rollCollectionData[die.collectionId]
+
 			// map die results back to our rollData
-			this.rollData[die.groupId].rolls[die.rollId].result = die.result
-			// TODO: die should have 'sides' or is that unnecessary data passed between workers?
+			// since all rolls are references to this.rollDiceDate the values will be added to those objects
+			group.rolls[die.rollId].value = die.result
+
+			// increment the completed roll count for this group
+			collection.completedRolls++
+			// if all rolls are completed then resolve the collection promise - returning dice that were in this collection
+			if(collection.completedRolls == collection.rolls.length) {
+				// pull out roll.collectionId and roll.id? They're meant to be internal values
+				collection.resolve(Object.values(collection.rolls).map(({collectionId, id, ...rest}) => rest))
+			}
+
 			// trigger callback passing individual die result
 			this.onDieComplete(die)
 		}
 		this.#DiceWorld.onRollComplete = () => {
-			this.rollData.forEach(rollGroup => {
-				// convert rolls from indexed objects to array
-				rollGroup.rolls = Object.values(rollGroup.rolls).map(roll => roll)
-				// add up the values
-				rollGroup.value = rollGroup.rolls.reduce((val,roll) => val + roll.result,0)
-				// add the modifier
-				rollGroup.value += rollGroup.modifier ? rollGroup.modifier : 0
-			})
-			// resolve promise
-			this.rollPromiseResolve(this.rollData)
-			// trigger callback passing the grouped roll data
-			this.onRollComplete(this.rollData)
+			// trigger callback passing the roll results
+			this.onRollComplete(this.getRollResults())
+		}
+
+		this.#DiceWorld.onDieRemoved = (die) => {
+			// get die information from cache
+			die = this.rollDiceData[die.rollId]
+			const collection = this.rollCollectionData[die.removeCollectionId]
+			collection.completedRolls++
+
+			// remove this die from cache
+			delete this.rollDiceData[die.rollId]
+
+			// remove this die from it's group rolls
+			const group = this.rollGroupData[die.groupId]
+			delete group.rolls[die.rollId]
+
+			// parse the group value now that the die has been removed from data
+			const groupData = this.#parseGroup(die.groupId)
+			// update the value and quantity values
+			group.value = groupData.value
+			group.qty = groupData.rollsArray.length
+
+			// if all rolls are completed then resolve the collection promise - returning dice that were removed
+			if(collection.completedRolls == collection.rolls.length) {
+				collection.resolve(Object.values(collection.rolls).map(({id, ...rest}) => rest))
+			}
 		}
 
     // initialize the AmmoJS physics worker
@@ -173,11 +201,15 @@ class World {
 	}
 
 	clear() {
-		// reset indexes and rollData
-		this.#rollIndex = 0
+		// reset indexes
+		this.#collectionIndex = 0
 		this.#groupIndex = 0
+		this.#rollIndex = 0
 		this.#idIndex = 0
-		this.rollData = []
+		// reset internal data objects
+		this.rollCollectionData = {}
+		this.rollGroupData = {}
+		this.rollDiceData = {}
 		// clear all rendered die bodies
 		this.#DiceWorld.clear()
     // clear all physics die bodies
@@ -201,161 +233,201 @@ class World {
 		return this
 	}
 
-	// add a die. Use groupId to add a die to a specific roll group
-	// when looking at the roll results object, the groupId on an individual roll corresponds to the groups' index value in the rollData array
-  add(notation, groupId, theme) {
-		// if the given groupId does not exist in the rollData array then reset groupId
-		// the added roll will be safely added to the rollData in a new group instead
-		if(this.rollData[groupId] === undefined){
-			groupId = undefined
-		}
-		if(theme) {
-			this.config.theme = theme
-		}
-		let parsedNotation = this.createNotationArray(notation)
-		// returns a Promise that is resolved in onRollComplete
-		return this.#makeRoll(parsedNotation, groupId)
-  }
-
-	reroll(dice) {
-		// TODO: add hide if you want to keep the die result for an external parser
-		// TODO: reroll group
-		const rollArray = Array.isArray(dice) ? dice : [dice]
-		const groupId = rollArray[0].groupId
-		const addQty = rollArray.map(r => ( {...r, qty: 1} ) )
-		
-		rollArray.forEach(r =>  this.remove( r ) )
-	
-		this.add(addQty, groupId)
-		// make this method chainable
-		return this
-	}
-
-	remove(die) {
-		const {groupId, rollId, hide = false} = die
-		// this will remove a roll from workers and rolldata
-		// TODO: hide if you want to keep the die result for an external parser
-		// delete the roll from cache
-		const rolls = this.rollData[groupId].rolls
-		const filtered = rolls.filter(roll => roll.rollId !== rollId)
-	
-		this.rollData[groupId].rolls = filtered
-
-		// remove the die from the render
-		this.#DiceWorld.remove(die)
-		// remove the die from the physics bodies - we do this in case there's a reroll. Don't want new dice interacting with a hidden physics body
-		this.#DiceWorker.postMessage({action: "removeDie", id: rollId})
-
-		// TODO: recalculate the group value
-		// TODO: trigger onRollComplete again
-
-		// make this method chainable
-		return this
-	}
-
 	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
-  roll(notation, theme) {
-		// to add to a roll on screen use .add method
-    // reset the offscreen worker and physics worker with each new roll
-    this.clear()
-		if(theme) {
-			this.config.theme = theme
-		}
-		let parsedNotation = this.createNotationArray(notation)
+	roll(notation, theme) {
+		// note: to add to a roll on screen use .add method
+		// reset the offscreen worker and physics worker with each new roll
+		this.clear()
+		const collectionId = this.#collectionIndex++
+		
+		this.rollCollectionData[collectionId] = new Collection({
+			id: collectionId,
+			notation,
+			theme
+		})
+
+		const parsedNotation = this.createNotationArray(notation)
+		this.#makeRoll(parsedNotation, collectionId)
+
 		// returns a Promise that is resolved in onRollComplete
-		return this.#makeRoll(parsedNotation)
+		return this.rollCollectionData[collectionId].promise
+	}
+
+  add(notation, theme) {
+
+		const collectionId = this.#collectionIndex++
+
+		this.rollCollectionData[collectionId] = new Collection({
+			id: collectionId,
+			notation,
+			theme
+		})
+		
+		const parsedNotation = this.createNotationArray(notation)
+		this.#makeRoll(parsedNotation, collectionId)
+
+		// returns a Promise that is resolved in onRollComplete
+		return this.rollCollectionData[collectionId].promise
   }
 
-	async loadTheme(){
-		if(this.themeData.includes(this.config.theme)){
+	reroll(notation, options = {remove: false, hide: false}) {
+		// TODO: add hide if you want to keep the die result for an external parser
+
+		// ensure notation is an array
+		const rollArray = Array.isArray(notation) ? notation : [notation]
+
+		// destructure out 'sides', 'theme', 'groupId', 'rollId' - basically just getting rid of value - could do ({value, ...rest}) => rest
+		const cleanNotation = rollArray.map(({value, ...rest}) => rest)
+
+		if(options.remove === true){
+			this.remove(cleanNotation, options.hide)
+		}
+
+		// .add will return a promise that will then be returned here
+		return this.add(cleanNotation)
+	}
+
+	remove(notation, hide = false) {
+		// ensure notation is an array
+		const rollArray = Array.isArray(notation) ? notation : [notation]
+
+		const collectionId = this.#collectionIndex++
+
+		this.rollCollectionData[collectionId] = new Collection({
+			id: collectionId,
+			notation,
+			rolls: rollArray,
+		})
+
+		// loop through each die to be removed
+		rollArray.map(die => {
+			// add the collectionId to the die so it can be looked up in the callback
+			this.rollDiceData[die.rollId].removeCollectionId = collectionId
+			// assign the id for this die from our cache - required for removal
+			die.id = this.rollDiceData[die.rollId].id
+			// remove the die from the render
+			this.#DiceWorld.remove(die)
+			// remove the die from the physics bodies
+			this.#DiceWorker.postMessage({action: "removeDie", id: die.id})
+		})
+
+		return this.rollCollectionData[collectionId].promise
+	}
+
+	async loadTheme(theme){
+		if(this.themeData.includes(theme)){
 			return
 		} else {
-			await this.#DiceWorld.loadTheme(this.config.theme)
-			this.themeData.push(this.config.theme)
+			await this.#DiceWorld.loadTheme(theme)
+			this.themeData.push(theme)
 		}
 	}
 
 	// used by both .add and .roll - .roll clears the box and .add does not
-	async #makeRoll(parsedNotation, groupId){
-		const hasGroupId = groupId !== undefined
+	async #makeRoll(parsedNotation, collectionId){
 
-		// load the theme prior to adding all the dice => give textures a chance to load so you don't see a flash of naked dice
-		await this.loadTheme()
+		const collection = this.rollCollectionData[collectionId]
 
 		// loop through the number of dice in the group and roll each one
-		parsedNotation.forEach(notation => {
+		parsedNotation.forEach(async notation => {
+			const theme = notation.theme || collection.theme || this.config.theme
 			const rolls = {}
-			// let index = hasGroupId ? groupId : this.#groupIndex
+			const hasGroupId = notation.groupId !== undefined
 			let index
+
+			// load the theme prior to adding all the dice => give textures a chance to load so you don't see a flash of naked dice
+			await this.loadTheme(theme)
+
+			// TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.
 
 			for (var i = 0, len = notation.qty; i < len; i++) {
 				// id's start at zero and zero can be falsy, so we check for undefined
 				let rollId = notation.rollId !== undefined ? notation.rollId : this.#rollIndex++
 				let id = notation.id !== undefined ? notation.id : this.#idIndex++
-				index = hasGroupId ? groupId : this.#groupIndex
+				index = hasGroupId ? notation.groupId : this.#groupIndex
 
 				const roll = {
 					sides: notation.sides,
 					groupId: index,
+					collectionId: collection.id,
 					rollId,
 					id,
-					theme: this.config.theme
+					theme
 				}
 
 				rolls[rollId] = roll
+				this.rollDiceData[rollId] = roll
+				collection.rolls.push(this.rollDiceData[rollId])
 
 				this.#DiceWorld.add(roll)
 
 			}
 
 			if(hasGroupId) {
-				Object.assign(this.rollData[groupId].rolls, rolls)
+				Object.assign(this.rollGroupData[index].rolls, rolls)
 			} else {
 				// save this roll group for later
 				notation.rolls = rolls
-				this.rollData[index] = notation
+				notation.id = index
+				this.rollGroupData[index] = notation
 				++this.#groupIndex
 			}
-			
 		})
-
-		return new Promise((resolve,reject) => {
-			this.rollPromiseResolve = resolve
-			this.rollPromiseReject = reject
-		})
-
 	}
 
 	// accepts simple notations eg: 4d6
 	// accepts array of notations eg: ['4d6','2d10']
-	// accepts array of objects eg: [{sides:int, qty:int, mods:[]}]
 	// accepts object {sides:int, qty:int}
+	// accepts array of objects eg: [{sides:int, qty:int, mods:[]}]
 	createNotationArray(input){
 		const notation = Array.isArray( input ) ? input : [ input ]
 		let parsedNotation = []
 
+
 		const verifyObject = ( object ) => {
-			const checkSidesAndQty =  object.sides && object.qty ? true : false
-	
-			if ( checkSidesAndQty ) {
+			if(!object.hasOwnProperty('qty')) {
+				object.qty = 1
+			}
+			if ( object.hasOwnProperty('sides') ) {
 				return true
 			} else {
-				const err = "Roll notation is missing sides and/or qty"
+				const err = "Roll notation is missing sides"
 				throw new Error(err);
 			}
 		}
-	
+
+		const incrementId = (key) => {
+			key = key.toString()
+			let splitKey = key.split(".")
+			if(splitKey[1]){
+				splitKey[1] = parseInt(splitKey[1]) + 1
+			} else {
+				splitKey[1] = 1
+			}
+			return splitKey[0] + "." + splitKey[1]
+		}
+
+		// verify that the rollId is unique. If not then increment it by .1
+		// rollIds become keys in the rollDiceData object, so they must be unique or they will overright another entry
+		const verifyRollId = ( object ) => {
+			if(object.hasOwnProperty('rollId')){
+				if(this.rollDiceData.hasOwnProperty(object.rollId)){
+					object.rollId = incrementId(object.rollId)
+				}
+			}
+		}
 
 		// notation is an array of strings or objects
 		notation.forEach(roll => {
+			// console.log('roll', roll)
 			// if notation is an array of strings
 			if ( typeof roll === 'string' ) {
 				parsedNotation.push( this.parse( roll ) )
 			} else if ( typeof notation === 'object' ) {
-				verifyObject( roll ) && parsedNotation.push( roll )
+				verifyRollId( roll )
+				verifyObject( roll )  && parsedNotation.push( roll )
 			}
 		})
-
 
 		return parsedNotation
 	}
@@ -400,16 +472,50 @@ class World {
     }
   }
 
-	getRollResults(){
-		// calculate the value of all the rolls added together - advanced rolls such as 4d6dl1 (4d6 drop lowest 1) will require an external parser
-		this.rollData.forEach(rollGroup => {
-			// add up the values
-			rollGroup.value = Object.values(rollGroup.rolls).reduce((val,roll) => val + roll.result,0)
-			// add the modifier
-			rollGroup.value += rollGroup.modifier ? rollGroup.modifier : 0
-		})
+	#parseGroup(groupId) {
+		// console.log('groupId', groupId)
+		const rollGroup = this.rollGroupData[groupId]
+		// turn object into an array
+		const rollsArray = Object.values(rollGroup.rolls).map(roll => roll)
+		// add up the values
+		let value = rollsArray.reduce((val,roll) => val + roll.value,0)
+		// add the modifier
+		value += rollGroup.modifier ? rollGroup.modifier : 0
+		// return the value and the rollsArray
+		return {value, rollsArray}
+	}
 
-		return this.rollData
+	getRollResults(){
+		// loop through each roll group
+		return Object.entries(this.rollGroupData).map(([key,val]) => {
+			// parse the group data to get the value and the rolls as an array
+			const groupData = this.#parseGroup(key)
+			// set the value for this roll group in this.rollGroupData
+			val.value = groupData.value
+			// set the qty equal to the number of rolls - this can be changed by rerolls and removals
+			val.qty = groupData.rollsArray.length
+			// copy the group that will be put into the return object
+			const groupCopy = {...val}
+			// replace the rolls object with a rolls array
+			groupCopy.rolls = groupData.rollsArray
+			// return the groupCopy - note: we never return this.rollGroupData
+			return groupCopy
+		})
+	}
+}
+
+class Collection{
+	constructor({id, notation, rolls, theme}){
+		this.id = id
+		this.notation = notation
+		this.theme = theme
+		this.rolls = rolls || []
+		this.completedRolls = 0
+		const that = this
+		this.promise = new Promise((resolve,reject) => {
+			that.resolve = resolve
+			that.reject = reject
+		})
 	}
 }
 

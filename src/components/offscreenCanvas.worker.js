@@ -260,6 +260,8 @@ const remove = (data) => {
 
 	// step the animation forward
 	scene.render()
+
+	self.postMessage({action:"die-removed", die: data})
 }
 
 const updatesFromPhysics = (buffer) => {
@@ -330,7 +332,8 @@ const handleAsleep = async (die) => {
 			self.postMessage({action:"roll-result", die: {
 				groupId: d100.config.groupId,
 				rollId: d100.config.rollId,
-				id: d100.id,
+				collectionId: die.config.collectionId,
+				// id: d100.id,
 				result : d100.result
 			}})
 		}
@@ -342,7 +345,8 @@ const handleAsleep = async (die) => {
 		self.postMessage({action:"roll-result", die: {
 			groupId: die.config.groupId,
 			rollId: die.config.rollId,
-			id: die.id,
+			collectionId: die.config.collectionId,
+			// id: die.id,
 			result: die.result
 		}})
 	}

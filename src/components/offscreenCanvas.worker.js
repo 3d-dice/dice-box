@@ -249,19 +249,31 @@ const _add = async (options) => {
 
 }
 
-const remove = (data) => {
+const remove = (die) => {
 	// TODO: test this with exploding dice
+	// check if this is d100 and remove associated d10 first
+	const dieData = dieCache[die.id]
+	if(dieData.hasOwnProperty('d10Instance')){
+		dieCache[dieData.d10Instance.id].mesh.dispose()
+		delete dieCache[dieData.d10Instance.id]
+		physicsWorkerPort.postMessage({
+      action: "removeDie",
+			id: dieData.d10Instance.id
+    })
+		sleeperCount--
+	}
+
 	// remove die
-	dieCache[data.id].mesh.dispose()
+	dieData.mesh.dispose()
 	// delete entry
-	delete dieCache[data.id]
+	delete dieCache[die.id]
 	// decrement count
 	sleeperCount--
 
 	// step the animation forward
 	scene.render()
 
-	self.postMessage({action:"die-removed", die: data})
+	self.postMessage({action:"die-removed", die})
 }
 
 const updatesFromPhysics = (buffer) => {

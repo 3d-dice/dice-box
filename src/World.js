@@ -478,7 +478,12 @@ class World {
 		// turn object into an array
 		const rollsArray = Object.values(rollGroup.rolls).map(roll => roll)
 		// add up the values
-		let value = rollsArray.reduce((val,roll) => val + roll.value,0)
+		// some dice may still be rolling, should this be a promise?
+		// if dice are still rolling in the group then the value is undefined - hence the isNaN check
+		let value = rollsArray.reduce((val,roll) => {
+			const rollVal = isNaN(roll.value) ? 0 : roll.value
+			return val + rollVal
+		},0)
 		// add the modifier
 		value += rollGroup.modifier ? rollGroup.modifier : 0
 		// return the value and the rollsArray

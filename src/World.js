@@ -33,6 +33,7 @@ class World {
 	diceWorkerInit
 	onDieComplete = () => {}
 	onRollComplete = () => {}
+	onRemoveComplete = () => {}
 
   constructor(container, options = {}){
 		// extend defaults with options
@@ -128,7 +129,8 @@ class World {
 			}
 
 			// trigger callback passing individual die result
-			this.onDieComplete(die)
+			const {collectionId, id, ...returnDie} = this.rollDiceData[die.rollId]
+			this.onDieComplete(returnDie)
 		}
 		this.#DiceWorld.onRollComplete = () => {
 			// trigger callback passing the roll results
@@ -158,6 +160,8 @@ class World {
 			if(collection.completedRolls == collection.rolls.length) {
 				collection.resolve(Object.values(collection.rolls).map(({id, ...rest}) => rest))
 			}
+			const {collectionId, id, removeCollectionId, ...returnDie} = die
+			this.onRemoveComplete(returnDie)
 		}
 
     // initialize the AmmoJS physics worker
@@ -476,7 +480,8 @@ class World {
 		// console.log('groupId', groupId)
 		const rollGroup = this.rollGroupData[groupId]
 		// turn object into an array
-		const rollsArray = Object.values(rollGroup.rolls).map(roll => roll)
+		const rollsArray = Object.values(rollGroup.rolls).map(({collectionId, id, ...rest}) => rest)
+		rollsArray.sort((a,b) => a.rollId.toString() > b.rollId.toString() ? 1 : -1)
 		// add up the values
 		// some dice may still be rolling, should this be a promise?
 		// if dice are still rolling in the group then the value is undefined - hence the isNaN check

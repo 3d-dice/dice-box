@@ -238,7 +238,7 @@ class World {
 	}
 
 	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
-	roll(notation, {theme = undefined} = {}) {
+	roll(notation, {theme = undefined,newStartPoint = true} = {}) {
 		// note: to add to a roll on screen use .add method
 		// reset the offscreen worker and physics worker with each new roll
 		this.clear()
@@ -247,7 +247,8 @@ class World {
 		this.rollCollectionData[collectionId] = new Collection({
 			id: collectionId,
 			notation,
-			theme
+			theme,
+			anustart: newStartPoint
 		})
 
 		const parsedNotation = this.createNotationArray(notation)

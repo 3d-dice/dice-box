@@ -238,7 +238,7 @@ class World {
 	}
 
 	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
-	roll(notation, theme) {
+	roll(notation, {theme = undefined} = {}) {
 		// note: to add to a roll on screen use .add method
 		// reset the offscreen worker and physics worker with each new roll
 		this.clear()
@@ -257,7 +257,7 @@ class World {
 		return this.rollCollectionData[collectionId].promise
 	}
 
-  add(notation, theme) {
+  add(notation, {theme = undefined} = {}) {
 
 		const collectionId = this.#collectionIndex++
 
@@ -274,7 +274,7 @@ class World {
 		return this.rollCollectionData[collectionId].promise
   }
 
-	reroll(notation, options = {remove: false, hide: false}) {
+	reroll(notation, {remove = false, hide = false} = {}) {
 		// TODO: add hide if you want to keep the die result for an external parser
 
 		// ensure notation is an array
@@ -283,15 +283,15 @@ class World {
 		// destructure out 'sides', 'theme', 'groupId', 'rollId' - basically just getting rid of value - could do ({value, ...rest}) => rest
 		const cleanNotation = rollArray.map(({value, ...rest}) => rest)
 
-		if(options.remove === true){
-			this.remove(cleanNotation, options.hide)
+		if(remove === true){
+			this.remove(cleanNotation, {hide})
 		}
 
 		// .add will return a promise that will then be returned here
 		return this.add(cleanNotation)
 	}
 
-	remove(notation, hide = false) {
+	remove(notation, {hide = false} = {}) {
 		// ensure notation is an array
 		const rollArray = Array.isArray(notation) ? notation : [notation]
 

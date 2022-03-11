@@ -76,6 +76,9 @@ self.onmessage = (e) => {
           case "addDie":
 						// toss from all edges
 						// setStartPosition()
+						if(e.data.anustart){
+							setStartPosition()
+						}
             addDie(e.data.sides, e.data.id)
             break;
           case "rollDie":
@@ -90,7 +93,9 @@ self.onmessage = (e) => {
 						
             break;
           case "resumeSimulation":
-						setStartPosition()
+						if(e.data.anustart){
+							setStartPosition()
+						}
             stopLoop = false
 						loop()
             break;

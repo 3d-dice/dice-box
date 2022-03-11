@@ -128,11 +128,12 @@ const updateConfig = (options) => {
 }
 
 // all this does is start the render engine.
-const render = () => {
+const render = (anustart) => {
   // document.body.addEventListener('click',()=>engine.stopRenderLoop())
   engine.runRenderLoop(renderLoop.bind(self))
 	physicsWorkerPort.postMessage({
 		action: "resumeSimulation",
+		anustart
 	})
 }
 
@@ -201,7 +202,7 @@ const add = (options) => {
 // add a die to the scene
 const _add = async (options) => {
 	if(engine.activeRenderLoops.length === 0) {
-		render()
+		render(options.anustart)
 	}
 
 	const diceOptions = {
@@ -222,7 +223,8 @@ const _add = async (options) => {
 		action: "addDie",
 		sides: options.sides,
 		scale: config.scale,
-		id: newDie.id
+		id: newDie.id,
+		anustart: options.anustart
 	})
 
   // for d100's we need to add an additional d10 and pair it up with the d100 just created

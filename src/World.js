@@ -257,14 +257,15 @@ class World {
 		return this.rollCollectionData[collectionId].promise
 	}
 
-  add(notation, {theme = undefined} = {}) {
+  add(notation, {theme = undefined,newStartPoint = true} = {}) {
 
 		const collectionId = this.#collectionIndex++
 
 		this.rollCollectionData[collectionId] = new Collection({
 			id: collectionId,
 			notation,
-			theme
+			theme,
+			anustart: newStartPoint
 		})
 		
 		const parsedNotation = this.createNotationArray(notation)
@@ -274,7 +275,7 @@ class World {
 		return this.rollCollectionData[collectionId].promise
   }
 
-	reroll(notation, {remove = false, hide = false} = {}) {
+	reroll(notation, {remove = false, hide = false, newStartPoint = true} = {}) {
 		// TODO: add hide if you want to keep the die result for an external parser
 
 		// ensure notation is an array
@@ -288,7 +289,7 @@ class World {
 		}
 
 		// .add will return a promise that will then be returned here
-		return this.add(cleanNotation)
+		return this.add(cleanNotation, {newStartPoint})
 	}
 
 	remove(notation, {hide = false} = {}) {
@@ -332,6 +333,7 @@ class World {
 	async #makeRoll(parsedNotation, collectionId){
 
 		const collection = this.rollCollectionData[collectionId]
+		let anustart = collection.anustart
 
 		// loop through the number of dice in the group and roll each one
 		parsedNotation.forEach(async notation => {
@@ -364,7 +366,10 @@ class World {
 				this.rollDiceData[rollId] = roll
 				collection.rolls.push(this.rollDiceData[rollId])
 
-				this.#DiceWorld.add(roll)
+				this.#DiceWorld.add({...roll,anustart})
+
+				// turn flag off
+				anustart = false
 
 			}
 
@@ -515,11 +520,9 @@ class World {
 }
 
 class Collection{
-	constructor({id, notation, rolls, theme}){
-		this.id = id
-		this.notation = notation
-		this.theme = theme
-		this.rolls = rolls || []
+	constructor(options){
+		Object.assign(this,options)
+		this.rolls = options.rolls || []
 		this.completedRolls = 0
 		const that = this
 		this.promise = new Promise((resolve,reject) => {

@@ -61,118 +61,192 @@ Dice-Box can only accept simple dice notations and a modifier such as `2d20` or 
 |theme|'purpleRock'|HEX color value or one of 'purpleRock', 'diceOfRolling', 'galvanized'.|
 |scale|4| Options are best between 2-9. The higher the number the larger the dice. Accepts decimal numbers |
 
+### Die Types
+This documentation makes frequent reference to common dice notations such as `5d6` where the first number represents the number of dice to roll and the `d#` represents the number of sides on a die. Currently support dice are `d4`, `d6`, `d8`, `d10`, `d12`, `d20`, and `d100`
 
-### Promised based rolls
-The methods `.roll()`,`.add()`, and `.reroll()` are all methods that return a promise that is resolved when the `dieRollComplete` event is triggered. So it is possible to write `DiceBox.roll('4d6').then(results => console.log(results))`. Results can also be retrieved from the `onRollComplete` callback event.
-
-### Die Result Object
-The result for an individual die will look something like this
-```json
+### Common Objects
+#### Roll Object
+```javascript
 {
-  "groupId": 5,
-  "rollId": 29,
-  "id": 29,
-  "result": 4
+  modifier: int,   // optional - the modifier (positive or negative) to be added to the final results
+  qty: int,        // the number of dice to be rolled
+  sides: int,      // the type of die to be rolled
+  theme: string,    // optional - the theme for this roll
 }
 ```
 
-### Roll Results Array Objects
+#### Individual Die Result Object
+```javascript
+{
+  groupId: int,    // the roll group this die belongs to
+  rollId: int,     // the unique identifier for this die within the group
+  sides: int,      // the type of die
+  theme: string,   // the theme that was assigned to this die
+  value: int,      // the roll result for this die
+}
+```
+
+#### Roll Result Array Object
+```javascript
+[
+  {                    // the roll group object
+    id: 0,             // the id of this group - should match the groupId of rolls
+    modifier: int,     // the modifier that was added to the final value
+    qty: int,          // the number of dice in this roll
+    rolls: [           // an array of Die Result Objects
+      {
+        groupId: int,
+        rollId: int,
+        sides: int,
+        theme: string,
+        value: int,
+      }
+    ],
+    sides: int,        // the type of die used
+    theme: string      // the theme for this group of dice
+    value: int         // the sum of the dice roll results and modifier
+  }
+]
+```
 The result object for `3d6` will look something like this
-```json
+```javascript
 [
   {
-    "qty": 3,
-    "sides": 6,
-    "modifier": 0,
-    "rolls": [
+    qty: 3,
+    sides: 6,
+    mods: [],
+    rolls: [
       {
-        "sides": 6,
-        "groupId": 0,
-        "rollId": 1,
-        "id": 1,
-        "theme": "nebula",
-        "result": 5
+        sides: 6,
+        groupId: 0,
+        rollId: 0,
+        theme: 'diceOfRolling',
+        value: 5
       },
       {
-        "sides": 6,
-        "groupId": 0,
-        "rollId": 2,
-        "id": 2,
-        "theme": "nebula",
-        "result": 6
+        sides: 6,
+        groupId: 0,
+        rollId: 1,
+        theme: 'diceOfRolling',
+        value: 2
       },
       {
-        "sides": 6,
-        "groupId": 0,
-        "rollId": 3,
-        "id": 3,
-        "theme": "nebula",
-        "result": 3
-      },
+        sides: 6,
+        groupId: 0,
+        rollId: 2,
+        theme: 'diceOfRolling',
+        value: 3
+      }
     ],
-    "value": 14
+    id: 0,
+    value: 10
   }
 ]
 ```
 
-#### What's the difference between `groupId`, `rollId` and `id`?
+#### What's the difference between `groupId`, and `rollId`?
 __groupId__: the roll group this die is a part of. This becomes more useful with the advanced dice roller that accepts notations such as `2d10+2d6`. In this case `groupId: 0` would be assigned to the 2d10 and `groupId: 1` would be assigned to the 2d6
 
 __rollId__: the id of the die within the group. By default this is incremented automatically by the dice roller, however there are cases where the rollId is assigned, such as exploding die. In this case, in order to make an association between the 'exploder' and the 'explodee' the rollId of the added die is set to a decimal value of the triggering die. For example with 1d6 that explodes twice: 
-```json
+```javascript
 [
   {
-    "groupId": 0,
-    "rollId": 0,
-    "id": 0,
-    "result": 6
-  },
-  {
-    "groupId": 0,
-    "rollId": "0.1",
-    "id": 1,
-    "result": 6
-  },
-  {
-    "groupId": 0,
-    "rollId": "0.2",
-    "id": 1,
-    "result": 3
+    qty: 3,
+    sides: 6,
+    mods: [
+      {
+        type: 'explode',
+        target: null
+      }
+    ],
+    rolls: [
+      {
+        sides: 6,
+        groupId: 0,
+        rollId: 0,
+        theme: 'diceOfRolling',
+        value: 6
+      },
+      {
+        sides: 6,
+        groupId: 0,
+        rollId: 0.1,
+        theme: 'diceOfRolling',
+        value: 6
+      },
+      {
+        sides: 6,
+        groupId: 0,
+        rollId: 0.2,
+        theme: 'diceOfRolling',
+        value: 5
+      }
+    ],
+    id: 0,
+    value: 17
   }
 ]
 ```
-__id__: an auto-incremented number assigned to dice as they are added to the simulation. This id is used to keep the physics simulation synced with the scene being rendered on the canvas. It should never be changed. The id counter is reset on clear.
 
 ## Methods
+### Promised based rolls
+The methods `.roll()`,`.add()`, `.reroll()` and `.remove()` are all methods that return a promise containing the results of the dice rolled by the callee. So it is possible to write `DiceBox.roll('4d6').then(results => console.log(results))`. Results can also be retrieved from the `onRollComplete` callback event or by using the `.getRollResults()` method (not a promise).
+
 ### Roll
 A roll will clear current dice and start a new roll. 
 ```javascript
-diceBox.roll('2d20')
+roll(notation:mixed, options = {theme:string})
+```
+The notation argument can accept the following roll formats
+1. string notation: `'3d6'` or with a simple modifier `'3d6+2'`
+2. an array of strings: `['2d10','1d6']`
+3. a roll object: `{sides:6, qty:3}`
+4. an array of roll objects: `[{qty:2, sides:10},{qty:1, sides:6}]`
+
+The options argument allows for defining a theme for this roll group.
+
+> #### Themes
+> Themes can be specified in three places. On the config object at initialization, as an options parameter when using `.roll()` or `.add()`, or as specified on a _roll object_ or _die result object_. Themes are applied in the order of _roll object_ first, options parameter second and box config option third.
+
+```javascript
+diceBox.roll('2d20',{theme:'#4b8968'}) // returns a Promise with an array of die results
 ```
 
 ### Add
 This method will add the specified notation to the current roll in a new roll group.
 ```javascript
-diceBox.add('2d6')
+add(notation:mixed, options = {theme:string})
 ```
-
-### Remove
-This method requires an object for an argument identifying the roll group and die you wish to remove. This method can only remove one die at a time.
+The acceptable arguments are the same as `.roll()`.
 ```javascript
-diceBox.remove({
-  groupId: 0,
-  rollId: 2
-})
+diceBox.add('1d8') // returns a Promise with an array of die results for the dice that were added
 ```
-You may pass a result roll object into this method to remove that specific die from the box.
 
 ### Reroll
-Reroll act much like Remove except that it will use the roll object to make another roll of the same die.
+This method will reroll a die.
+```javascript
+reroll(notation:mixed, options = {remove:boolean})
+```
+The notation argument here requires an roll object or an array of roll objects identifying the roll group `groupId` and die `rollId` you wish to reroll. Die result objects from previous rolls are valid arguments and can be passed in to trigger a reroll.
+The remove option indicates the die being rerolled should be removed from the scene
 ```javascript
 diceBox.reroll({
   groupId: 0,
   rollId: 2
-})
+}) // returns a Promise with an array of die results for the dice that were rerolled
+```
+
+### Remove
+Remove dice from the scene
+```javascript
+remove(notation:mixed)
+```
+The notation here is the same a `.reroll()`
+```javascript
+diceBox.remove({
+  groupId: 0,
+  rollId: 2
+}) // returns a Promise with an array of die results for the dice that were removed
 ```
 
 ### Clear
@@ -193,9 +267,15 @@ This will show the canvas element that the dice box is rendered to.
 diceBox.show()
 ```
 
+### Get Roll Results
+Get the results of all the dice in the scene at anytime. However, if dice are still rolling they will not have a value yet.
+```javascript
+diceBox.getRollResults() // returns an array of roll result objects
+```
+
 ## Callbacks
 ### onDieComplete
-This callback is triggered whenever an individual die has completed rolling and contains the die result object as it's argument. It contains the result object for that die
+This callback is triggered whenever an individual die has completed rolling and contains the die result object as it's argument.
 ```javascript
 Box.onDieComplete = (dieResult) => console.log('die result', dieResult)
 ```
@@ -206,8 +286,14 @@ This callback is triggered whenever all the dice have finished rolling and/or th
 Box.onRollComplete = (rollResult) => console.log('roll results', rollResult)
 ```
 
+### onRemoveComplete
+This callback is triggered whenever a die has been removed from the scene and contains the die result object that was removed as it's argument..
+```javascript
+Box.onRemoveComplete = (dieResult) => console.log('die removed', dieResult)
+```
+
 ## Other setup options
-In my demo project I have it set up as seen below. You probably won't need the `BoxControls` but they're fun to play with.
+In my demo project I have it set up as seen below. You probably won't need the `BoxControls` but they're fun to play with. See this demo in Code Sandbox here: https://codesandbox.io/s/3d-dice-demo-2bily5
 ```javascript
 import './style.css'
 import DiceBox from '@3d-dice/dice-box'
@@ -238,7 +324,7 @@ document.addEventListener("DOMContentLoaded", async() => {
       },
       onReroll: (rolls) => {
         // loop through parsed roll notations and send them to the Box
-        rolls.forEach(roll => Box.add(roll,roll.groupId))
+        rolls.forEach(roll => Box.add(roll))
       },
       onResults: (results) => {
         Display.showResults(results)

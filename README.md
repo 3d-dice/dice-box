@@ -215,20 +215,22 @@ diceBox.roll('2d20',{theme:'#4b8968'}) // returns a Promise with an array of die
 ### Add
 This method will add the specified notation to the current roll in a new roll group.
 ```javascript
-add(notation:mixed, options = {theme:string})
+add(notation:mixed, options = {theme:string, newStartPoint:boolean})
 ```
 The acceptable arguments are the same as `.roll()`.
+The option `newStartPoint` will toss the dice in from a new point along the edge of the box (defaults to true)
 ```javascript
-diceBox.add('1d8') // returns a Promise with an array of die results for the dice that were added
+diceBox.add('1d8',{newStartPoint: false}) // returns a Promise with an array of die results for the dice that were added
 ```
 
 ### Reroll
 This method will reroll a die.
 ```javascript
-reroll(notation:mixed, options = {remove:boolean})
+reroll(notation:mixed, options = {remove:boolean, newStartPoint:boolean})
 ```
 The notation argument here requires an roll object or an array of roll objects identifying the roll group `groupId` and die `rollId` you wish to reroll. Die result objects from previous rolls are valid arguments and can be passed in to trigger a reroll.
-The remove option indicates the die being rerolled should be removed from the scene
+The remove option indicates the die being rerolled should be removed from the scene.
+The option `newStartPoint` will toss the dice in from a new point along the edge of the box (defaults to true).
 ```javascript
 diceBox.reroll({
   groupId: 0,

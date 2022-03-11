@@ -251,8 +251,20 @@ const _add = async (options) => {
 
 const remove = (data) => {
 	// TODO: test this with exploding dice
+	// check if this is d100 and remove associated d10 first
+	const dieData = dieCache[data.id]
+	if(dieData.hasOwnProperty('d10Instance')){
+		dieCache[dieData.d10Instance.id].mesh.dispose()
+		delete dieCache[dieData.d10Instance.id]
+		physicsWorkerPort.postMessage({
+      action: "removeDie",
+			id: dieData.d10Instance.id
+    })
+		sleeperCount--
+	}
+
 	// remove die
-	dieCache[data.id].mesh.dispose()
+	dieData.mesh.dispose()
 	// delete entry
 	delete dieCache[data.id]
 	// decrement count
@@ -260,6 +272,8 @@ const remove = (data) => {
 
 	// step the animation forward
 	scene.render()
+
+	self.postMessage({action:"die-removed", rollId: data.rollId})
 }
 
 const updatesFromPhysics = (buffer) => {
@@ -330,7 +344,8 @@ const handleAsleep = async (die) => {
 			self.postMessage({action:"roll-result", die: {
 				groupId: d100.config.groupId,
 				rollId: d100.config.rollId,
-				id: d100.id,
+				collectionId: die.config.collectionId,
+				// id: d100.id,
 				result : d100.result
 			}})
 		}
@@ -342,7 +357,8 @@ const handleAsleep = async (die) => {
 		self.postMessage({action:"roll-result", die: {
 			groupId: die.config.groupId,
 			rollId: die.config.rollId,
-			id: die.id,
+			collectionId: die.config.collectionId,
+			// id: die.id,
 			result: die.result
 		}})
 	}

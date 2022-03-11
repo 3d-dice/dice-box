@@ -54,7 +54,7 @@ self.onmessage = (e) => {
 			clearDice(e.data)
       break
 		case "removeDie":
-			removeDie(e.data)
+			removeDie(e.data.id)
 			break;
 		case "resize":
 			width = e.data.width
@@ -82,6 +82,9 @@ self.onmessage = (e) => {
 						// TODO: this won't work, need a die object
             rollDie(e.data.id)
             break;
+					case "removeDie":
+						removeDie(e.data.id)
+						break;
           case "stopSimulation":
             stopLoop = true
 						
@@ -425,9 +428,9 @@ const rollDie = (die) => {
 
 }
 
-const removeDie = (data) => {
+const removeDie = (id) => {
 	sleepingBodies = sleepingBodies.filter((die) => {
-		let match = die.id === data.id
+		let match = die.id === id
 		if(match){
 			// remove the mesh from the scene
 			physicsWorld.removeRigidBody(die)

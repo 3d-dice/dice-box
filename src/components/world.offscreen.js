@@ -49,11 +49,13 @@ class WorldOffScreen {
 					this.pendingThemePromises[e.data.id]()
 					break;
 				case 'roll-result':
-					const die = e.data.die
-					this.onRollResult(die)
+					this.onRollResult(e.data.die)
 					break;
 				case 'roll-complete':
 					this.onRollComplete()
+					break;
+				case 'die-removed':
+					this.onDieRemoved(e.data.rollId)
 					break;
 			}
 		}

@@ -481,7 +481,6 @@ class World {
 		const rollGroup = this.rollGroupData[groupId]
 		// turn object into an array
 		const rollsArray = Object.values(rollGroup.rolls).map(({collectionId, id, ...rest}) => rest)
-		rollsArray.sort((a,b) => a.rollId.toString() > b.rollId.toString() ? 1 : -1)
 		// add up the values
 		// some dice may still be rolling, should this be a promise?
 		// if dice are still rolling in the group then the value is undefined - hence the isNaN check

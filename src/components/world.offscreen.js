@@ -55,7 +55,7 @@ class WorldOffScreen {
 					this.onRollComplete()
 					break;
 				case 'die-removed':
-					this.onDieRemoved(e.data.die)
+					this.onDieRemoved(e.data.rollId)
 					break;
 			}
 		}

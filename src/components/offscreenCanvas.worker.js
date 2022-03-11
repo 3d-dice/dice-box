@@ -249,10 +249,10 @@ const _add = async (options) => {
 
 }
 
-const remove = (die) => {
+const remove = (data) => {
 	// TODO: test this with exploding dice
 	// check if this is d100 and remove associated d10 first
-	const dieData = dieCache[die.id]
+	const dieData = dieCache[data.id]
 	if(dieData.hasOwnProperty('d10Instance')){
 		dieCache[dieData.d10Instance.id].mesh.dispose()
 		delete dieCache[dieData.d10Instance.id]
@@ -266,14 +266,14 @@ const remove = (die) => {
 	// remove die
 	dieData.mesh.dispose()
 	// delete entry
-	delete dieCache[die.id]
+	delete dieCache[data.id]
 	// decrement count
 	sleeperCount--
 
 	// step the animation forward
 	scene.render()
 
-	self.postMessage({action:"die-removed", die})
+	self.postMessage({action:"die-removed", rollId: data.rollId})
 }
 
 const updatesFromPhysics = (buffer) => {

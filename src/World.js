@@ -137,9 +137,9 @@ class World {
 			this.onRollComplete(this.getRollResults())
 		}
 
-		this.#DiceWorld.onDieRemoved = (die) => {
+		this.#DiceWorld.onDieRemoved = (rollId) => {
 			// get die information from cache
-			die = this.rollDiceData[die.rollId]
+			let die = this.rollDiceData[rollId]
 			const collection = this.rollCollectionData[die.removeCollectionId]
 			collection.completedRolls++
 
@@ -308,11 +308,12 @@ class World {
 			// add the collectionId to the die so it can be looked up in the callback
 			this.rollDiceData[die.rollId].removeCollectionId = collectionId
 			// assign the id for this die from our cache - required for removal
-			die.id = this.rollDiceData[die.rollId].id
-			// remove the die from the render
-			this.#DiceWorld.remove(die)
+			// die.id = this.rollDiceData[die.rollId].id - note: can appear in async roll result data if attached to die object
+			let id = this.rollDiceData[die.rollId].id
+			// remove the die from the render - don't like having to pass two ids. rollId is passed over just so it can be passed back for callback
+			this.#DiceWorld.remove({id,rollId: die.rollId})
 			// remove the die from the physics bodies
-			this.#DiceWorker.postMessage({action: "removeDie", id: die.id})
+			this.#DiceWorker.postMessage({action: "removeDie", id })
 		})
 
 		return this.rollCollectionData[collectionId].promise

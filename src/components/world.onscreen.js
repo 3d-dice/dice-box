@@ -222,15 +222,34 @@ class WorldOnscreen {
 	
 	remove(data) {
 	// TODO: test this with exploding dice
+	const dieData = this.#dieCache[data.id]
+	
+	// check if this is d100 and remove associated d10 first
+	if(dieData.hasOwnProperty('d10Instance')){
+		// remove die
+		this.#dieCache[dieData.d10Instance.id].mesh.dispose()
+		// delete entry
+		delete this.#dieCache[dieData.d10Instance.id]
+		// remove physics body
+		physicsWorkerPort.postMessage({
+			action: "removeDie",
+			id: dieData.d10Instance.id
+    })
+		// decrement count
+		this.#sleeperCount--
+	}
+
 	// remove die
 	this.#dieCache[data.id].mesh.dispose()
 	// delete entry
 	delete this.#dieCache[data.id]
 	// decrement count
-	sleeperCount--
+	this.#sleeperCount--
 
 	// step the animation forward
 	this.#scene.render()
+
+	this.onDieRemoved(data.rollId)
 }
 	
 	updatesFromPhysics(buffer) {
@@ -293,29 +312,25 @@ class WorldOnscreen {
 			if(die?.d10Instance?.asleep || die?.dieParent?.asleep) {
 				const d100 = die.config.sides === 100 ? die : die.dieParent
 				const d10 = die.config.sides === 10 ? die : die.d10Instance
-				if (d10.result === 0 && d100.result === 0) {
-					d100.result = 100; // 00 + 0 is 100 on a d100
+				if (d10.value === 0 && d100.value === 0) {
+					d100.value = 100; // 00 + 0 is 100 on a d100
 				} else {
-					d100.result = d100.result + d10.result
+					d100.value = d100.value + d10.value
 				}
 	
 				this.onRollResult({
-					groupId: d100.config.groupId,
 					rollId: d100.config.rollId,
-					id: d100.id,
-					result : d100.result
+					value : d100.value
 				})
 			}
 		} else {
 			// turn 0's on a d10 into a 10
-			if(die.config.sides === 10 && die.result === 0) {
-				die.result = 10
+			if(die.config.sides === 10 && die.value === 0) {
+				die.value = 10
 			}
 			this.onRollResult({
-				groupId: die.config.groupId,
 				rollId: die.config.rollId,
-				id: die.id,
-				result: die.result
+				value: die.value
 			})
 		}
 		// add to the sleeper count

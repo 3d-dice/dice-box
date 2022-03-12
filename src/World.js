@@ -112,13 +112,14 @@ class World {
 			this.diceWorldInit()
 		}
 		// now that DiceWorld is ready we can attach our callbacks
-		this.#DiceWorld.onRollResult = (die) => {
+		this.#DiceWorld.onRollResult = (result) => {
+			const die = this.rollDiceData[result.rollId]
 			const group = this.rollGroupData[die.groupId]
 			const collection = this.rollCollectionData[die.collectionId]
 
 			// map die results back to our rollData
 			// since all rolls are references to this.rollDiceDate the values will be added to those objects
-			group.rolls[die.rollId].value = die.result
+			group.rolls[die.rollId].value = result.value
 
 			// increment the completed roll count for this group
 			collection.completedRolls++
@@ -129,7 +130,7 @@ class World {
 			}
 
 			// trigger callback passing individual die result
-			const {collectionId, id, ...returnDie} = this.rollDiceData[die.rollId]
+			const {collectionId, id, ...returnDie} = die
 			this.onDieComplete(returnDie)
 		}
 		this.#DiceWorld.onRollComplete = () => {

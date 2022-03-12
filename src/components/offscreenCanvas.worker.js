@@ -337,31 +337,25 @@ const handleAsleep = async (die) => {
 		if(die?.d10Instance?.asleep || die?.dieParent?.asleep) {
 			const d100 = die.config.sides === 100 ? die : die.dieParent
 			const d10 = die.config.sides === 10 ? die : die.d10Instance
-			if (d10.result === 0 && d100.result === 0) {
-				d100.result = 100; // 00 + 0 is 100 on a d100
+			if (d10.value === 0 && d100.value === 0) {
+				d100.value = 100; // 00 + 0 is 100 on a d100
 			} else {
-				d100.result = d100.result + d10.result
+				d100.value = d100.value + d10.value
 			}
 
 			self.postMessage({action:"roll-result", die: {
-				groupId: d100.config.groupId,
 				rollId: d100.config.rollId,
-				collectionId: die.config.collectionId,
-				// id: d100.id,
-				result : d100.result
+				value : d100.value
 			}})
 		}
 	} else {
 		// turn 0's on a d10 into a 10
-		if(die.config.sides === 10 && die.result === 0) {
-			die.result = 10
+		if(die.config.sides === 10 && die.value === 0) {
+			die.value = 10
 		}
 		self.postMessage({action:"roll-result", die: {
-			groupId: die.config.groupId,
 			rollId: die.config.rollId,
-			collectionId: die.config.collectionId,
-			// id: die.id,
-			result: die.result
+			value: die.value
 		}})
 	}
 	// add to the sleeper count

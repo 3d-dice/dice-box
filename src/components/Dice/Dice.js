@@ -122,9 +122,9 @@ class Dice {
 
       // let rayHelper = new RayHelper(Dice.ray)
       // rayHelper.show(d.config.scene)
-			d.result = meshFaceIds[d.dieType][picked.faceId]
+			d.value = meshFaceIds[d.dieType][picked.faceId]
 
-      return resolve(d.result)
+      return resolve(d.value)
     })
     return await getDieRoll()
   }

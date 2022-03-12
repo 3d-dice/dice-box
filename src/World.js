@@ -237,8 +237,17 @@ class World {
 		return this
 	}
 
+	#validateNotation(notation) {
+		console.log('notation', notation)
+	}
+	#validateOptions(options) {
+		console.log('options', options)
+	}
+
 	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
 	roll(notation, {theme = undefined,newStartPoint = true} = {}) {
+		this.#validateNotation(notation)
+		this.#validateOptions(arguments[1])
 		// note: to add to a roll on screen use .add method
 		// reset the offscreen worker and physics worker with each new roll
 		this.clear()
@@ -259,7 +268,8 @@ class World {
 	}
 
   add(notation, {theme = undefined,newStartPoint = true} = {}) {
-
+		this.#validateNotation(notation)
+		this.#validateOptions(arguments[1])
 		const collectionId = this.#collectionIndex++
 
 		this.rollCollectionData[collectionId] = new Collection({
@@ -277,6 +287,8 @@ class World {
   }
 
 	reroll(notation, {remove = false, hide = false, newStartPoint = true} = {}) {
+		this.#validateNotation(notation)
+		this.#validateOptions(arguments[1])
 		// TODO: add hide if you want to keep the die result for an external parser
 
 		// ensure notation is an array
@@ -294,6 +306,8 @@ class World {
 	}
 
 	remove(notation, {hide = false} = {}) {
+		this.#validateNotation(notation)
+		this.#validateOptions(arguments[1])
 		// ensure notation is an array
 		const rollArray = Array.isArray(notation) ? notation : [notation]
 

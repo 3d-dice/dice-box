@@ -375,7 +375,16 @@ class World {
 			}
 
 			if(hasGroupId) {
-				Object.assign(this.rollGroupData[index].rolls, rolls)
+				try{
+					Object.assign(this.rollGroupData[index].rolls, rolls)
+				} catch (e) {
+					console.warn('Error:', 'Are you sure the group you\'re adding to exists? I\'ll make a new one for you.')
+					// save this roll group for later in a new group
+					notation.rolls = rolls
+					notation.id = index
+					this.rollGroupData[this.#groupIndex] = notation
+					++this.#groupIndex
+				}
 			} else {
 				// save this roll group for later
 				notation.rolls = rolls

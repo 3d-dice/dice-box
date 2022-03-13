@@ -4,7 +4,7 @@ High performance 3D dice roller module made with [BabylonJS](https://www.babylon
 ![Demo Screenshot](https://github.com/3d-dice/dice-box/blob/main/dice-screenshot.jpg)
 
 ## Demo
-New demo for version 0.5! <br>
+New demo for version 0.6! <br>
 Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html <br>
 See the kitchen sink code demo here: https://codesandbox.io/s/3d-dice-demo-2bily5 <br>
 Here's a simple React Demo for rolling attributes (using 3d6): https://codesandbox.io/s/react-roller-attributes-6jjiod <br>

@@ -372,4 +372,8 @@ body {
 ```
 
 ## Other Projects
+### Dice So Nice
 If you're looking for a 3D dice roller that works with [three.js](https://threejs.org/) than I would recommend looking into [Dice So Nice](https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/tree/master)
+
+### Dice of Rolling
+My favorite theme for this project has been the Dice of Rolling theme based on the real [Dice of Rolling](https://diceofrolling.com/#dice). Great product and I really enjoy using them in real life.

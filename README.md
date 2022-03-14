@@ -105,7 +105,7 @@ This documentation makes frequent reference to common dice notations such as `5d
       }
     ],
     sides: int,        // the type of die used
-    theme: string      // the theme for this group of dice
+    theme: string,      // the theme for this group of dice
     value: int         // the sum of the dice roll results and modifier
   }
 ]

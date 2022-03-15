@@ -51,7 +51,7 @@ self.onmessage = (e) => {
       })
       break
     case "clearDice":
-			clearDice(e.data)
+			clearDice()
       break
 		case "removeDie":
 			removeDie(e.data.id)
@@ -141,7 +141,7 @@ const init = async (data) => {
 	sharedVector3 = new Ammo.btVector3(0, 0, 0)
 	emptyVector = setVector3(0,0,0)
 
-	setStartPosition(aspect)
+	setStartPosition()
 	
 	// load our collider data
 	// perhaps we don't await this, let it run and resolve it later

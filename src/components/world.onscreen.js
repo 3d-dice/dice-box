@@ -231,7 +231,7 @@ class WorldOnscreen {
 		// delete entry
 		delete this.#dieCache[dieData.d10Instance.id]
 		// remove physics body
-		physicsWorkerPort.postMessage({
+		this.#physicsWorkerPort.postMessage({
 			action: "removeDie",
 			id: dieData.d10Instance.id
     })

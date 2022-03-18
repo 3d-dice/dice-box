@@ -3,6 +3,9 @@ High performance 3D dice roller module made with [BabylonJS](https://www.babylon
 
 ![Demo Screenshot](https://github.com/3d-dice/dice-box/blob/main/dice-screenshot.jpg)
 
+## Docs
+New docs site now available at [fantasticdice.games](https://fantasticdice.games)
+
 ## Demo
 New demo for version 0.6! <br>
 Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html <br>

@@ -103,11 +103,12 @@ class WorldOnscreen {
 	}
 
 	// all this does is start the render engine.
-	render() {
+	render(anustart) {
 		// document.body.addEventListener('click',()=>engine.stopRenderLoop())
 		this.#engine.runRenderLoop(this.renderLoop.bind(this))
 		this.#physicsWorkerPort.postMessage({
 			action: "resumeSimulation",
+			anustart
 		})
 	}
 
@@ -173,7 +174,7 @@ class WorldOnscreen {
 	// add a die to the scene
 	async #add(options) {
 		if(this.#engine.activeRenderLoops.length === 0) {
-			this.render()
+			this.render(options.anustart)
 		}
 		const diceOptions = {
 			...options,

@@ -1,17 +1,17 @@
 declare module "@3d-dice/dice-box" {
   type DiceboxConfig = {
-    assetPath: string;
-    delay: number;
-    enableShadows: boolean;
-    gravity: number;
-    id: string;
-    offscreen: boolean;
-    origin: string;
-    spinForce: number;
-    startingHeight: number;
-    theme: string;
-    throwForce: number;
-    zoomLevel: number;
+    assetPath?: string;
+    delay?: number;
+    enableShadows?: boolean;
+    gravity?: number;
+    id?: string;
+    offscreen?: boolean;
+    origin?: string;
+    spinForce?: number;
+    startingHeight?: number;
+    theme?: string;
+    throwForce?: number;
+    zoomLevel?: number;
   };
 
   type RollObject = {

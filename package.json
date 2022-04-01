@@ -68,5 +68,8 @@
 			"not op_mini all",
 			"not ie all"
 		]
+	},
+	{
+		"types": "types/index.d.ts"
 	}
 }

@@ -18,7 +18,7 @@ const defaultOptions = {
 	origin: location.origin,
 }
 
-class World {
+class WorldFacad {
 	rollCollectionData = {}
 	rollGroupData = {}
 	rollDiceData = {}
@@ -534,4 +534,4 @@ class Collection{
 	}
 }
 
-export default World
+export default WorldFacad

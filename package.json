@@ -4,7 +4,7 @@
 		"name": "Frank Ali"
 	},
 	"description": "A 3D environment for rolling game dice",
-	"version": "0.6.0",
+	"version": "0.6.1",
 	"keywords": [
 		"3D",
 		"dice",
@@ -17,11 +17,7 @@
 		"tabletop"
 	],
 	"license": "MIT",
-	"engines": {
-		"node": ">=14.15.0",
-		"npm": "6.14.x"
-	},
-	"homepage": "https://github.com/3d-dice/dice-box#readme",
+	"homepage": "https://fantasticdice.games/",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/3d-dice/dice-box"

@@ -1,7 +1,7 @@
 import { createCanvas } from './components/canvas'
 // import WorldOffscreen from './components/world.offscreen'
 import physicsWorker from './components/physics.worker.js?worker&inline'
-import { debounce } from './helpers'
+import { debounce, createAsyncQueue } from './helpers'
 
 const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
@@ -11,26 +11,36 @@ const defaultOptions = {
 	startingHeight: 8, // height to drop the dice from - will not exceed the DiceBox height set by zoom
 	spinForce: 4, // passed on to physics as an impulse force
 	throwForce: 5, // passed on to physics as linear velocity
-	scale: 4, // scale the dice
-	theme: 'diceOfRolling', // can be a hex color or a pre-defined theme such as 'purpleRock'
+	scale: 6, // scale the dice
+	theme: 'default', // can be a hex color or a pre-defined theme such as 'purpleRock'
+	themeColor: '#2e8555', // used for color values or named theme variants - not fully implemented yet // green: #2e8555 // yellow: #feea03
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
 	assetPath: '/assets/dice-box/', // path to 'ammo', 'models', 'themes' folders and web workers
 	origin: location.origin,
+	meshFile: `models/default.json`
 }
+
+// TODO: update onScreenWorld file
+// TODO: ensure updateConfig still works
+// TODO: update presets slider for new theme configs
+// TODO: replace default model files
+// TODO: write changelog file/post
+// TODO: convert worldOffsreen.worker into a class so that it can be made more DRY with worldOnscreen
 
 class WorldFacad {
 	rollCollectionData = {}
 	rollGroupData = {}
 	rollDiceData = {}
 	themeData = []
+	themesLoadedData = {}
 	#collectionIndex = 0
 	#groupIndex = 0
 	#rollIndex = 0
 	#idIndex = 0
 	#DiceWorld
 	diceWorldInit
-	#DiceWorker
-	diceWorkerInit
+	#DicePhysics
+	dicePhysicsInit
 	onDieComplete = () => {}
 	onRollComplete = () => {}
 	onRemoveComplete = () => {}
@@ -38,14 +48,18 @@ class WorldFacad {
   constructor(container, options = {}){
 		// extend defaults with options
 		this.config = {...defaultOptions, ...options}
+		// if options do not provide a theme color then it should be null
+		this.config.themeColor =  options.theme ? options.themeColor ? options.themeColor : null : this.config.themeColor
 		// if a canvas selector is provided then that will be used for the dicebox, otherwise a canvas will be created using the config.id
     this.canvas = createCanvas({
       selector: container,
       id: this.config.id
     })
-
+		// create a queue to prevent theme being loaded multiple times
+		this.loadThemeQueue = createAsyncQueue({dedupe: true})
   }
 
+	// Load the BabylonJS World
 	async #loadWorld(){
 		if ("OffscreenCanvas" in window && "transferControlToOffscreen" in this.canvas && this.config.offscreen) { 
 			// Ok to use offscreen canvas - transfer controll offscreen
@@ -67,28 +81,48 @@ class WorldFacad {
 				options: this.config
 			})
 		}
-	}
-
-	#connectWorld(){
-		// create message channels for the two web workers to communicate through
-		const channel = new MessageChannel()
 
 		// set up a promise to be fullfilled when a message comes back from DiceWorld indicating init is complete
 		this.#DiceWorld.init = new Promise((resolve, reject) => {
 			this.diceWorldInit = resolve
 		})
 
+		this.#DiceWorld.onInitComplete = () => {
+			this.diceWorldInit()
+		}
+	}
+
+	// Load the AmmoJS physics world
+	#loadPhysics(){
+		// initialize physics world in which AmmoJS runs
+		this.#DicePhysics = new physicsWorker()
+		// set up a promise to be fullfilled when a message comes back from physics.worker indicating init is complete
+		this.#DicePhysics.init = new Promise((resolve, reject) => {
+			this.dicePhysicsInit = resolve
+		})
+		this.#DicePhysics.onmessage = (e) => {
+			switch( e.data.action ) {
+				case "init-complete":
+					this.dicePhysicsInit() // fulfill promise so other things can run
+			}
+    }
+		// initialize the AmmoJS physics worker
+		this.#DicePhysics.postMessage({
+			action: "init",
+			width: this.canvas.clientWidth,
+			height: this.canvas.clientHeight,
+			options: this.config
+		})
+	}
+
+	#connectWorld(){
+		const channel = new MessageChannel()
+		
+		// create message channel for the visual world and the physics world to communicate through
 		this.#DiceWorld.connect(channel.port1)
 
-		// initialize physics world in which AmmoJS runs
-		this.#DiceWorker = new physicsWorker()
-		// set up a promise to be fullfilled when a message comes back from physics.worker indicating init is complete
-		this.#DiceWorker.init = new Promise((resolve, reject) => {
-			this.diceWorkerInit = resolve
-		})
-
-		// Setup the connection: Port 2 is for diceWorker
-		this.#DiceWorker.postMessage({
+		// create message channel for this WorldFacad class to communicate with physics world
+		this.#DicePhysics.postMessage({
 			action: "connect"
 		},[ channel.port2 ])
 	}
@@ -97,20 +131,18 @@ class WorldFacad {
 		// send resize events to workers - debounced for performance
 		const resizeWorkers = () => {
 			this.#DiceWorld.resize({width: this.canvas.clientWidth, height: this.canvas.clientHeight})
-			this.#DiceWorker.postMessage({action: "resize", width: this.canvas.clientWidth, height: this.canvas.clientHeight});
+			this.#DicePhysics.postMessage({action: "resize", width: this.canvas.clientWidth, height: this.canvas.clientHeight});
 		}
 		const debounceResize = debounce(resizeWorkers)
 		window.addEventListener("resize", debounceResize)
 	}
 
   async init() {
+		// trigger physics first so it can load in parallel with world
+		this.#loadPhysics()
 		await this.#loadWorld()
-		this.#connectWorld()
 		this.resizeWorld()
 
-		this.#DiceWorld.onInitComplete = () => {
-			this.diceWorldInit()
-		}
 		// now that DiceWorld is ready we can attach our callbacks
 		this.#DiceWorld.onRollResult = (result) => {
 			const die = this.rollDiceData[result.rollId]
@@ -126,7 +158,7 @@ class WorldFacad {
 			// if all rolls are completed then resolve the collection promise - returning dice that were in this collection
 			if(collection.completedRolls == collection.rolls.length) {
 				// pull out roll.collectionId and roll.id? They're meant to be internal values
-				collection.resolve(Object.values(collection.rolls).map(({collectionId, id, ...rest}) => rest))
+				collection.resolve(Object.values(collection.rolls).map(({collectionId, id, meshName, ...rest}) => rest))
 			}
 
 			// trigger callback passing individual die result
@@ -161,42 +193,127 @@ class WorldFacad {
 			if(collection.completedRolls == collection.rolls.length) {
 				collection.resolve(Object.values(collection.rolls).map(({id, ...rest}) => rest))
 			}
-			const {collectionId, id, removeCollectionId, ...returnDie} = die
+			const {collectionId, id, removeCollectionId, meshName, ...returnDie} = die
 			this.onRemoveComplete(returnDie)
 		}
 
-    // initialize the AmmoJS physics worker
-    this.#DiceWorker.postMessage({
-      action: "init",
-      width: this.canvas.clientWidth,
-      height: this.canvas.clientHeight,
-			options: this.config
-    })
 
-    this.#DiceWorker.onmessage = (e) => {
-			switch( e.data.action ) {
-				case "init-complete":
-					this.diceWorkerInit() // fulfill promise so other things can run
-			}
-    }
+    // wait for both DiceWorld and DicePhysics to initialize
+		await Promise.all([this.#DiceWorld.init, this.#DicePhysics.init])
+		// set up message channels between Dice World and Dice Physics
+		this.#connectWorld()
 
-    // pomise.all to initialize both offscreenWorker and DiceWorker
-		await Promise.all([this.#DiceWorld.init, this.#DiceWorker.init])
+		// queue load of the theme defined in the config
+		this.loadThemeQueue.push(() => this.loadTheme(this.config.theme))
 
+		//TODO: this should probably return a promise
 		// make this method chainable
 		return this
-
   }
+
+	// fetch the theme config and return a themeData object
+	async getThemeConfig(theme){
+		const basePath = `${this.config.assetPath}themes/${theme}`
+		let themeData
+
+		if (theme === 'default'){
+			// sensible defaults
+			themeData = {
+				name: "Default Colors",
+				material: {
+					type: "color",
+					diffuseTexture: {
+						light: 'diffuse-light.png',
+						dark: 'diffuse-dark.png'
+					},
+					diffuseLevel: 2,
+					bumpTexture: 'normal.png',
+					bumpLevel: .5
+				},
+			}
+		} else {
+			// fetch the theme.config file
+			themeData = await fetch(`${basePath}/theme.config.json`).then(resp => {
+				if(resp.ok) {
+					const contentType = resp.headers.get("content-type")
+					if (contentType && contentType.indexOf("application/json") !== -1) {
+						return resp.json()
+					} 
+					else if (resp.type && resp.type === 'basic') {
+						return resp.json()
+					}
+					else {
+						// return resp
+						throw new Error(`Incorrect contentType: ${contentType}. Expected "application/json" or "basic"`)
+					}
+				} else {
+					throw new Error(`Request rejected with status ${resp.status}: ${resp.statusText}`)
+				}
+			})
+		}
+
+		let meshFilePath = this.config.assetPath + this.config.meshFile
+		let meshName = 'default'
+		if(themeData.hasOwnProperty('meshFile')){
+			meshFilePath = `${basePath}/${themeData.meshFile}`
+			if(!themeData.hasOwnProperty('meshName')) {
+				console.warn('You should provide a meshName in your theme.config.json file')
+				// fallback to fileName as meshName without extension
+				meshName = themeData.meshFile.replace(/(.*)\..{2,4}$/,'$1')
+			} else {
+				meshName = themeData.meshName
+			}
+		}
+
+		Object.assign(themeData,
+			{
+				basePath,
+				meshFilePath,
+				meshName,
+				theme,
+			}
+		)
+
+		return themeData
+	}
+
+	async loadTheme(theme){
+		// check the cache
+		if(this.themesLoadedData[theme]) {
+			// short circuit if theme has been previously loaded
+			return this.themesLoadedData[theme]
+		}
+
+		// fetch
+		let themeConfig = await this.getThemeConfig(theme)
+
+		// pass config onto DiceWorld to load - the theme loader needs 'scene' from DiceWorld
+		await this.#DiceWorld.loadTheme(themeConfig)
+
+		// save the themeData for later
+		this.themesLoadedData[theme] = themeConfig
+
+		return themeConfig
+	}
 
 	// TODO: use getter and setter
 	// change config options
-	updateConfig(options) {
+	async updateConfig(options) {
 		const newConfig = {...this.config,...options}
+		// console.log('newConfig', newConfig)
+		// if(this.config.theme !== options.theme) {
+			await this.loadTheme(options.theme).then(config => {
+				if(config.material.type !== 'color') {
+					newConfig.themeColor = undefined
+				}
+			})
+		// }
+
 		this.config = newConfig
 		// pass updates to DiceWorld
 		this.#DiceWorld.updateConfig(newConfig)
 		// pass updates to PhysicsWorld
-		this.#DiceWorker.postMessage({
+		this.#DicePhysics.postMessage({
 			action: 'updateConfig',
 			options: newConfig
 		})
@@ -218,7 +335,7 @@ class WorldFacad {
 		// clear all rendered die bodies
 		this.#DiceWorld.clear()
     // clear all physics die bodies
-    this.#DiceWorker.postMessage({action: "clearDice"})
+    this.#DicePhysics.postMessage({action: "clearDice"})
 
 		// make this method chainable
 		return this
@@ -316,19 +433,10 @@ class WorldFacad {
 			// remove the die from the render - don't like having to pass two ids. rollId is passed over just so it can be passed back for callback
 			this.#DiceWorld.remove({id,rollId: die.rollId})
 			// remove the die from the physics bodies
-			this.#DiceWorker.postMessage({action: "removeDie", id })
+			this.#DicePhysics.postMessage({action: "removeDie", id })
 		})
 
 		return this.rollCollectionData[collectionId].promise
-	}
-
-	async loadTheme(theme){
-		if(this.themeData.includes(theme)){
-			return
-		} else {
-			await this.#DiceWorld.loadTheme(theme)
-			this.themeData.push(theme)
-		}
 	}
 
 	// used by both .add and .roll - .roll clears the box and .add does not
@@ -340,15 +448,17 @@ class WorldFacad {
 		// loop through the number of dice in the group and roll each one
 		parsedNotation.forEach(async notation => {
 			const theme = notation.theme || collection.theme || this.config.theme
+			const themeColor = notation.themeColor || collection.themeColor || this.config.themeColor
 			const rolls = {}
 			const hasGroupId = notation.groupId !== undefined
 			let index
 
-			// load the theme prior to adding all the dice => give textures a chance to load so you don't see a flash of naked dice
-			await this.loadTheme(theme)
+			// load the theme, will be short circuited if previously loaded
+			await this.loadThemeQueue.push(() => this.loadTheme(theme))
+
+			const {meshName} = this.themesLoadedData[theme]
 
 			// TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.
-
 			for (var i = 0, len = notation.qty; i < len; i++) {
 				// id's start at zero and zero can be falsy, so we check for undefined
 				let rollId = notation.rollId !== undefined ? notation.rollId : this.#rollIndex++
@@ -361,7 +471,9 @@ class WorldFacad {
 					collectionId: collection.id,
 					rollId,
 					id,
-					theme
+					theme,
+					themeColor,
+					meshName
 				}
 
 				rolls[rollId] = roll
@@ -372,7 +484,6 @@ class WorldFacad {
 
 				// turn flag off
 				anustart = false
-
 			}
 
 			if(hasGroupId) {
@@ -488,7 +599,7 @@ class WorldFacad {
 		// console.log('groupId', groupId)
 		const rollGroup = this.rollGroupData[groupId]
 		// turn object into an array
-		const rollsArray = Object.values(rollGroup.rolls).map(({collectionId, id, ...rest}) => rest)
+		const rollsArray = Object.values(rollGroup.rolls).map(({collectionId, id, meshName, ...rest}) => rest)
 		// add up the values
 		// some dice may still be rolling, should this be a promise?
 		// if dice are still rolling in the group then the value is undefined - hence the isNaN check

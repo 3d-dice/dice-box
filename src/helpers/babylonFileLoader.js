@@ -49,7 +49,7 @@ SceneLoader.RegisterPlugin({
         if (data.indexOf("json") !== -1) {
             return true;
         }
-        return false;
+        return true;
     },
     importMesh: function (meshesNames, scene, data, rootUrl, meshes, particleSystems, skeletons, onError) {
         // Entire method running in try block, so ALWAYS logs as far as it got, only actually writes details

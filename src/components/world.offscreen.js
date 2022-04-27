@@ -45,8 +45,12 @@ class WorldOffScreen {
 				case "init-complete":
 					this.offscreenWorkerInit() //fulfill promise so other things can run
 					break;
+				case "connect-complete":
+					break;
 				case "theme-loaded":
-					this.pendingThemePromises[e.data.id]()
+					if(e.data.id){
+						this.pendingThemePromises[e.data.id](e.data.themeData)
+					}
 					break;
 				case 'roll-result':
 					this.onRollResult(e.data.die)
@@ -59,7 +63,8 @@ class WorldOffScreen {
 					break;
 			}
 		}
-		await Promise.all([this.#OffscreenWorker.init])
+		// await Promise.all([this.#OffscreenWorker.init])
+		await this.#OffscreenWorker.init
 
 		this.onInitComplete(true)
 
@@ -82,13 +87,10 @@ class WorldOffScreen {
 		this.#OffscreenWorker.postMessage({action: "resize", options});
 	}
 
-	async loadTheme(theme) {
-		const id = createUUID()
-
+	async loadTheme(options) {
 		return new Promise((resolve, reject) => {
-			this.#OffscreenWorker.postMessage({action: "loadTheme", id, theme})
-			// this.themeLoadedInit = resolve
-			this.pendingThemePromises[id] = resolve
+			this.#OffscreenWorker.postMessage({action: "loadTheme", options})
+			this.pendingThemePromises[options.theme] = resolve
 		})
 	}
 

@@ -1,114 +1,166 @@
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
-import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { CustomMaterial } from '@babylonjs/materials/custom/customMaterial';
+import { SerializationHelper } from '@babylonjs/core/Misc/decorators'
 
-function sleeper(ms) {
-  return new Promise(resolve => setTimeout(() => resolve(), ms));
+// this is a monkey patch for cloning CustomMaterial in BabylonJS
+CustomMaterial.prototype.clone = function (name)  {
+  const th = this
+  const result = SerializationHelper.Clone(() => new CustomMaterial(name, this.getScene()), this)
+
+  result.name = name
+  result.id = name  
+  result.CustomParts.Fragment_Begin = th.CustomParts.Fragment_Begin
+  result.CustomParts.Fragment_Definitions = th.CustomParts.Fragment_Definitions
+  result.CustomParts.Fragment_MainBegin = th.CustomParts.Fragment_MainBegin
+  result.CustomParts.Fragment_Custom_Diffuse = th.CustomParts.Fragment_Custom_Diffuse
+  result.CustomParts.Fragment_Before_Lights = th.CustomParts.Fragment_Before_Lights
+  result.CustomParts.Fragment_Before_Fog = th.CustomParts.Fragment_Before_Fog
+  result.CustomParts.Fragment_Custom_Alpha = th.CustomParts.Fragment_Custom_Alpha
+  result.CustomParts.Fragment_Before_FragColor = th.CustomParts.Fragment_Before_FragColor
+  result.CustomParts.Vertex_Begin = th.CustomParts.Vertex_Begin
+  result.CustomParts.Vertex_Definitions = th.CustomParts.Vertex_Definitions
+  result.CustomParts.Vertex_MainBegin = th.CustomParts.Vertex_MainBegin
+  result.CustomParts.Vertex_Before_PositionUpdated = th.CustomParts.Vertex_Before_PositionUpdated
+  result.CustomParts.Vertex_Before_NormalUpdated = th.CustomParts.Vertex_Before_NormalUpdated
+  result.CustomParts.Vertex_After_WorldPosComputed = th.CustomParts.Vertex_After_WorldPosComputed
+  result.CustomParts.Vertex_MainEnd = th.CustomParts.Vertex_MainEnd 
+
+  return result
 }
 
-async function loadStandardMaterial(theme,assetPath,scene) {
-  let diceMaterial = new StandardMaterial(theme,scene);
-  let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,scene)
-  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal-dx.jpg`,scene)
-  // let diceSpecTexture = await importTextureAsync(`${assetPath}themes/${theme}/specularity.jpg`,scene)
-	diceMaterial.diffuseTexture = diceTexture
-  diceMaterial.bumpTexture = diceBumpTexture
-  // diceMaterial.specularTexture = diceSpecTexture
-  // diceMaterial.specularPower = 1
-
-	sharedSettings(diceMaterial)
-
-  return diceMaterial
-}
-
-async function loadSemiTransparentMaterial(theme,assetPath,scene) {
-  let diceMaterial = new StandardMaterial(theme,scene);
-  let diceTexture = await importTextureAsync(`${assetPath}themes/${theme}/albedo.jpg`,scene)
-  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/${theme}/normal-dx.jpg`,scene)
-  let diceOpacityTexture = await importTextureAsync(`${assetPath}themes/${theme}/mask.png`,scene)
-	diceMaterial.diffuseTexture = diceTexture
-	diceMaterial.opacityTexture = diceOpacityTexture
-	diceMaterial.opacityTexture.getAlphaFromRGB = true
-  diceMaterial.opacityTexture.vScale = -1
-	// diceMaterial.backFaceCulling = false
-  diceMaterial.bumpTexture = diceBumpTexture
-
-	sharedSettings(diceMaterial)
-
-  return diceMaterial
-}
-
-async function loadColorMaterial(theme,assetPath,scene) {
-	let color = Color3.FromHexString(theme)
-  let diceMaterial = new CustomMaterial(theme,scene);
-	let diceTexture
-	// console.log("color totals",(color.r*256*0.299 + color.g*256*0.587 + color.b*256*0.114))
-	if ((color.r*256*0.299 + color.g*256*0.587 + color.b*256*0.114) > 175){
-		diceTexture = await importTextureAsync(`${assetPath}themes/transparent/albedo-dark.png`,scene)
-	} else {
-		diceTexture = await importTextureAsync(`${assetPath}themes/transparent/albedo-light.png`,scene)
-	}
-	diceMaterial.diffuseTexture = diceTexture
-	// diceMaterial.diffuseTexture.hasAlpha = true;
-	// diceMaterial.useAlphaFromDiffuseTexture = true;
-	diceMaterial.Fragment_Custom_Diffuse(`
-		baseColor.rgb = mix(vec3(${color.r},${color.g},${color.b}), baseColor.rgb, baseColor.a);
-	`)
-
-  let diceBumpTexture = await importTextureAsync(`${assetPath}themes/transparent/normal-dx.jpg`,scene)
-  diceMaterial.bumpTexture = diceBumpTexture
-
-	sharedSettings(diceMaterial)
-
-  return diceMaterial
-}
-
-const sharedSettings = (material) => {
-	material.diffuseTexture.level = 1.3
-  // material.bumpTexture.level = 2
-  // material.invertNormalMapY = true
-  // material.invertNormalMapX = true
-
-	// additional settings for .babylon file settings with Preserve Z-up right handed coordinate
-	// material.diffuseTexture.vScale = -1
-  // material.bumpTexture.vScale = -1
-	// material.diffuseTexture.uScale = -1
-  // material.bumpTexture.uScale = -1
-
-  material.allowShaderHotSwapping = false
-	return material
-}
-
-
-async function importTextureAsync(url, scene) {
-  return new Promise((resolve, reject) => {
-    let texture = new Texture(
-      url, // url: Nullable<string>
-      scene, // sceneOrEngine: Nullable<Scene | ThinEngine>
-      undefined, // noMipmapOrOptions?: boolean | ITextureCreationOptions
-      true, // invertY?: boolean
-      undefined, // samplingMode?: number
-      () => resolve(texture), // onLoad?: Nullable<() => void>
-      () => reject("Unable to load texture") // onError?: Nullable<(message?: string
-    )
-  })
-}
-
-const loadTheme = async (theme,p,s) => {
-  let material
-  if(theme.startsWith("#")){
-    material = await loadColorMaterial(theme,p,s)
-  } 
-  else if(theme.toLowerCase().startsWith("trans")) {
-    material = await loadSemiTransparentMaterial(theme,p,s)
+class ThemeLoader {
+  loadedThemes = {}
+  themeData = {}
+  constructor(options) {
+    this.scene = options.scene
   }
-  else {
-    // await sleeper(3000).then(async ()=>{
-    material = await loadStandardMaterial(theme,p,s)
-    // })
+
+  async loadStandardMaterial(options) {
+    const {basePath, theme, material: matParams} = options
+    //TODO: apply more matParams
+    const diceMaterial = new StandardMaterial(theme, this.scene);
+    if(matParams.diffuseTexture){
+      diceMaterial.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture}`,this.scene)
+      if(matParams.diffuseLevel) {
+        diceMaterial.diffuseTexture.level = matParams.diffuseLevel
+      }
+    }
+    if(matParams.bumpTexture){
+      diceMaterial.bumpTexture = await this.importTextureAsync(`${basePath}/${matParams.bumpTexture}`,this.scene)
+      if(matParams.bumpLevel){
+        diceMaterial.bumpTexture.level = matParams.bumpLevel
+      }
+    }
+    if(matParams.specularTexture){
+      diceMaterial.specularTexture = await this.importTextureAsync(`${basePath}/${matParams.specularTexture}`,this.scene)
+      if(matParams.specularPower){
+        diceMaterial.specularTexture.specularPower = matParams.specularPower
+      }
+    }
+
+    diceMaterial.allowShaderHotSwapping = false
+
+    // other fun params for the future
+    // diceMaterial.useAlphaFromDiffuseTexture
+    // diceMaterial.useEmissiveAsIllumination
+    // diceMaterial.opacityTexture
+    // diceMaterial.emissiveTexture
+    // diceMaterial.ambientTexture
+    // diceMaterial.reflectionTexture
+    // diceMaterial.refractionTexture
+    // diceMaterial.lightmapTexture
+
   }
-  return material
+
+  // this will create two materials - one with light text and one with dark text, the underlying color can be changed by color instance buffers
+  async loadColorMaterial(options) {
+    const {theme, basePath, material: matParams} = options
+    // create the custom color material with white/light numbers
+    const diceMatLight = new CustomMaterial(theme+'_light',this.scene)
+    // Other fun params for the future
+    // diceMatLight.useEmissiveAsIllumination = true
+    // diceMatLight.useAlphaFromDiffuseTexture = true
+    // diceMatLight.ambientColor = Color3.White()
+    // diceMatLight.ambientTexture = diceTexture
+    // diceMatLight.emissiveTexture = diceTexture
+    // diceMatLight.opacityTexture = diceTexture
+    if(matParams.diffuseTexture && matParams.diffuseTexture.light){
+      diceMatLight.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture.light}`,this.scene)
+      if(matParams.diffuseLevel) {
+        diceMatLight.diffuseTexture.level = matParams.diffuseLevel
+      }
+    }
+    if(matParams.bumpTexture){
+      diceMatLight.bumpTexture = await this.importTextureAsync(`${basePath}/${matParams.bumpTexture}`,this.scene)
+      if(matParams.bumpLevel){
+        diceMatLight.bumpTexture.level = matParams.bumpLevel
+      }
+    }
+  
+    diceMatLight.allowShaderHotSwapping = false
+  
+    // the magic that allows for the material color to be changed on instances
+    diceMatLight.Vertex_Definitions(`
+      attribute vec3 customColor;
+      varying vec3 vColor;
+    `)
+    .Vertex_MainEnd(`
+      vColor = customColor;
+    `)
+    .Fragment_Definitions(`
+      varying vec3 vColor;
+    `)
+    .Fragment_Custom_Diffuse(`
+      baseColor.rgb = mix(vColor.rgb, baseColor.rgb, baseColor.a);
+    `)
+
+    diceMatLight.AddAttribute('customColor')
+  
+    // create the custom color material with black/dark numbers
+    const diceMatDark = diceMatLight.clone(theme+'_dark')
+    if(matParams.diffuseTexture && matParams.diffuseTexture.dark){
+      diceMatDark.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture.dark}`,this.scene)
+      if(matParams.diffuseLevel) {
+        diceMatDark.diffuseTexture.level = matParams.diffuseLevel
+      }
+    }
+    // this must be set again for some reason - does not clone
+    diceMatDark.AddAttribute('customColor')
+  }
+
+  async importTextureAsync(url) {
+    return new Promise((resolve, reject) => {
+      let texture = new Texture(
+        url, // url: Nullable<string>
+        this.scene, // sceneOrEngine: Nullable<Scene | ThinEngine>
+        undefined, // noMipmapOrOptions?: boolean | ITextureCreationOptions
+        true, // invertY?: boolean
+        undefined, // samplingMode?: number
+        () => resolve(texture), // onLoad?: Nullable<() => void>
+        () => reject("Unable to load texture") // onError?: Nullable<(message?: string
+      )
+    })
+  }
+
+  async load(options){
+    const { material } = options
+
+    if(material.type === "color") {
+      await this.loadColorMaterial(options)
+    } 
+    else if (material.type === "standard") {
+      await this.loadStandardMaterial(options)
+    } 
+    //TODO: more material options
+    // else if (material.type === "semiTransparent") {
+    //   await this.loadSemiTransparentMaterial(options)
+    // }
+    else {
+      console.error(`Material type: ${material.type} not supported`)
+    }
+  }
 }
 
-export { loadTheme, importTextureAsync }
+
+export default ThemeLoader

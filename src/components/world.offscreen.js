@@ -8,11 +8,12 @@ class WorldOffScreen {
 	pendingThemePromises = []
 	#offscreenCanvas
 	#OffscreenWorker
-	onInitComplete = () => {} // init callback
+	// onInitComplete = () => {} // init callback
 	onRollResult = () => {} // individual die callback
 	onRollComplete = () => {} // roll group callback
 
 	constructor(options){
+		this.onInitComplete = options.onInitComplete
 
 		// transfer control offscreen
 		this.#offscreenCanvas = options.canvas.transferControlToOffscreen()

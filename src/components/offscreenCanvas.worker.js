@@ -1,3 +1,4 @@
+import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { createEngine } from './engine'
 import { createScene } from './scene'
 import { createCamera } from './camera'
@@ -5,7 +6,6 @@ import { createLights } from './lights'
 import DiceBox from './DiceBox'
 import Dice from './Dice'
 import ThemeLoader from './Dice/themes'
-import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 
 let 
 	config,

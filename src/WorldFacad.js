@@ -37,10 +37,12 @@ class WorldFacad {
 	#groupIndex = 0
 	#rollIndex = 0
 	#idIndex = 0
-	#DiceWorld
-	diceWorldInit
+	#DiceWorld = {}
+	#diceWorldPromise
+	#diceWorldResolve
 	#DicePhysics
-	dicePhysicsInit
+	#dicePhysicsPromise
+	#dicePhysicsResolve
 	onDieComplete = () => {}
 	onRollComplete = () => {}
 	onRemoveComplete = () => {}
@@ -61,13 +63,25 @@ class WorldFacad {
 
 	// Load the BabylonJS World
 	async #loadWorld(){
-		if ("OffscreenCanvas" in window && "transferControlToOffscreen" in this.canvas && this.config.offscreen) { 
+
+		// set up a promise to be fullfilled when a message comes back from DiceWorld indicating init is complete
+		this.#diceWorldPromise = new Promise((resolve, reject) => {
+			this.#diceWorldResolve = resolve
+		})
+
+		// resolve the promise one onInitComplete callback is triggered
+		const onInitComplete = () => {
+			this.#diceWorldResolve()
+		}
+
+		if ("OffscreenCanvas" in window && "transferControlToOffscreen" in this.canvas && this.config.offscreen) {
 			// Ok to use offscreen canvas - transfer controll offscreen
 			const WorldOffscreen = await import('./components/world.offscreen').then(module => module.default)
 			// WorldOffscreen is just a container class that passes all method calls to the Offscreen Canvas worker
 			this.#DiceWorld = new WorldOffscreen({
 				canvas: this.canvas,
-				options: this.config
+				options: this.config,
+				onInitComplete
 			})
 		} else {
 			if(this.config.offscreen){
@@ -78,18 +92,22 @@ class WorldFacad {
 			const WorldOnscreen = await import('./components/world.onscreen').then(module => module.default)
 			this.#DiceWorld = new WorldOnscreen({
 				canvas: this.canvas,
-				options: this.config
+				options: this.config,
+				onInitComplete
 			})
 		}
 
-		// set up a promise to be fullfilled when a message comes back from DiceWorld indicating init is complete
-		this.#DiceWorld.init = new Promise((resolve, reject) => {
-			this.diceWorldInit = resolve
-		})
 
-		this.#DiceWorld.onInitComplete = () => {
-			this.diceWorldInit()
-		}
+
+		// console.log('this.#DiceWorld', this.#DiceWorld)
+
+		// this.#DiceWorld.onInitComplete = () => {
+		// 	console.log("init complete")
+		// 	console.log("This never fires? How does any of it work then?")
+		// 	this.#diceWorldResolve()
+		// }
+
+		// console.log('this.#DiceWorld', this.#DiceWorld)
 	}
 
 	// Load the AmmoJS physics world
@@ -97,13 +115,13 @@ class WorldFacad {
 		// initialize physics world in which AmmoJS runs
 		this.#DicePhysics = new physicsWorker()
 		// set up a promise to be fullfilled when a message comes back from physics.worker indicating init is complete
-		this.#DicePhysics.init = new Promise((resolve, reject) => {
-			this.dicePhysicsInit = resolve
+		this.#dicePhysicsPromise = new Promise((resolve, reject) => {
+			this.#dicePhysicsResolve = resolve
 		})
 		this.#DicePhysics.onmessage = (e) => {
 			switch( e.data.action ) {
 				case "init-complete":
-					this.dicePhysicsInit() // fulfill promise so other things can run
+					this.#dicePhysicsResolve() // fulfill promise so other things can run
 			}
     }
 		// initialize the AmmoJS physics worker
@@ -197,10 +215,10 @@ class WorldFacad {
 			this.onRemoveComplete(returnDie)
 		}
 
-
     // wait for both DiceWorld and DicePhysics to initialize
-		await Promise.all([this.#DiceWorld.init, this.#DicePhysics.init])
+		await Promise.all([this.#diceWorldPromise, this.#dicePhysicsPromise])
 		// set up message channels between Dice World and Dice Physics
+
 		this.#connectWorld()
 
 		// queue load of the theme defined in the config
@@ -213,7 +231,7 @@ class WorldFacad {
 
 	// fetch the theme config and return a themeData object
 	async getThemeConfig(theme){
-		const basePath = `${this.config.assetPath}themes/${theme}`
+		const basePath = `${this.config.origin}${this.config.assetPath}themes/${theme}`
 		let themeData
 
 		if (theme === 'default'){
@@ -252,7 +270,7 @@ class WorldFacad {
 			})
 		}
 
-		let meshFilePath = this.config.assetPath + this.config.meshFile
+		let meshFilePath = this.config.origin + this.config.assetPath + this.config.meshFile
 		let meshName = 'default'
 		if(themeData.hasOwnProperty('meshFile')){
 			meshFilePath = `${basePath}/${themeData.meshFile}`

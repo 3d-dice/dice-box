@@ -244,7 +244,7 @@ class WorldFacad {
 						light: 'diffuse-light.png',
 						dark: 'diffuse-dark.png'
 					},
-					diffuseLevel: 2,
+					diffuseLevel: 1,
 					bumpTexture: 'normal.png',
 					bumpLevel: .5
 				},
@@ -471,8 +471,10 @@ class WorldFacad {
 			const hasGroupId = notation.groupId !== undefined
 			let index
 
+			
 			// load the theme, will be short circuited if previously loaded
-			await this.loadThemeQueue.push(() => this.loadTheme(theme))
+			const loadTheme = () => this.loadTheme(theme)
+			await this.loadThemeQueue.push(loadTheme)
 
 			const {meshName} = this.themesLoadedData[theme]
 

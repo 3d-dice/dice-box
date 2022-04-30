@@ -15,7 +15,7 @@ function createLights(options = defaultOptions) {
   d_light.intensity = .65
   
   const h_light = new HemisphericLight("HemisphericLight", new Vector3(1, 1, 0), scene)
-  h_light.intensity = .2
+  h_light.intensity = .4
   
   if(enableShadows){
     d_light.shadowMinZ = 1

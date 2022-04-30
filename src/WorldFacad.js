@@ -20,13 +20,6 @@ const defaultOptions = {
 	meshFile: `models/default.json`
 }
 
-// TODO: update onScreenWorld file
-// TODO: ensure updateConfig still works
-// TODO: update presets slider for new theme configs
-// TODO: replace default model files
-// TODO: write changelog file/post
-// TODO: convert worldOffsreen.worker into a class so that it can be made more DRY with worldOnscreen
-
 class WorldFacad {
 	rollCollectionData = {}
 	rollGroupData = {}

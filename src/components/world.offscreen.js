@@ -5,7 +5,7 @@ class WorldOffScreen {
 	initialized = false
 	offscreenWorkerInit = false
 	themeLoadedInit = false
-	pendingThemePromises = []
+	pendingThemePromises = {}
 	#offscreenCanvas
 	#OffscreenWorker
 	// onInitComplete = () => {} // init callback
@@ -50,7 +50,7 @@ class WorldOffScreen {
 					break;
 				case "theme-loaded":
 					if(e.data.id){
-						this.pendingThemePromises[e.data.id](e.data.themeData)
+						this.pendingThemePromises[e.data.id](e.data.id)
 					}
 					break;
 				case 'roll-result':
@@ -89,9 +89,14 @@ class WorldOffScreen {
 	}
 
 	async loadTheme(options) {
+		// prevent multiple requests of the same theme
 		return new Promise((resolve, reject) => {
-			this.#OffscreenWorker.postMessage({action: "loadTheme", options})
+			if(Object.keys(this.pendingThemePromises).includes(options.theme)) {
+				return resolve()
+			}
+
 			this.pendingThemePromises[options.theme] = resolve
+			this.#OffscreenWorker.postMessage({action: "loadTheme", options})
 		})
 	}
 

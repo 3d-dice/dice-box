@@ -107,6 +107,10 @@ class WorldOffScreen {
 	add(options){
 		this.#OffscreenWorker.postMessage({action: "addDie", options})
 	}
+	
+	addNonDie(options){
+		this.#OffscreenWorker.postMessage({action: "addNonDie", options})
+	}
 
 	remove(options){
 		// remove the die from the render

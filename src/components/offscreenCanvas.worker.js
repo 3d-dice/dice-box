@@ -35,6 +35,9 @@ self.onmessage = (e) => {
     case "addDie":
 			add({...e.data.options})
       break
+    case "addNonDie":
+			addNonDie({...e.data.options})
+      break
 		case "loadTheme":
 			loadThemes(e.data.options)
 			break
@@ -210,6 +213,20 @@ const add = (options) => {
 	})
 }
 
+const addNonDie = (die) => {
+	if(engine.activeRenderLoops.length === 0) {
+		render(false)
+	}
+	const {id, value, ...config} = die
+	const newDie = {
+		id,
+		value,
+		config
+	}
+	dieCache[id] = newDie
+	handleAsleep(newDie)
+}
+
 // add a die to the scene
 const _add = async (options) => {
 	if(engine.activeRenderLoops.length === 0) {
@@ -345,9 +362,12 @@ const handleAsleep = async (die) => {
 	die.asleep = true
 
 	// get the roll result for this die
-	let result = await Dice.getRollResult(die, scene)
+	if(!die.value){
+		await Dice.getRollResult(die, scene)
+	}
+
 	// TODO: catch error if no result is found
-	if(result === undefined) {
+	if(die.value === undefined) {
 		console.log("No result. This die needs a reroll.")
 	}
 

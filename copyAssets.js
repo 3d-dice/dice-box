@@ -3,21 +3,46 @@
 const copydir = require('copy-dir');
 const path = require('path');
 const fs = require('fs');
+const readline = require('readline');
+const { stdin: input, stdout: output } = require('process');
+
+const { AbortController } = require('node-abort-controller'); //polyfill for Node <v14
+const ac = new AbortController();
+const signal = ac.signal;
 
 const filesToCopy = './dist/assets'
+let staticPath = '/public/assets'
 
-// User's local directory
-const userPath = path.join(process.env.INIT_CWD,'/public/assets')
+// creat prompt asking for static folder
+const rl = readline.createInterface({ input, output });
 
-// Creates directory if it doesn't exist
-fs.mkdir(userPath, { recursive: true }, (err) => {
-  if (err) throw err;
-  
-  // Moving files to user's local directory
-  copydir(filesToCopy, userPath, {
-    utimes: true,  // keep add time and modify time
-    mode: true,    // keep file mode
-    cover: true    // cover file when exists, default is true
-  })
+const writeFiles = (path) => {
+  // Creates directory if it doesn't exist
+  fs.mkdir(path, { recursive: true }, (err) => {
+    if (err) throw err;
+    
+    // Moving files to user's local directory
+    copydir(filesToCopy, path, {
+      utimes: true,  // keep add time and modify time
+      mode: true,    // keep file mode
+      cover: true    // cover file when exists, default is true
+    })
+  });
+}
+
+rl.question('Path to your static assets folder (press "Enter" for /public/assets): ', (answer) => {
+  answer = answer || staticPath
+  console.log(`Copying assets to: ${answer}`);
+
+  writeFiles(path.join(process.env.INIT_CWD,answer))
+
+  rl.close();
 });
 
+signal.addEventListener('abort', () => {
+  console.log(`Question timeout. Using default: ${staticPath}`);
+  writeFiles(path.join(process.env.INIT_CWD,staticPath))
+  rl.close();
+}, { once: true });
+
+setTimeout(() => ac.abort(), 10000);

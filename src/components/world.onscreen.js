@@ -1,11 +1,11 @@
-import { Vector3 } from '@babylonjs/core/Maths/math'
+import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { createEngine } from './engine'
 import { createScene } from './scene'
 import { createCamera } from './camera'
 import { createLights } from './lights'
 import DiceBox from './DiceBox'
 import Dice from './Dice'
-import { loadTheme } from './Dice/themes'
+import ThemeLoader from './Dice/themes'
 
 class WorldOnscreen {
 	config
@@ -20,13 +20,16 @@ class WorldOnscreen {
 	#camera
 	#lights
 	#diceBox
+	#themeLoader
 	#physicsWorkerPort
-	onInitComplete = () => {}
+	// onInitComplete = () => {}
 	onRollResult = () => {}
 	onRollComplete = () => {}
+	onThemeLoaded = () => {}
 	diceBufferView = new Float32Array(8000)
 
 	constructor(options){
+		this.onInitComplete = options.onInitComplete
 		this.initialized = this.initScene(options)
 	}
 	
@@ -51,39 +54,31 @@ class WorldOnscreen {
 			scene: this.#scene
 		})
 		
-		// loading all our dice models
-		// we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
-		await Dice.loadModels({
-			assetPath: this.config.origin + this.config.assetPath,
-			scene: this.#scene,
-			scale: this.config.scale
-		})
+		this.#themeLoader = new ThemeLoader({scene: this.#scene})
+
+		// init complete - let the world know
+		this.onInitComplete()
+	}
+
+	connect(port){
+		this.#physicsWorkerPort = port
 
 		this.#physicsWorkerPort.postMessage({
 			action: "initBuffer",
 			diceBuffer: this.diceBufferView.buffer
 		}, [this.diceBufferView.buffer])
-	
-		// init complete - let the world know
-		this.onInitComplete(true)
 
-		// is this needed?
-		// return true
-	}
-
-	connect(port){
-		this.#physicsWorkerPort = port
 		this.#physicsWorkerPort.onmessage = (e) => {
-        switch (e.data.action) {
-          case "updates": // dice status/position updates from physics worker
-						this.updatesFromPhysics(e.data.diceBuffer)
-            break;
-        
-          default:
-            console.error("action from physicsWorker not found in offscreen worker")
-            break;
-        }
-      }
+			switch (e.data.action) {
+				case "updates": // dice status/position updates from physics worker
+					this.updatesFromPhysics(e.data.diceBuffer)
+					break;
+			
+				default:
+					console.error("action from physicsWorker not found in offscreen worker")
+					break;
+			}
+		}
 	}
 
 	updateConfig(options){
@@ -132,8 +127,24 @@ class WorldOnscreen {
 		}
 	}
 
-	async loadTheme(theme) {
-		await loadTheme(theme, this.config.origin + this.config.assetPath, this.#scene)
+	async loadTheme(options) {
+		// console.log("loading theme")
+		// await loadTheme(theme, this.config.origin + this.config.assetPath, this.#scene)
+		const {theme, basePath, material, meshFilePath, meshName} = options
+		// load the textures and create the materials needed for this theme
+		await this.#themeLoader.load({theme,basePath,material})
+	
+		// Load the 3D meshes declared by the theme and return the collider mesh data to be passed on to the physics worker
+		const colliders = await Dice.loadModels({meshFilePath,meshName}, this.#scene)
+	
+		this.#physicsWorkerPort.postMessage({
+			action: "loadModels",
+			options: {
+				colliders,
+				meshName
+			}
+		})
+		this.onThemeLoaded({id: theme})
 	}
 
 	clear() {
@@ -160,10 +171,7 @@ class WorldOnscreen {
 
 	add(options) {
 		// loadDie allows you to specify sides(dieType) and theme and returns the options you passed in
-		Dice.loadDie({
-			...options,
-			scene: this.#scene
-		}).then(resp => {
+		Dice.loadDie(options, this.#scene).then(resp => {
 			// space out adding the dice so they don't lump together too much
 			this.#dieRollTimer.push(setTimeout(() => {
 				this.#add(resp)
@@ -184,7 +192,7 @@ class WorldOnscreen {
 			lights: this.#lights,
 		}
 		
-		const newDie = new Dice(diceOptions)
+		const newDie = new Dice(diceOptions, this.#scene)
 		
 		// save the die just created to the cache
 		this.#dieCache[newDie.id] = newDie
@@ -192,16 +200,21 @@ class WorldOnscreen {
 		// tell the physics engine to roll this die type - which is a low poly collider
 		this.#physicsWorkerPort.postMessage({
 			action: "addDie",
-			sides: options.sides,
-			scale: this.config.scale,
-			id: newDie.id
+			options: {
+				sides: options.sides,
+				scale: this.config.scale,
+				id: newDie.id,
+				anustart: options.anustart,
+				theme: options.theme,
+				meshName: options.meshName,
+			}
 		})
 	
 		// for d100's we need to add an additional d10 and pair it up with the d100 just created
 		if(options.sides === 100) {
 			// assign the new die to a property on the d100 - spread the options in order to pass a matching theme
-			newDie.d10Instance = await Dice.loadDie({...diceOptions, sides: 10, id: newDie.id + 10000}).then( response =>  {
-				const d10Instance = new Dice(response)
+			newDie.d10Instance = await Dice.loadDie({...diceOptions, sides: 10, id: newDie.id + 10000}, this.#scene).then( response =>  {
+				const d10Instance = new Dice(response, this.#scene)
 				// identify the parent of this d10 so we can calculate the roll result later
 				d10Instance.dieParent = newDie
 				return d10Instance
@@ -210,9 +223,13 @@ class WorldOnscreen {
 			this.#dieCache[`${newDie.d10Instance.id}`] = newDie.d10Instance
 			this.#physicsWorkerPort.postMessage({
 				action: "addDie",
-				sides: 10,
-				scale: this.config.scale,
-				id: newDie.d10Instance.id
+				options: {
+					sides: 10,
+					scale: this.config.scale,
+					id: newDie.d10Instance.id,
+					theme: options.theme,
+					meshName: options.meshName
+				}
 			})
 		}
 	
@@ -301,7 +318,7 @@ class WorldOnscreen {
 		die.asleep = true
 	
 		// get the roll result for this die
-		let result = await Dice.getRollResult(die)
+		let result = await Dice.getRollResult(die, this.#scene)
 		// TODO: catch error if no result is found
 		if(result === undefined) {
 			console.log("No result. This die needs a reroll.")

@@ -5,14 +5,15 @@ class WorldOffScreen {
 	initialized = false
 	offscreenWorkerInit = false
 	themeLoadedInit = false
-	pendingThemePromises = []
+	pendingThemePromises = {}
 	#offscreenCanvas
 	#OffscreenWorker
-	onInitComplete = () => {} // init callback
+	// onInitComplete = () => {} // init callback
 	onRollResult = () => {} // individual die callback
 	onRollComplete = () => {} // roll group callback
 
 	constructor(options){
+		this.onInitComplete = options.onInitComplete
 
 		// transfer control offscreen
 		this.#offscreenCanvas = options.canvas.transferControlToOffscreen()
@@ -45,8 +46,12 @@ class WorldOffScreen {
 				case "init-complete":
 					this.offscreenWorkerInit() //fulfill promise so other things can run
 					break;
+				case "connect-complete":
+					break;
 				case "theme-loaded":
-					this.pendingThemePromises[e.data.id]()
+					if(e.data.id){
+						this.pendingThemePromises[e.data.id](e.data.id)
+					}
 					break;
 				case 'roll-result':
 					this.onRollResult(e.data.die)
@@ -59,7 +64,8 @@ class WorldOffScreen {
 					break;
 			}
 		}
-		await Promise.all([this.#OffscreenWorker.init])
+		// await Promise.all([this.#OffscreenWorker.init])
+		await this.#OffscreenWorker.init
 
 		this.onInitComplete(true)
 
@@ -82,13 +88,15 @@ class WorldOffScreen {
 		this.#OffscreenWorker.postMessage({action: "resize", options});
 	}
 
-	async loadTheme(theme) {
-		const id = createUUID()
-
+	async loadTheme(options) {
+		// prevent multiple requests of the same theme
 		return new Promise((resolve, reject) => {
-			this.#OffscreenWorker.postMessage({action: "loadTheme", id, theme})
-			// this.themeLoadedInit = resolve
-			this.pendingThemePromises[id] = resolve
+			if(Object.keys(this.pendingThemePromises).includes(options.theme)) {
+				return resolve()
+			}
+
+			this.pendingThemePromises[options.theme] = resolve
+			this.#OffscreenWorker.postMessage({action: "loadTheme", options})
 		})
 	}
 

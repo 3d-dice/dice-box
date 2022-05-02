@@ -1,11 +1,11 @@
+import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { createEngine } from './engine'
 import { createScene } from './scene'
 import { createCamera } from './camera'
 import { createLights } from './lights'
 import DiceBox from './DiceBox'
 import Dice from './Dice'
-import { loadTheme } from './Dice/themes'
-import { Vector3 } from '@babylonjs/core/Maths/math'
+import ThemeLoader from './Dice/themes'
 
 let 
 	config,
@@ -19,6 +19,7 @@ let
 	camera,
 	lights,
 	diceBox,
+	themeLoader,
 	physicsWorkerPort,
 	diceBufferView = new Float32Array(8000)
 
@@ -35,7 +36,7 @@ self.onmessage = (e) => {
 			add({...e.data.options})
       break
 		case "loadTheme":
-			loadThemes(e.data.id,e.data.theme)
+			loadThemes(e.data.options)
 			break
     case "clearDice":
 			clear()
@@ -53,18 +54,7 @@ self.onmessage = (e) => {
 			updateConfig(e.data.options)
 			break
     case "connect": // These are messages sent from physics.worker.js
-      physicsWorkerPort = e.data.port
-      physicsWorkerPort.onmessage = (e) => {
-        switch (e.data.action) {
-          case "updates": // dice status/position updates from physics worker
-						updatesFromPhysics(e.data.diceBuffer)
-            break;
-        
-          default:
-            console.error("action from physicsWorker not found in offscreen worker")
-            break;
-        }
-      }
+			connect(e.data.port)
       break
     default:
       console.error("action not found in offscreen worker")
@@ -95,21 +85,32 @@ const initScene = async (data) => {
 		enableDebugging: false
 	})
 
-  // loading all our dice models
-  // we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
-  await Dice.loadModels({
-		assetPath: config.origin + config.assetPath,
-		scene,
-		scale: config.scale
-	})
+	themeLoader = new ThemeLoader({scene})
+
+  // init complete - let the world know
+  self.postMessage({action:"init-complete"})
+}
+
+const connect = (port) => {
+	physicsWorkerPort = port
 
 	physicsWorkerPort.postMessage({
 		action: "initBuffer",
 		diceBuffer: diceBufferView.buffer
 	}, [diceBufferView.buffer])
 
-  // init complete - let the world know
-  self.postMessage({action:"init-complete"})
+	physicsWorkerPort.onmessage = (e) => {
+		switch (e.data.action) {
+			case "updates": // dice status/position updates from physics worker
+				updatesFromPhysics(e.data.diceBuffer)
+				break;
+		
+			default:
+				console.error("action from physicsWorker not found in offscreen worker")
+				break;
+		}
+	}
+	self.postMessage({action:"connect-complete"})
 }
 
 const updateConfig = (options) => {
@@ -158,9 +159,22 @@ const renderLoop = () => {
   }
 }
 
-const loadThemes = async (id,theme) => {
-	await loadTheme(theme, config.origin + config.assetPath, scene)
-	self.postMessage({action:"theme-loaded",id})
+const loadThemes = async (options) => {
+	const {theme, basePath, material, meshFilePath, meshName} = options
+	// load the textures and create the materials needed for this theme
+	await themeLoader.load({theme,basePath,material})
+
+	// Load the 3D meshes declared by the theme and return the collider mesh data to be passed on to the physics worker
+	const colliders = await Dice.loadModels({meshFilePath,meshName}, scene)
+
+	physicsWorkerPort.postMessage({
+		action: "loadModels",
+		options: {
+			colliders,
+			meshName
+		}
+	})
+	self.postMessage({action:"theme-loaded",id: theme})
 }
 
 const clear = () => {
@@ -188,10 +202,7 @@ const clear = () => {
 
 const add = (options) => {
 	// loadDie allows you to specify sides(dieType) and theme and returns the options you passed in
-	Dice.loadDie({
-		...options,
-		scene
-	}).then(resp => {
+	Dice.loadDie(options, scene).then(resp => {
 		// space out adding the dice so they don't lump together too much
 		dieRollTimer.push(setTimeout(() => {
 			_add(resp)
@@ -213,7 +224,7 @@ const _add = async (options) => {
 		lights,
 	}
 
-  const newDie = new Dice(diceOptions)
+  const newDie = new Dice(diceOptions, scene)
 
   // save the die just created to the cache
   dieCache[newDie.id] = newDie
@@ -221,28 +232,37 @@ const _add = async (options) => {
 	// tell the physics engine to roll this die type - which is a low poly collider
 	physicsWorkerPort.postMessage({
 		action: "addDie",
-		sides: options.sides,
-		scale: config.scale,
-		id: newDie.id,
-		anustart: options.anustart
+		options: {
+			sides: options.sides,
+			scale: config.scale,
+			id: newDie.id,
+			anustart: options.anustart,
+			theme: options.theme,
+			meshName: options.meshName,
+		}
 	})
 
   // for d100's we need to add an additional d10 and pair it up with the d100 just created
   if(options.sides === 100) {
     // assign the new die to a property on the d100 - spread the options in order to pass a matching theme
-    newDie.d10Instance = await Dice.loadDie({...diceOptions, sides: 10, id: newDie.id + 10000}).then( response =>  {
-      const d10Instance = new Dice(response)
+    newDie.d10Instance = await Dice.loadDie({...diceOptions, sides: 10, id: newDie.id + 10000}, scene).then( response =>  {
+      const d10Instance = new Dice(response, scene)
       // identify the parent of this d10 so we can calculate the roll result later
       d10Instance.dieParent = newDie
       return d10Instance
     })
+
     // add the d10 to the cache and ask the physics worker for a collider
     dieCache[`${newDie.d10Instance.id}`] = newDie.d10Instance
     physicsWorkerPort.postMessage({
       action: "addDie",
-      sides: 10,
-			scale: config.scale,
-			id: newDie.d10Instance.id
+			options: {
+				sides: 10,
+				scale: config.scale,
+				id: newDie.d10Instance.id,
+				theme: options.theme,
+				meshName: options.meshName
+			}
     })
   }
 
@@ -325,7 +345,7 @@ const handleAsleep = async (die) => {
 	die.asleep = true
 
 	// get the roll result for this die
-	let result = await Dice.getRollResult(die)
+	let result = await Dice.getRollResult(die, scene)
 	// TODO: catch error if no result is found
 	if(result === undefined) {
 		console.log("No result. This die needs a reroll.")

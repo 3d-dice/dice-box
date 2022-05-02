@@ -13,6 +13,8 @@ function createScene(options) {
   scene.pointerDownPredicate = () => false;
   scene.pointerUpPredicate = () => false;
   scene.clearCachedVertexData();
+  // used to map 3D mesh faces to actual dice values
+  scene.colliderFaceMaps = []
 
   const optimizationSettings = SceneOptimizerOptions.LowDegradationAllowed()
   optimizationSettings.optimizations = optimizationSettings.optimizations.splice(1)

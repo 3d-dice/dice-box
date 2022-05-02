@@ -1,0 +1,13 @@
+{
+  "name": "Dice of Rolling",
+  "systemName": "diceOfRolling",
+  "author": "Frank Ali",
+  "version": 0.1,
+  "material": {
+    "type": "standard",
+    "diffuseTexture": "diffuse.jpg",
+    "bumpTexture": "../default/normal.png",
+    "diffuseLevel": 1.4,
+    "bumpLevel": 0.6
+  }
+}

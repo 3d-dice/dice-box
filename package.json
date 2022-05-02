@@ -43,8 +43,7 @@
 	"dependencies": {
 		"@babylonjs/core": "^5.4.0",
 		"@babylonjs/loaders": "^5.4.0",
-		"@babylonjs/materials": "^5.4.0",
-		"crypto-random": "^1.0.3"
+		"@babylonjs/materials": "^5.4.0"
 	},
 	"devDependencies": {
 		"copy-dir": "^1.3.0",

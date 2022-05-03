@@ -50,7 +50,7 @@
 		"node-abort-controller": "^3.0.1",
 		"rollup-plugin-copy": "^3.4.0",
 		"rollup-plugin-visualizer": "^5.6.0",
-		"vite": "^2.9.6"
+		"vite": "^2.9.7"
 	},
 	"browserslist": {
 		"production": [

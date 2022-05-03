@@ -227,7 +227,10 @@ const addNonDie = (die) => {
 		config
 	}
 	dieCache[id] = newDie
-	handleAsleep(newDie)
+	
+	dieRollTimer.push(setTimeout(() => {
+		handleAsleep(newDie)
+	}, count++ * config.delay))
 }
 
 // add a die to the scene

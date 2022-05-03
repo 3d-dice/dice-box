@@ -183,17 +183,18 @@ class WorldOnscreen {
 	}
 
 	addNonDie(die){
+		if(this.#engine.activeRenderLoops.length === 0) {
+			this.render(false)
+		}
+		const {id, value, ...config} = die
+		const newDie = {
+			id,
+			value,
+			config
+		}
+		this.#dieCache[id] = newDie
+		
 		this.#dieRollTimer.push(setTimeout(() => {
-			if(this.#engine.activeRenderLoops.length === 0) {
-				this.render(false)
-			}
-			const {id, value, ...config} = die
-			const newDie = {
-				id,
-				value,
-				config
-			}
-			this.#dieCache[id] = newDie
 			this.handleAsleep(newDie)
 		}, this.#count++ * this.config.delay))
 	}

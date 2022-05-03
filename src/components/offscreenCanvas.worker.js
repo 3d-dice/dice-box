@@ -35,6 +35,9 @@ self.onmessage = (e) => {
     case "addDie":
 			add({...e.data.options})
       break
+    case "addNonDie":
+			addNonDie({...e.data.options})
+      break
 		case "loadTheme":
 			loadThemes(e.data.options)
 			break
@@ -189,7 +192,10 @@ const clear = () => {
 	engine.stopRenderLoop()
 	// remove all dice
 	// dieCache.forEach(die => die.mesh.dispose())
-	Object.values(dieCache).forEach(die => die.mesh.dispose())
+	Object.values(dieCache).forEach(die => {
+		if(die.mesh)
+			die.mesh.dispose()
+	})
 
 	dieCache = {}
 	count = 0
@@ -208,6 +214,23 @@ const add = (options) => {
 			_add(resp)
 		}, count++ * config.delay))
 	})
+}
+
+const addNonDie = (die) => {
+	if(engine.activeRenderLoops.length === 0) {
+		render(false)
+	}
+	const {id, value, ...config} = die
+	const newDie = {
+		id,
+		value,
+		config
+	}
+	dieCache[id] = newDie
+	
+	dieRollTimer.push(setTimeout(() => {
+		handleAsleep(newDie)
+	}, count++ * config.delay))
 }
 
 // add a die to the scene
@@ -276,17 +299,24 @@ const remove = (data) => {
 	// check if this is d100 and remove associated d10 first
 	const dieData = dieCache[data.id]
 	if(dieData.hasOwnProperty('d10Instance')){
-		dieCache[dieData.d10Instance.id].mesh.dispose()
+		if(dieCache[dieData.d10Instance.id].mesh){
+			dieCache[dieData.d10Instance.id].mesh.dispose()
+
+			// remove d10 physics body just for d100 items
+			// The collider for other dice are removed at the WorldFacad level so it can be done in parallel
+			physicsWorkerPort.postMessage({
+				action: "removeDie",
+				id: dieData.d10Instance.id
+			})
+		}
 		delete dieCache[dieData.d10Instance.id]
-		physicsWorkerPort.postMessage({
-      action: "removeDie",
-			id: dieData.d10Instance.id
-    })
 		sleeperCount--
 	}
 
 	// remove die
-	dieData.mesh.dispose()
+	if(dieData.mesh) {
+		dieData.mesh.dispose()
+	}
 	// delete entry
 	delete dieCache[data.id]
 	// decrement count
@@ -345,9 +375,12 @@ const handleAsleep = async (die) => {
 	die.asleep = true
 
 	// get the roll result for this die
-	let result = await Dice.getRollResult(die, scene)
+	if(!die.value){
+		await Dice.getRollResult(die, scene)
+	}
+
 	// TODO: catch error if no result is found
-	if(result === undefined) {
+	if(die.value === undefined) {
 		console.log("No result. This die needs a reroll.")
 	}
 

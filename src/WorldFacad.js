@@ -1,7 +1,7 @@
 import { createCanvas } from './components/canvas'
 // import WorldOffscreen from './components/world.offscreen'
 import physicsWorker from './components/physics.worker.js?worker&inline'
-import { debounce, createAsyncQueue } from './helpers'
+import { debounce, createAsyncQueue, Random } from './helpers'
 
 const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
@@ -226,6 +226,7 @@ class WorldFacad {
 	async getThemeConfig(theme){
 		const basePath = `${this.config.origin}${this.config.assetPath}themes/${theme}`
 		let themeData
+		const diceAvailable = ['d4','d6','d8','d10','d12','d20','d100']
 
 		if (theme === 'default'){
 			// sensible defaults
@@ -274,6 +275,10 @@ class WorldFacad {
 			} else {
 				meshName = themeData.meshName
 			}
+		}
+		// if diceAvailable is not specified then assume the default set of seven
+		if(!themeData.hasOwnProperty('diceAvailable')){
+			themeData.diceAvailable = diceAvailable
 		}
 
 		Object.assign(themeData,
@@ -469,7 +474,7 @@ class WorldFacad {
 			const loadTheme = () => this.loadTheme(theme)
 			await this.loadThemeQueue.push(loadTheme)
 
-			const {meshName} = this.themesLoadedData[theme]
+			const {meshName, diceAvailable} = this.themesLoadedData[theme]
 
 			// TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.
 			for (var i = 0, len = notation.qty; i < len; i++) {
@@ -493,7 +498,14 @@ class WorldFacad {
 				this.rollDiceData[rollId] = roll
 				collection.rolls.push(this.rollDiceData[rollId])
 
-				this.#DiceWorld.add({...roll,anustart})
+				// check if this is a non-standard die, if so then use crypto fallback
+				if(diceAvailable.includes(`d${roll.sides}`)) {
+					this.#DiceWorld.add({...roll,anustart})
+				} else {
+					console.warn(`Requested die 'd${roll.sides}' not available. Using crypto.getRandomValues() fallback`)
+					roll.value = Random.range(1, roll.sides)
+					this.#DiceWorld.addNonDie(roll)
+				}
 
 				// turn flag off
 				anustart = false

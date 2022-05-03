@@ -22,7 +22,7 @@ const defaultOptions = {
 // TODO: this would probably be better as a factory pattern
 class Dice {
   // mesh = null
-  result = 0
+  value = 0
   asleep = false
   constructor(options, scene) {
     this.config = {...defaultOptions, ...options}

@@ -94,3 +94,28 @@ export const deepCopy = obj => JSON.parse(JSON.stringify(obj))
 export const sleeper = (ms) => {
   return new Promise(resolve => setTimeout(() => resolve(), ms));
 }
+
+export class Random {
+  /**
+   * Generate a random number between 0 (inclusive) and 1 (exclusive).
+   * A drop in replacement for Math.random()
+   * @return {number}
+   */
+  static value() {
+    const crypto = window.crypto || window.msCrypto;
+    const buffer = new Uint32Array(1);
+    const int = crypto.getRandomValues(buffer)[0];
+
+    return int / 2**32
+  }
+  /**
+   * Generate a very good random number between min (inclusive) and max (exclusive) by using crypto.getRandomValues() twice.
+   * @param  {number} min
+   * @param  {number} max
+   * @return {number}
+   */
+  static range(min, max) {
+    // return Math.floor(this.value() * (max - min) + min); // plain random
+    return (Math.floor(Math.pow(10,14)*this.value()*this.value())%(max-min+1))+min // super random!
+  }
+}

@@ -158,7 +158,10 @@ class WorldOnscreen {
 		// stop anything that's currently rendering
 		this.#engine.stopRenderLoop()
 		// remove all dice
-		Object.values(this.#dieCache).forEach(die => die.mesh.dispose())
+		Object.values(this.#dieCache).forEach(die => {
+			if(die.mesh)
+				die.mesh.dispose()
+		})
 		
 		// reset storage
 		this.#dieCache = {}
@@ -177,6 +180,23 @@ class WorldOnscreen {
 				this.#add(resp)
 			}, this.#count++ * this.config.delay))
 		})
+	}
+
+	addNonDie(die){
+		if(this.#engine.activeRenderLoops.length === 0) {
+			this.render(false)
+		}
+		const {id, value, ...config} = die
+		const newDie = {
+			id,
+			value,
+			config
+		}
+		this.#dieCache[id] = newDie
+		
+		this.#dieRollTimer.push(setTimeout(() => {
+			this.handleAsleep(newDie)
+		}, this.#count++ * this.config.delay))
 	}
 
 	// add a die to the scene
@@ -245,20 +265,25 @@ class WorldOnscreen {
 	// check if this is d100 and remove associated d10 first
 	if(dieData.hasOwnProperty('d10Instance')){
 		// remove die
-		this.#dieCache[dieData.d10Instance.id].mesh.dispose()
+		if(this.#dieCache[dieData.d10Instance.id].mesh){
+			this.#dieCache[dieData.d10Instance.id].mesh.dispose()
+
+			// remove d10 physics body just for d100 items
+			this.#physicsWorkerPort.postMessage({
+				action: "removeDie",
+				id: dieData.d10Instance.id
+			})
+		}
 		// delete entry
 		delete this.#dieCache[dieData.d10Instance.id]
-		// remove physics body
-		this.#physicsWorkerPort.postMessage({
-			action: "removeDie",
-			id: dieData.d10Instance.id
-    })
 		// decrement count
 		this.#sleeperCount--
 	}
 
 	// remove die
-	this.#dieCache[data.id].mesh.dispose()
+	if(this.#dieCache[data.id].mesh){
+		this.#dieCache[data.id].mesh.dispose()
+	}
 	// delete entry
 	delete this.#dieCache[data.id]
 	// decrement count
@@ -318,9 +343,12 @@ class WorldOnscreen {
 		die.asleep = true
 	
 		// get the roll result for this die
-		let result = await Dice.getRollResult(die, this.#scene)
+		if(!die.value){
+			await Dice.getRollResult(die, this.#scene)
+		}
+
 		// TODO: catch error if no result is found
-		if(result === undefined) {
+		if(die.value === undefined) {
 			console.log("No result. This die needs a reroll.")
 		}
 	

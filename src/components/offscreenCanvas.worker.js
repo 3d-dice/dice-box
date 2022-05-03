@@ -77,7 +77,12 @@ const initScene = async (data) => {
 	engine = createEngine(canvas)
   scene = createScene({engine})
   camera = createCamera({engine})
-  lights = createLights({enableShadows: config.enableShadows})
+  lights = createLights({
+		enableShadows: config.enableShadows,
+		shadowOpacity: config.shadowOpacity,
+		intensity: config.lightIntensity,
+		scene
+	})
 
   // create the box that provides surfaces for shadows to render on
 	diceBox = new DiceBox({
@@ -128,6 +133,13 @@ const updateConfig = (options) => {
 		Object.values(dieCache).forEach(({mesh}) => {
 			mesh.scaling = new Vector3(config.scale,config.scale,config.scale)
 		})
+	}
+	if(prevConfig.shadowOpacity !== config.shadowOpacity) {
+		lights.directional.shadowGenerator.darkness = config.shadowOpacity
+	}
+	if(prevConfig.lightIntensity !== config.lightIntensity) {
+		lights.directional.intensity = .65 * config.lightIntensity
+		lights.hemispheric.intensity = .4 * config.lightIntensity
 	}
 }
 

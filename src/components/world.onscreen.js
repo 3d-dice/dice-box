@@ -44,7 +44,12 @@ class WorldOnscreen {
 		this.#engine  = createEngine(this.#canvas )
 		this.#scene = createScene({engine:this.#engine })
 		this.#camera  = createCamera({engine:this.#engine, scene: this.#scene})
-		this.#lights  = createLights({enableShadows: this.config.enableShadows, scene: this.#scene})
+		this.#lights  = createLights({
+			enableShadows: this.config.enableShadows,
+			shadowOpacity: this.config.shadowOpacity,
+			intensity: this.config.lightIntensity,
+			scene: this.#scene
+		})
 	
 		// create the box that provides surfaces for shadows to render on
 		this.#diceBox  = new DiceBox({
@@ -88,12 +93,19 @@ class WorldOnscreen {
 		if(prevConfig.enableShadows !== this.config.enableShadows) {
 			// regenerate the lights
 			Object.values(this.#lights ).forEach(light => light.dispose())
-			this.#lights  = createLights({enableShadows: this.config.enableShadows})
+			this.#lights = createLights({enableShadows: this.config.enableShadows})
 		}
 		if(prevConfig.scale !== this.config.scale) {
 			Object.values(this.#dieCache).forEach(({mesh}) => {
 				mesh.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
 			})
+		}
+		if(prevConfig.shadowOpacity !== this.config.shadowOpacity) {
+			this.#lights.directional.shadowGenerator.darkness = this.config.shadowOpacity
+		}
+		if(prevConfig.lightIntensity !== this.config.lightIntensity) {
+			this.#lights.directional.intensity = .65 * this.config.lightIntensity
+			this.#lights.hemispheric.intensity = .4 * this.config.lightIntensity
 		}
 	}
 

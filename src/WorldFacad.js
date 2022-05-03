@@ -17,7 +17,8 @@ const defaultOptions = {
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
 	assetPath: '/assets/dice-box/', // path to 'ammo', 'models', 'themes' folders and web workers
 	origin: location.origin,
-	meshFile: `models/default.json`
+	meshFile: `models/default.json`,
+	suspendSimulation: false
 }
 
 class WorldFacad {
@@ -499,12 +500,12 @@ class WorldFacad {
 				collection.rolls.push(this.rollDiceData[rollId])
 
 				// check if this is a non-standard die, if so then use crypto fallback
-				if(diceAvailable.includes(`d${roll.sides}`)) {
-					this.#DiceWorld.add({...roll,anustart})
-				} else {
-					console.warn(`Requested die 'd${roll.sides}' not available. Using crypto.getRandomValues() fallback`)
+				if(this.config.suspendSimulation || !diceAvailable.includes(`d${roll.sides}`)){
 					roll.value = Random.range(1, roll.sides)
 					this.#DiceWorld.addNonDie(roll)
+				}
+				else {
+					this.#DiceWorld.add({...roll,anustart})
 				}
 
 				// turn flag off

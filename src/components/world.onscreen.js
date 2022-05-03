@@ -158,7 +158,10 @@ class WorldOnscreen {
 		// stop anything that's currently rendering
 		this.#engine.stopRenderLoop()
 		// remove all dice
-		Object.values(this.#dieCache).forEach(die => die.mesh.dispose())
+		Object.values(this.#dieCache).forEach(die => {
+			if(die.mesh)
+				die.mesh.dispose()
+		})
 		
 		// reset storage
 		this.#dieCache = {}
@@ -177,6 +180,22 @@ class WorldOnscreen {
 				this.#add(resp)
 			}, this.#count++ * this.config.delay))
 		})
+	}
+
+	addNonDie(die){
+		this.#dieRollTimer.push(setTimeout(() => {
+			if(this.#engine.activeRenderLoops.length === 0) {
+				this.render(false)
+			}
+			const {id, value, ...config} = die
+			const newDie = {
+				id,
+				value,
+				config
+			}
+			this.#dieCache[id] = newDie
+			this.handleAsleep(newDie)
+		}, this.#count++ * this.config.delay))
 	}
 
 	// add a die to the scene
@@ -318,9 +337,12 @@ class WorldOnscreen {
 		die.asleep = true
 	
 		// get the roll result for this die
-		let result = await Dice.getRollResult(die, this.#scene)
+		if(!die.value){
+			await Dice.getRollResult(die, this.#scene)
+		}
+
 		// TODO: catch error if no result is found
-		if(result === undefined) {
+		if(die.value === undefined) {
 			console.log("No result. This die needs a reroll.")
 		}
 	

@@ -192,7 +192,10 @@ const clear = () => {
 	engine.stopRenderLoop()
 	// remove all dice
 	// dieCache.forEach(die => die.mesh.dispose())
-	Object.values(dieCache).forEach(die => die.mesh.dispose())
+	Object.values(dieCache).forEach(die => {
+		if(die.mesh)
+			die.mesh.dispose()
+	})
 
 	dieCache = {}
 	count = 0

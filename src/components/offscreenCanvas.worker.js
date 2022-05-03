@@ -296,17 +296,24 @@ const remove = (data) => {
 	// check if this is d100 and remove associated d10 first
 	const dieData = dieCache[data.id]
 	if(dieData.hasOwnProperty('d10Instance')){
-		dieCache[dieData.d10Instance.id].mesh.dispose()
+		if(dieCache[dieData.d10Instance.id].mesh){
+			dieCache[dieData.d10Instance.id].mesh.dispose()
+
+			// remove d10 physics body just for d100 items
+			// The collider for other dice are removed at the WorldFacad level so it can be done in parallel
+			physicsWorkerPort.postMessage({
+				action: "removeDie",
+				id: dieData.d10Instance.id
+			})
+		}
 		delete dieCache[dieData.d10Instance.id]
-		physicsWorkerPort.postMessage({
-      action: "removeDie",
-			id: dieData.d10Instance.id
-    })
 		sleeperCount--
 	}
 
 	// remove die
-	dieData.mesh.dispose()
+	if(dieData.mesh) {
+		dieData.mesh.dispose()
+	}
 	// delete entry
 	delete dieCache[data.id]
 	// decrement count

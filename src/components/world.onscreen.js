@@ -264,20 +264,25 @@ class WorldOnscreen {
 	// check if this is d100 and remove associated d10 first
 	if(dieData.hasOwnProperty('d10Instance')){
 		// remove die
-		this.#dieCache[dieData.d10Instance.id].mesh.dispose()
+		if(this.#dieCache[dieData.d10Instance.id].mesh){
+			this.#dieCache[dieData.d10Instance.id].mesh.dispose()
+
+			// remove d10 physics body just for d100 items
+			this.#physicsWorkerPort.postMessage({
+				action: "removeDie",
+				id: dieData.d10Instance.id
+			})
+		}
 		// delete entry
 		delete this.#dieCache[dieData.d10Instance.id]
-		// remove physics body
-		this.#physicsWorkerPort.postMessage({
-			action: "removeDie",
-			id: dieData.d10Instance.id
-    })
 		// decrement count
 		this.#sleeperCount--
 	}
 
 	// remove die
-	this.#dieCache[data.id].mesh.dispose()
+	if(this.#dieCache[data.id].mesh){
+		this.#dieCache[data.id].mesh.dispose()
+	}
 	// delete entry
 	delete this.#dieCache[data.id]
 	// decrement count

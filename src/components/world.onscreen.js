@@ -359,14 +359,7 @@ class WorldOnscreen {
 		die.asleep = true
 	
 		// get the roll result for this die
-		if(!die.value){
-			await Dice.getRollResult(die, this.#scene)
-		}
-
-		// TODO: catch error if no result is found
-		if(die.value === undefined) {
-			console.log("No result. This die needs a reroll.")
-		}
+		await Dice.getRollResult(die, this.#scene)
 	
 		if(die.d10Instance || die.dieParent) {
 			// if one of the pair is asleep and the other isn't then it falls through without getting the roll result

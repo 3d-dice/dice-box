@@ -11,7 +11,7 @@ const defaultOptions = {
   enableShadows: true,
 }
 
-class DiceBox{
+class Container{
 	size = 9.5
 	constructor(options){
 		this.config = {...defaultOptions, ...options}
@@ -112,4 +112,4 @@ class DiceBox{
 	}
 }
 
-export default DiceBox
+export default Container

@@ -1,11 +1,11 @@
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
-import { createEngine } from './engine'
-import { createScene } from './scene'
-import { createCamera } from './camera'
-import { createLights } from './lights'
-import DiceBox from './DiceBox'
+import { createEngine } from './world/engine'
+import { createScene } from './world/scene'
+import { createCamera } from './world/camera'
+import { createLights } from './world/lights'
+import Container from './Container'
 import Dice from './Dice'
-import ThemeLoader from './Dice/themes'
+import ThemeLoader from './ThemeLoader'
 
 class WorldOnscreen {
 	config
@@ -19,7 +19,7 @@ class WorldOnscreen {
 	#scene
 	#camera
 	#lights
-	#diceBox
+	#container
 	#themeLoader
 	#physicsWorkerPort
 	// onInitComplete = () => {}
@@ -52,7 +52,7 @@ class WorldOnscreen {
 		})
 	
 		// create the box that provides surfaces for shadows to render on
-		this.#diceBox  = new DiceBox({
+		this.#container  = new Container({
 			enableShadows: this.config.enableShadows,
 			aspect: this.#canvas.width / this.#canvas.height,
 			lights: this.#lights,
@@ -110,12 +110,12 @@ class WorldOnscreen {
 	}
 
 	// all this does is start the render engine.
-	render(anustart) {
+	render(newStartPoint) {
 		// document.body.addEventListener('click',()=>engine.stopRenderLoop())
 		this.#engine.runRenderLoop(this.renderLoop.bind(this))
 		this.#physicsWorkerPort.postMessage({
 			action: "resumeSimulation",
-			anustart
+			newStartPoint
 		})
 	}
 
@@ -148,6 +148,10 @@ class WorldOnscreen {
 	
 		// Load the 3D meshes declared by the theme and return the collider mesh data to be passed on to the physics worker
 		const colliders = await Dice.loadModels({meshFilePath,meshName}, this.#scene)
+
+		if(!colliders){
+			throw new Error("No colliders returned from the 3D mesh file. Low poly colliders are expected to be in the same file as the high poly dice and the mesh name contains the word 'collider'")
+		}
 	
 		this.#physicsWorkerPort.postMessage({
 			action: "loadModels",
@@ -214,7 +218,7 @@ class WorldOnscreen {
 	// add a die to the scene
 	async #add(options) {
 		if(this.#engine.activeRenderLoops.length === 0) {
-			this.render(options.anustart)
+			this.render(options.newStartPoint)
 		}
 		const diceOptions = {
 			...options,
@@ -236,7 +240,7 @@ class WorldOnscreen {
 				sides: options.sides,
 				scale: this.config.scale,
 				id: newDie.id,
-				anustart: options.anustart,
+				newStartPoint: options.newStartPoint,
 				theme: options.theme,
 				meshName: options.meshName,
 			}
@@ -355,14 +359,7 @@ class WorldOnscreen {
 		die.asleep = true
 	
 		// get the roll result for this die
-		if(!die.value){
-			await Dice.getRollResult(die, this.#scene)
-		}
-
-		// TODO: catch error if no result is found
-		if(die.value === undefined) {
-			console.log("No result. This die needs a reroll.")
-		}
+		await Dice.getRollResult(die, this.#scene)
 	
 		if(die.d10Instance || die.dieParent) {
 			// if one of the pair is asleep and the other isn't then it falls through without getting the roll result
@@ -397,7 +394,7 @@ class WorldOnscreen {
 	
 	resize() {
 		// redraw the dicebox
-		this.#diceBox.create({aspect: this.#canvas.width / this.#canvas.height})
+		this.#container.create({aspect: this.#canvas.width / this.#canvas.height})
 		this.#engine.resize()
 	}
 }

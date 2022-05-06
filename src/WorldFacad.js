@@ -1,5 +1,4 @@
-import { createCanvas } from './components/canvas'
-// import WorldOffscreen from './components/world.offscreen'
+import { createCanvas } from './components/world/canvas'
 import physicsWorker from './components/physics.worker.js?worker&inline'
 import { debounce, createAsyncQueue, Random } from './helpers'
 
@@ -44,6 +43,9 @@ class WorldFacad {
 	onRemoveComplete = () => {}
 
   constructor(container, options = {}){
+		if(typeof options !== 'object') {
+			throw new Error('Config options should be an object. Config reference: https://fantasticdice.games/docs/usage/config#configuration-options')
+		}
 		// extend defaults with options
 		this.config = {...defaultOptions, ...options}
 		// if options do not provide a theme color then it should be null
@@ -229,7 +231,6 @@ class WorldFacad {
 	async getThemeConfig(theme){
 		const basePath = `${this.config.origin}${this.config.assetPath}themes/${theme}`
 		let themeData
-		const diceAvailable = ['d4','d6','d8','d10','d12','d20','d100']
 
 		if (theme === 'default'){
 			// sensible defaults
@@ -262,13 +263,16 @@ class WorldFacad {
 						throw new Error(`Incorrect contentType: ${contentType}. Expected "application/json" or "basic"`)
 					}
 				} else {
-					throw new Error(`Request rejected with status ${resp.status}: ${resp.statusText}`)
+					throw new Error(`Unable to fetch config file for theme: '${theme}'. Request rejected with status ${resp.status}: ${resp.statusText}`)
 				}
-			})
+			}).catch(error => console.error(error))
 		}
 
 		let meshFilePath = this.config.origin + this.config.assetPath + this.config.meshFile
 		let meshName = 'default'
+		if(!themeData){
+			throw new Error("No theme config data to work with.")
+		}
 		if(themeData.hasOwnProperty('meshFile')){
 			meshFilePath = `${basePath}/${themeData.meshFile}`
 			if(!themeData.hasOwnProperty('meshName')) {
@@ -279,9 +283,10 @@ class WorldFacad {
 				meshName = themeData.meshName
 			}
 		}
+
 		// if diceAvailable is not specified then assume the default set of seven
 		if(!themeData.hasOwnProperty('diceAvailable')){
-			themeData.diceAvailable = diceAvailable
+			themeData.diceAvailable = ['d4','d6','d8','d10','d12','d20','d100']
 		}
 
 		Object.assign(themeData,
@@ -304,10 +309,12 @@ class WorldFacad {
 		}
 
 		// fetch
-		let themeConfig = await this.getThemeConfig(theme)
+		let themeConfig = await this.getThemeConfig(theme).catch(error => console.error(error))
+
+		if(!themeConfig) return
 
 		// pass config onto DiceWorld to load - the theme loader needs 'scene' from DiceWorld
-		await this.#DiceWorld.loadTheme(themeConfig)
+		await this.#DiceWorld.loadTheme(themeConfig).catch(error => console.error(error))
 
 		// save the themeData for later
 		this.themesLoadedData[theme] = themeConfig
@@ -325,7 +332,7 @@ class WorldFacad {
 				if(config.material.type !== 'color') {
 					newConfig.themeColor = undefined
 				}
-			})
+			}).catch(error => console.error(error))
 		// }
 
 		this.config = newConfig
@@ -385,7 +392,7 @@ class WorldFacad {
 			id: collectionId,
 			notation,
 			theme,
-			anustart: newStartPoint
+			newStartPoint
 		})
 
 		const parsedNotation = this.createNotationArray(notation)
@@ -403,7 +410,7 @@ class WorldFacad {
 			id: collectionId,
 			notation,
 			theme,
-			anustart: newStartPoint
+			newStartPoint
 		})
 		
 		const parsedNotation = this.createNotationArray(notation)
@@ -462,10 +469,13 @@ class WorldFacad {
 	async #makeRoll(parsedNotation, collectionId){
 
 		const collection = this.rollCollectionData[collectionId]
-		let anustart = collection.anustart
+		let newStartPoint = collection.newStartPoint
 
 		// loop through the number of dice in the group and roll each one
 		parsedNotation.forEach(async notation => {
+			if(!notation.sides) {
+				throw new Error("Improper dice notation or unable to parse notation")
+			}
 			const theme = notation.theme || collection.theme || this.config.theme
 			const themeColor = notation.themeColor || collection.themeColor || this.config.themeColor
 			const rolls = {}
@@ -503,15 +513,16 @@ class WorldFacad {
 
 				// check if this is a non-standard die, if so then use crypto fallback
 				if(this.config.suspendSimulation || !diceAvailable.includes(`d${roll.sides}`)){
+					console.warn(this.config.suspendSimulation ? "3D simulation suspended. Using fallback." : `${roll.sides} sided die unavailable in '${theme}' theme. Using fallback.`)
 					roll.value = Random.range(1, roll.sides)
 					this.#DiceWorld.addNonDie(roll)
 				}
 				else {
-					this.#DiceWorld.add({...roll,anustart})
+					this.#DiceWorld.add({...roll,newStartPoint})
 				}
 
 				// turn flag off
-				anustart = false
+				newStartPoint = false
 			}
 
 			if(hasGroupId) {

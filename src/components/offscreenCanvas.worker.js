@@ -1,11 +1,11 @@
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
-import { createEngine } from './engine'
-import { createScene } from './scene'
-import { createCamera } from './camera'
-import { createLights } from './lights'
-import DiceBox from './DiceBox'
+import { createEngine } from './world/engine'
+import { createScene } from './world/scene'
+import { createCamera } from './world/camera'
+import { createLights } from './world/lights'
+import Container from './Container'
 import Dice from './Dice'
-import ThemeLoader from './Dice/themes'
+import ThemeLoader from './ThemeLoader'
 
 let 
 	config,
@@ -18,7 +18,7 @@ let
 	scene, 
 	camera,
 	lights,
-	diceBox,
+	container,
 	themeLoader,
 	physicsWorkerPort,
 	diceBufferView = new Float32Array(8000)
@@ -39,7 +39,7 @@ self.onmessage = (e) => {
 			addNonDie({...e.data.options})
       break
 		case "loadTheme":
-			loadThemes(e.data.options)
+			loadThemes(e.data.options).catch(error => console.error(error))
 			break
     case "clearDice":
 			clear()
@@ -85,11 +85,10 @@ const initScene = async (data) => {
 	})
 
   // create the box that provides surfaces for shadows to render on
-	diceBox = new DiceBox({
+	container = new Container({
 		enableShadows: config.enableShadows,
     aspect: canvas.width / canvas.height,
     lights,
-		scene,
 		enableDebugging: false
 	})
 
@@ -144,12 +143,12 @@ const updateConfig = (options) => {
 }
 
 // all this does is start the render engine.
-const render = (anustart) => {
+const render = (newStartPoint) => {
   // document.body.addEventListener('click',()=>engine.stopRenderLoop())
   engine.runRenderLoop(renderLoop.bind(self))
 	physicsWorkerPort.postMessage({
 		action: "resumeSimulation",
-		anustart
+		newStartPoint
 	})
 }
 
@@ -181,6 +180,10 @@ const loadThemes = async (options) => {
 
 	// Load the 3D meshes declared by the theme and return the collider mesh data to be passed on to the physics worker
 	const colliders = await Dice.loadModels({meshFilePath,meshName}, scene)
+
+	if(!colliders){
+		throw new Error("No colliders returned from the 3D mesh file. Low poly colliders are expected to be in the same file as the high poly dice and the mesh name contains the word 'collider'")
+	}
 
 	physicsWorkerPort.postMessage({
 		action: "loadModels",
@@ -248,7 +251,7 @@ const addNonDie = (die) => {
 // add a die to the scene
 const _add = async (options) => {
 	if(engine.activeRenderLoops.length === 0) {
-		render(options.anustart)
+		render(options.newStartPoint)
 	}
 
 	const diceOptions = {
@@ -271,7 +274,7 @@ const _add = async (options) => {
 			sides: options.sides,
 			scale: config.scale,
 			id: newDie.id,
-			anustart: options.anustart,
+			newStartPoint: options.newStartPoint,
 			theme: options.theme,
 			meshName: options.meshName,
 		}
@@ -387,14 +390,7 @@ const handleAsleep = async (die) => {
 	die.asleep = true
 
 	// get the roll result for this die
-	if(!die.value){
-		await Dice.getRollResult(die, scene)
-	}
-
-	// TODO: catch error if no result is found
-	if(die.value === undefined) {
-		console.log("No result. This die needs a reroll.")
-	}
+	await Dice.getRollResult(die, scene)
 
 	if(die.d10Instance || die.dieParent) {
 		// if one of the pair is asleep and the other isn't then it falls through without getting the roll result
@@ -431,6 +427,6 @@ const resize = (data) => {
 	canvas.width = data.width
 	canvas.height = data.height
 	// redraw the dicebox
-	diceBox.create({aspect: data.width / data.height})
+	container.create({aspect: data.width / data.height})
 	engine.resize()
 }

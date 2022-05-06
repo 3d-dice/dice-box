@@ -1,5 +1,4 @@
 import worldWorker from './offscreenCanvas.worker?worker&inline' // using vits.js worker import - this will be compiled away
-import { createUUID } from '../helpers'
 
 class WorldOffScreen {
 	initialized = false
@@ -97,7 +96,7 @@ class WorldOffScreen {
 
 			this.pendingThemePromises[options.theme] = resolve
 			this.#OffscreenWorker.postMessage({action: "loadTheme", options})
-		})
+		}).catch(error => console.error(error))
 	}
 
 	clear(){

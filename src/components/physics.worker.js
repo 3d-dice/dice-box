@@ -80,7 +80,7 @@ self.onmessage = (e) => {
           case "addDie":
 						// toss from all edges
 						// setStartPosition()
-						if(e.data.options.anustart){
+						if(e.data.options.newStartPoint){
 							setStartPosition()
 						}
             addDie(e.data.options)
@@ -97,7 +97,7 @@ self.onmessage = (e) => {
 						
             break;
           case "resumeSimulation":
-						if(e.data.anustart){
+						if(e.data.newStartPoint){
 							setStartPosition()
 						}
             stopLoop = false
@@ -378,7 +378,9 @@ const addDie = (options) => {
 	const { sides, id, meshName, scale} = options
 	let cType = `d${sides}_collider`
 	const comboKey = `${meshName}_${cType}`
-	const mass = colliders[comboKey].physicsMass * config.mass * config.scale // feature? mass should go up with scale, but it throws off the throwForce and spinForce scaling
+	const colliderMass = colliders[comboKey].physicsMass || .1
+	const mass = colliderMass * config.mass * config.scale // feature? mass should go up with scale, but it throws off the throwForce and spinForce scaling
+	// TODO: incorporate colliders physicsFriction and physicsRestitution settings
 	// clone the collider
 	const newDie = createRigidBody(colliders[comboKey].convexHull, {
 		mass,

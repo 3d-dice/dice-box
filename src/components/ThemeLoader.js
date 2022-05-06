@@ -41,21 +41,33 @@ class ThemeLoader {
     //TODO: apply more matParams
     const diceMaterial = new StandardMaterial(theme, this.scene);
     if(matParams.diffuseTexture){
-      diceMaterial.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture}`,this.scene)
-      if(matParams.diffuseLevel) {
-        diceMaterial.diffuseTexture.level = matParams.diffuseLevel
+      try {        
+        diceMaterial.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture}`,theme)
+        if(matParams.diffuseLevel) {
+          diceMaterial.diffuseTexture.level = matParams.diffuseLevel
+        }
+      } catch (error) {
+        console.error(error)
       }
     }
     if(matParams.bumpTexture){
-      diceMaterial.bumpTexture = await this.importTextureAsync(`${basePath}/${matParams.bumpTexture}`,this.scene)
-      if(matParams.bumpLevel){
-        diceMaterial.bumpTexture.level = matParams.bumpLevel
+      try {
+        diceMaterial.bumpTexture = await this.importTextureAsync(`${basePath}/${matParams.bumpTexture}`,theme)
+        if(matParams.bumpLevel){
+          diceMaterial.bumpTexture.level = matParams.bumpLevel
+        }
+      } catch (error) {
+        console.error(error)
       }
     }
     if(matParams.specularTexture){
-      diceMaterial.specularTexture = await this.importTextureAsync(`${basePath}/${matParams.specularTexture}`,this.scene)
-      if(matParams.specularPower){
-        diceMaterial.specularTexture.specularPower = matParams.specularPower
+      try {        
+        diceMaterial.specularTexture = await this.importTextureAsync(`${basePath}/${matParams.specularTexture}`,theme)
+        if(matParams.specularPower){
+          diceMaterial.specularTexture.specularPower = matParams.specularPower
+        }
+      } catch (error) {
+        console.error(error)
       }
     }
 
@@ -86,15 +98,23 @@ class ThemeLoader {
     // diceMatLight.emissiveTexture = diceTexture
     // diceMatLight.opacityTexture = diceTexture
     if(matParams.diffuseTexture && matParams.diffuseTexture.light){
-      diceMatLight.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture.light}`,this.scene)
-      if(matParams.diffuseLevel) {
-        diceMatLight.diffuseTexture.level = matParams.diffuseLevel
+      try {
+        diceMatLight.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture.light}`,theme)
+        if(matParams.diffuseLevel) {
+          diceMatLight.diffuseTexture.level = matParams.diffuseLevel
+        }
+      } catch (error) {
+        console.error(error)
       }
     }
     if(matParams.bumpTexture){
-      diceMatLight.bumpTexture = await this.importTextureAsync(`${basePath}/${matParams.bumpTexture}`,this.scene)
-      if(matParams.bumpLevel){
-        diceMatLight.bumpTexture.level = matParams.bumpLevel
+      try {        
+        diceMatLight.bumpTexture = await this.importTextureAsync(`${basePath}/${matParams.bumpTexture}`,theme)
+        if(matParams.bumpLevel){
+          diceMatLight.bumpTexture.level = matParams.bumpLevel
+        }
+      } catch (error) {
+        console.error(error)
       }
     }
   
@@ -120,27 +140,32 @@ class ThemeLoader {
     // create the custom color material with black/dark numbers
     const diceMatDark = diceMatLight.clone(theme+'_dark')
     if(matParams.diffuseTexture && matParams.diffuseTexture.dark){
-      diceMatDark.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture.dark}`,this.scene)
-      if(matParams.diffuseLevel) {
-        diceMatDark.diffuseTexture.level = matParams.diffuseLevel
+      try {
+        diceMatDark.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture.dark}`,theme)
+        if(matParams.diffuseLevel) {
+          diceMatDark.diffuseTexture.level = matParams.diffuseLevel
+        }
+      } catch (error) {
+        console.error(error)
       }
     }
     // this must be set again for some reason - does not clone
     diceMatDark.AddAttribute('customColor')
   }
 
-  async importTextureAsync(url) {
+  async importTextureAsync(url,theme) {
     return new Promise((resolve, reject) => {
+      let fileName = url.match(/^(.*\/)(.*)$/)
       let texture = new Texture(
-        url, // url: Nullable<string>
-        this.scene, // sceneOrEngine: Nullable<Scene | ThinEngine>
-        undefined, // noMipmapOrOptions?: boolean | ITextureCreationOptions
-        true, // invertY?: boolean
-        undefined, // samplingMode?: number
-        () => resolve(texture), // onLoad?: Nullable<() => void>
-        () => reject("Unable to load texture") // onError?: Nullable<(message?: string
-      )
-    })
+          url, // url: Nullable<string>
+          this.scene, // sceneOrEngine: Nullable<Scene | ThinEngine>
+          undefined, // noMipmapOrOptions?: boolean | ITextureCreationOptions
+          true, // invertY?: boolean
+          undefined, // samplingMode?: number
+          () => resolve(texture), // onLoad?: Nullable<() => void>
+          () => reject(`Unable to load texture '${fileName[2]}' for theme: '${theme}'. Check that your assetPath is configured correctly and that the files exist at path: '${fileName[1]}'`) // onError?: Nullable<(message?: string
+        )
+    }).catch(error => console.error(error))
   }
 
   async load(options){

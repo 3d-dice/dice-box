@@ -110,12 +110,12 @@ class WorldOnscreen {
 	}
 
 	// all this does is start the render engine.
-	render(anustart) {
+	render(newStartPoint) {
 		// document.body.addEventListener('click',()=>engine.stopRenderLoop())
 		this.#engine.runRenderLoop(this.renderLoop.bind(this))
 		this.#physicsWorkerPort.postMessage({
 			action: "resumeSimulation",
-			anustart
+			newStartPoint
 		})
 	}
 
@@ -218,7 +218,7 @@ class WorldOnscreen {
 	// add a die to the scene
 	async #add(options) {
 		if(this.#engine.activeRenderLoops.length === 0) {
-			this.render(options.anustart)
+			this.render(options.newStartPoint)
 		}
 		const diceOptions = {
 			...options,
@@ -240,7 +240,7 @@ class WorldOnscreen {
 				sides: options.sides,
 				scale: this.config.scale,
 				id: newDie.id,
-				anustart: options.anustart,
+				newStartPoint: options.newStartPoint,
 				theme: options.theme,
 				meshName: options.meshName,
 			}

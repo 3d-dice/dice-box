@@ -143,12 +143,12 @@ const updateConfig = (options) => {
 }
 
 // all this does is start the render engine.
-const render = (anustart) => {
+const render = (newStartPoint) => {
   // document.body.addEventListener('click',()=>engine.stopRenderLoop())
   engine.runRenderLoop(renderLoop.bind(self))
 	physicsWorkerPort.postMessage({
 		action: "resumeSimulation",
-		anustart
+		newStartPoint
 	})
 }
 
@@ -251,7 +251,7 @@ const addNonDie = (die) => {
 // add a die to the scene
 const _add = async (options) => {
 	if(engine.activeRenderLoops.length === 0) {
-		render(options.anustart)
+		render(options.newStartPoint)
 	}
 
 	const diceOptions = {
@@ -274,7 +274,7 @@ const _add = async (options) => {
 			sides: options.sides,
 			scale: config.scale,
 			id: newDie.id,
-			anustart: options.anustart,
+			newStartPoint: options.newStartPoint,
 			theme: options.theme,
 			meshName: options.meshName,
 		}

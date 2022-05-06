@@ -393,7 +393,7 @@ class WorldFacad {
 			id: collectionId,
 			notation,
 			theme,
-			anustart: newStartPoint
+			newStartPoint
 		})
 
 		const parsedNotation = this.createNotationArray(notation)
@@ -411,7 +411,7 @@ class WorldFacad {
 			id: collectionId,
 			notation,
 			theme,
-			anustart: newStartPoint
+			newStartPoint
 		})
 		
 		const parsedNotation = this.createNotationArray(notation)
@@ -470,7 +470,7 @@ class WorldFacad {
 	async #makeRoll(parsedNotation, collectionId){
 
 		const collection = this.rollCollectionData[collectionId]
-		let anustart = collection.anustart
+		let newStartPoint = collection.newStartPoint
 
 		// loop through the number of dice in the group and roll each one
 		parsedNotation.forEach(async notation => {
@@ -519,11 +519,11 @@ class WorldFacad {
 					this.#DiceWorld.addNonDie(roll)
 				}
 				else {
-					this.#DiceWorld.add({...roll,anustart})
+					this.#DiceWorld.add({...roll,newStartPoint})
 				}
 
 				// turn flag off
-				anustart = false
+				newStartPoint = false
 			}
 
 			if(hasGroupId) {

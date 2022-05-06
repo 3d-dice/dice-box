@@ -1,5 +1,4 @@
-import { createCanvas } from './components/canvas'
-// import WorldOffscreen from './components/world.offscreen'
+import { createCanvas } from './components/world/canvas'
 import physicsWorker from './components/physics.worker.js?worker&inline'
 import { debounce, createAsyncQueue, Random } from './helpers'
 

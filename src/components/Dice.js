@@ -3,7 +3,7 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { Ray } from "@babylonjs/core/Culling/ray";
 // import { RayHelper } from '@babylonjs/core/Debug';
-import '../../helpers/babylonFileLoader'
+import '../helpers/babylonFileLoader'
 import '@babylonjs/core/Meshes/instancedMesh'
 
 

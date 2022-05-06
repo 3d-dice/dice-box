@@ -5,7 +5,7 @@ import { createCamera } from './camera'
 import { createLights } from './lights'
 import DiceBox from './DiceBox'
 import Dice from './Dice'
-import ThemeLoader from './Dice/themes'
+import ThemeLoader from './ThemeLoader'
 
 let 
 	config,

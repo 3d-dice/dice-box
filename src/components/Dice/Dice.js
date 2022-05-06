@@ -149,6 +149,7 @@ class Dice {
         }
         model.setEnabled(false)
         model.freezeNormals()
+        model.freezeWorldMatrix()
         model.isPickable = false
         model.doNotSyncBoundingInfo = true
         // prefix all the meshs ids from this file with the file name so we can find them later e.g.: 'default-dice_d10' and 'default-dice_d10_collider'
@@ -161,8 +162,11 @@ class Dice {
         scene.getMeshByName(meshName + '_d10_collider').clone(meshName + '_d100_collider')
       }
       // save colliderFaceMap to scene - couldn't find a better place to stash this
+      if(!modelData.colliderFaceMap){
+        throw new Error(`'colliderFaceMap' data not found in ${meshFilePath}. Without the colliderFaceMap data dice values can not be resolved.`)
+      }
       scene.colliderFaceMaps[meshName] = modelData.colliderFaceMap
-    })
+    }).catch(error => console.error(error))
     // return collider data so it can be passed to physics
     // TODO: return any physics settings as well
     return modelData.meshes.filter(model => model.name.includes("collider"))
@@ -189,6 +193,10 @@ class Dice {
       
       const meshFaceIds = scene.colliderFaceMaps[die.config.meshName]
 
+      if(!meshFaceIds[d.dieType]){
+        throw new Error(`No colliderFaceMap data for ${d.dieType}`)
+      }
+
       // const dieHitbox = d.config.scene.getMeshByName(`${d.dieType}_collider`).createInstance(`${d.dieType}-hitbox-${d.id}`)
       const dieHitbox = scene.getMeshByName(`${die.config.meshName}_${d.dieType}_collider`).createInstance(`${die.config.meshName}_${d.dieType}-hitbox-${d.id}`)
       dieHitbox.isPickable = true
@@ -209,9 +217,13 @@ class Dice {
       // let rayHelper = new RayHelper(Dice.ray)
       // rayHelper.show(d.config.scene)
 			d.value = meshFaceIds[d.dieType][picked.faceId]
+      if(d.value === undefined){
+        throw new Error(`colliderFaceMap Error: No value found for ${d.dieType} mesh face ${picked.faceId}`)
+      }
 
       return resolve(d.value)
-    })
+    }).catch(error => console.error(error))
+    
     return await getDieRoll()
   }
 }

@@ -232,7 +232,6 @@ class WorldFacad {
 	async getThemeConfig(theme){
 		const basePath = `${this.config.origin}${this.config.assetPath}themes/${theme}`
 		let themeData
-		const diceAvailable = ['d4','d6','d8','d10','d12','d20','d100']
 
 		if (theme === 'default'){
 			// sensible defaults
@@ -285,9 +284,10 @@ class WorldFacad {
 				meshName = themeData.meshName
 			}
 		}
+
 		// if diceAvailable is not specified then assume the default set of seven
 		if(!themeData.hasOwnProperty('diceAvailable')){
-			themeData.diceAvailable = diceAvailable
+			themeData.diceAvailable = ['d4','d6','d8','d10','d12','d20','d100']
 		}
 
 		Object.assign(themeData,
@@ -474,6 +474,9 @@ class WorldFacad {
 
 		// loop through the number of dice in the group and roll each one
 		parsedNotation.forEach(async notation => {
+			if(!notation.sides) {
+				throw new Error("Improper dice notation or unable to parse notation")
+			}
 			const theme = notation.theme || collection.theme || this.config.theme
 			const themeColor = notation.themeColor || collection.themeColor || this.config.themeColor
 			const rolls = {}
@@ -511,6 +514,7 @@ class WorldFacad {
 
 				// check if this is a non-standard die, if so then use crypto fallback
 				if(this.config.suspendSimulation || !diceAvailable.includes(`d${roll.sides}`)){
+					console.warn(this.config.suspendSimulation ? "3D simulation suspended. Using fallback." : `${roll.sides} sided die unavailable in '${theme}' theme. Using fallback.`)
 					roll.value = Random.range(1, roll.sides)
 					this.#DiceWorld.addNonDie(roll)
 				}

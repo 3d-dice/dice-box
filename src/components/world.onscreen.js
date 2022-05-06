@@ -3,7 +3,7 @@ import { createEngine } from './world/engine'
 import { createScene } from './world/scene'
 import { createCamera } from './world/camera'
 import { createLights } from './world/lights'
-import DiceBox from './DiceBox'
+import Container from './Container'
 import Dice from './Dice'
 import ThemeLoader from './ThemeLoader'
 
@@ -19,7 +19,7 @@ class WorldOnscreen {
 	#scene
 	#camera
 	#lights
-	#diceBox
+	#container
 	#themeLoader
 	#physicsWorkerPort
 	// onInitComplete = () => {}
@@ -52,7 +52,7 @@ class WorldOnscreen {
 		})
 	
 		// create the box that provides surfaces for shadows to render on
-		this.#diceBox  = new DiceBox({
+		this.#container  = new Container({
 			enableShadows: this.config.enableShadows,
 			aspect: this.#canvas.width / this.#canvas.height,
 			lights: this.#lights,
@@ -394,7 +394,7 @@ class WorldOnscreen {
 	
 	resize() {
 		// redraw the dicebox
-		this.#diceBox.create({aspect: this.#canvas.width / this.#canvas.height})
+		this.#container.create({aspect: this.#canvas.width / this.#canvas.height})
 		this.#engine.resize()
 	}
 }

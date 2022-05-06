@@ -3,7 +3,7 @@ import { createEngine } from './world/engine'
 import { createScene } from './world/scene'
 import { createCamera } from './world/camera'
 import { createLights } from './world/lights'
-import DiceBox from './DiceBox'
+import Container from './Container'
 import Dice from './Dice'
 import ThemeLoader from './ThemeLoader'
 
@@ -18,7 +18,7 @@ let
 	scene, 
 	camera,
 	lights,
-	diceBox,
+	container,
 	themeLoader,
 	physicsWorkerPort,
 	diceBufferView = new Float32Array(8000)
@@ -85,7 +85,7 @@ const initScene = async (data) => {
 	})
 
   // create the box that provides surfaces for shadows to render on
-	diceBox = new DiceBox({
+	container = new Container({
 		enableShadows: config.enableShadows,
     aspect: canvas.width / canvas.height,
     lights,
@@ -427,6 +427,6 @@ const resize = (data) => {
 	canvas.width = data.width
 	canvas.height = data.height
 	// redraw the dicebox
-	diceBox.create({aspect: data.width / data.height})
+	container.create({aspect: data.width / data.height})
 	engine.resize()
 }

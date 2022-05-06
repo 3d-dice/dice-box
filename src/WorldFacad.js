@@ -44,6 +44,9 @@ class WorldFacad {
 	onRemoveComplete = () => {}
 
   constructor(container, options = {}){
+		if(typeof options !== 'object') {
+			throw new Error('Config options should be an object. Config reference: https://fantasticdice.games/docs/usage/config#configuration-options')
+		}
 		// extend defaults with options
 		this.config = {...defaultOptions, ...options}
 		// if options do not provide a theme color then it should be null
@@ -262,13 +265,16 @@ class WorldFacad {
 						throw new Error(`Incorrect contentType: ${contentType}. Expected "application/json" or "basic"`)
 					}
 				} else {
-					throw new Error(`Request rejected with status ${resp.status}: ${resp.statusText}`)
+					throw new Error(`Unable to fetch config file for theme: '${theme}'. Request rejected with status ${resp.status}: ${resp.statusText}`)
 				}
-			})
+			}).catch(error => console.error(error))
 		}
 
 		let meshFilePath = this.config.origin + this.config.assetPath + this.config.meshFile
 		let meshName = 'default'
+		if(!themeData){
+			throw new Error("No theme config data to work with.")
+		}
 		if(themeData.hasOwnProperty('meshFile')){
 			meshFilePath = `${basePath}/${themeData.meshFile}`
 			if(!themeData.hasOwnProperty('meshName')) {
@@ -304,10 +310,12 @@ class WorldFacad {
 		}
 
 		// fetch
-		let themeConfig = await this.getThemeConfig(theme)
+		let themeConfig = await this.getThemeConfig(theme).catch(error => console.error(error))
+
+		if(!themeConfig) return
 
 		// pass config onto DiceWorld to load - the theme loader needs 'scene' from DiceWorld
-		await this.#DiceWorld.loadTheme(themeConfig)
+		await this.#DiceWorld.loadTheme(themeConfig).catch(error => console.error(error))
 
 		// save the themeData for later
 		this.themesLoadedData[theme] = themeConfig
@@ -325,7 +333,7 @@ class WorldFacad {
 				if(config.material.type !== 'color') {
 					newConfig.themeColor = undefined
 				}
-			})
+			}).catch(error => console.error(error))
 		// }
 
 		this.config = newConfig

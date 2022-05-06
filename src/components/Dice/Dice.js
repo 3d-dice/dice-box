@@ -126,9 +126,14 @@ class Dice {
           throw new Error(`Incorrect contentType: ${contentType}. Expected "application/json" or "basic"`)
         }
       } else {
-        throw new Error(`Request rejected with status ${resp.status}: ${resp.statusText}`)
+        throw new Error(`Unable to load 3D mesh file: '${meshFilePath}'. Request rejected with status ${resp.status}: ${resp.statusText}`)
       }
-    })
+    }).catch(error => console.error(error))
+
+    if(!modelData){
+      return
+    }
+
     SceneLoader.ImportMeshAsync(null,null, 'data:' + JSON.stringify(modelData) , scene).then(data => {
       data.meshes.forEach(model => {
         if(model.name === "__root__") {
@@ -159,6 +164,7 @@ class Dice {
       scene.colliderFaceMaps[meshName] = modelData.colliderFaceMap
     })
     // return collider data so it can be passed to physics
+    // TODO: return any physics settings as well
     return modelData.meshes.filter(model => model.name.includes("collider"))
   }
 

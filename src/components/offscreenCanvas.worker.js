@@ -39,7 +39,7 @@ self.onmessage = (e) => {
 			addNonDie({...e.data.options})
       break
 		case "loadTheme":
-			loadThemes(e.data.options)
+			loadThemes(e.data.options).catch(error => console.error(error))
 			break
     case "clearDice":
 			clear()
@@ -89,7 +89,6 @@ const initScene = async (data) => {
 		enableShadows: config.enableShadows,
     aspect: canvas.width / canvas.height,
     lights,
-		scene,
 		enableDebugging: false
 	})
 
@@ -181,6 +180,10 @@ const loadThemes = async (options) => {
 
 	// Load the 3D meshes declared by the theme and return the collider mesh data to be passed on to the physics worker
 	const colliders = await Dice.loadModels({meshFilePath,meshName}, scene)
+
+	if(!colliders){
+		throw new Error("No colliders returned from the 3D mesh file. Low poly colliders are expected to be in the same file as the high poly dice and the mesh name contains the word 'collider'")
+	}
 
 	physicsWorkerPort.postMessage({
 		action: "loadModels",

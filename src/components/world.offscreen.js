@@ -97,7 +97,7 @@ class WorldOffScreen {
 
 			this.pendingThemePromises[options.theme] = resolve
 			this.#OffscreenWorker.postMessage({action: "loadTheme", options})
-		})
+		}).catch(error => console.error(error))
 	}
 
 	clear(){

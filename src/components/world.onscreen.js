@@ -97,7 +97,9 @@ class WorldOnscreen {
 		}
 		if(prevConfig.scale !== this.config.scale) {
 			Object.values(this.#dieCache).forEach(({mesh}) => {
-				mesh.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
+				if(mesh){
+					mesh.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
+				}
 			})
 		}
 		if(prevConfig.shadowOpacity !== this.config.shadowOpacity) {

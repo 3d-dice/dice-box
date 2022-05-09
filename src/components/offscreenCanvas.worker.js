@@ -130,7 +130,9 @@ const updateConfig = (options) => {
 	}
 	if(prevConfig.scale !== config.scale) {
 		Object.values(dieCache).forEach(({mesh}) => {
-			mesh.scaling = new Vector3(config.scale,config.scale,config.scale)
+			if(mesh){
+				mesh.scaling = new Vector3(config.scale,config.scale,config.scale)
+			}
 		})
 	}
 	if(prevConfig.shadowOpacity !== config.shadowOpacity) {

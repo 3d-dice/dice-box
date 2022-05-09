@@ -511,12 +511,17 @@ class WorldFacad {
 				this.rollDiceData[rollId] = roll
 				collection.rolls.push(this.rollDiceData[rollId])
 
-				// check if this is a non-standard die, if so then use crypto fallback
-				if(this.config.suspendSimulation || !diceAvailable.includes(`d${roll.sides}`)){
+				if (roll.sides === 'fate' && !diceAvailable.includes(`d${roll.sides}`)){
+					const min = -1
+					const max = 1
+					roll.value = Random.range(min,max)
+					this.#DiceWorld.addNonDie(roll)
+				} else if(this.config.suspendSimulation || !diceAvailable.includes(`d${roll.sides}`)){
+					// check if the requested roll is available in the current theme, if not then use crypto fallback
 					console.warn(this.config.suspendSimulation ? "3D simulation suspended. Using fallback." : `${roll.sides} sided die unavailable in '${theme}' theme. Using fallback.`)
 					roll.value = Random.range(1, roll.sides)
 					this.#DiceWorld.addNonDie(roll)
-				}
+				} 
 				else {
 					this.#DiceWorld.add({...roll,newStartPoint})
 				}
@@ -598,6 +603,8 @@ class WorldFacad {
   // taken from https://github.com/ChapelR/dice-notation
   parse(notation) {
     const diceNotation = /(\d+)[dD](\d+)(.*)$/i
+		const percentNotation = /(\d+)[dD]([0%]+)(.*)$/i
+		const fudgeNotation = /(\d+)[dD]([fF]+)(.*)$/i
     const modifier = /([+-])(\d+)/
     const cleanNotation = notation.trim().replace(/\s+/g, '')
     const validNumber = (n, err) => {
@@ -608,11 +615,13 @@ class WorldFacad {
       return n
     }
 
-    const roll = cleanNotation.match(diceNotation);
+		// match percentNotation before diceNotation
+    const roll = cleanNotation.match(percentNotation) || cleanNotation.match(diceNotation) || cleanNotation.match(fudgeNotation);
+
 		let mod = 0;
     const msg = 'Invalid notation: ' + notation + '';
 
-    if (roll.length < 3) {
+    if (!roll || !roll.length || roll.length < 3) {
       throw new Error(msg);
     }
     if (roll[3] && modifier.test(roll[3])) {
@@ -623,15 +632,21 @@ class WorldFacad {
       }
       mod = basicMod;
     }
-    
-    roll[1] = validNumber(roll[1], msg);
-    roll[2] = validNumber(roll[2], msg);
 
-    return {
-      qty : roll[1],
-      sides : roll[2],
-      modifier : mod,
-    }
+		const returnObj = {
+			qty : validNumber(roll[1], msg),
+      modifier: mod,
+		}
+
+		if(cleanNotation.match(percentNotation)){
+			returnObj.sides = '100' // as string, not number
+		} else if(cleanNotation.match(fudgeNotation)){
+			returnObj.sides = 'fate' // force lowercase
+		} else {
+			returnObj.sides = validNumber(roll[2], msg);
+		}
+
+    return returnObj
   }
 
 	#parseGroup(groupId) {

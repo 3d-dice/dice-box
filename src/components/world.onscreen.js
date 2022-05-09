@@ -204,17 +204,20 @@ class WorldOnscreen {
 		if(this.#engine.activeRenderLoops.length === 0) {
 			this.render(false)
 		}
-		const {id, value, ...config} = die
+		const {id, value, ...rest} = die
 		const newDie = {
 			id,
 			value,
-			config
+			config: rest
 		}
 		this.#dieCache[id] = newDie
 		
-		this.#dieRollTimer.push(setTimeout(() => {
-			this.handleAsleep(newDie)
-		}, this.#count++ * this.config.delay))
+		// double timeout to ensure any real dice have a chance to queue up and rollResults isn't triggered right away
+		setTimeout(()=>{
+			this.#dieRollTimer.push(setTimeout(() => {
+				this.handleAsleep(newDie)
+			}, this.#count++ * this.config.delay))
+		}, 10)
 	}
 
 	// add a die to the scene

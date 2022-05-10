@@ -289,6 +289,19 @@ class WorldFacad {
 			themeData.diceAvailable = ['d4','d6','d8','d10','d12','d20','d100']
 		}
 
+		if(themeData.hasOwnProperty("extends")){
+			let target = this.themesLoadedData[themeData.extends]
+			if(!target){
+				target = await this.loadTheme(themeData.extends).catch(error => console.error(error))
+			}
+			if(target){
+				themeData.diceInherited = [...(themeData.diceInherited || [])]
+				target.diceAvailable.map(die => {
+					themeData.diceInherited[die] = target.systemName
+				})
+			}
+		}
+
 		Object.assign(themeData,
 			{
 				basePath,
@@ -487,7 +500,8 @@ class WorldFacad {
 			const loadTheme = () => this.loadTheme(theme)
 			await this.loadThemeQueue.push(loadTheme)
 
-			const {meshName, diceAvailable} = this.themesLoadedData[theme]
+			const {meshName, diceAvailable, diceInherited = {}} = this.themesLoadedData[theme]
+			const diceExtra = Object.keys(diceInherited)
 
 			// TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.
 			for (var i = 0, len = notation.qty; i < len; i++) {
@@ -511,19 +525,31 @@ class WorldFacad {
 				this.rollDiceData[rollId] = roll
 				collection.rolls.push(this.rollDiceData[rollId])
 
-				if (roll.sides === 'fate' && !diceAvailable.includes(`d${roll.sides}`)){
+				// TODO: eliminate the 'd' for more flexible naming such as 'fate' - ensure numbers are strings
+				if (roll.sides === 'fate' && (!diceAvailable.includes(`d${roll.sides}`) && !diceExtra.includes(`d${roll.sides}`))){
 					const min = -1
 					const max = 1
 					roll.value = Random.range(min,max)
 					this.#DiceWorld.addNonDie(roll)
-				} else if(this.config.suspendSimulation || !diceAvailable.includes(`d${roll.sides}`)){
+				} else if(this.config.suspendSimulation || (!diceAvailable.includes(`d${roll.sides}`) && !diceExtra.includes(`d${roll.sides}`))){
 					// check if the requested roll is available in the current theme, if not then use crypto fallback
 					console.warn(this.config.suspendSimulation ? "3D simulation suspended. Using fallback." : `${roll.sides} sided die unavailable in '${theme}' theme. Using fallback.`)
 					roll.value = Random.range(1, roll.sides)
 					this.#DiceWorld.addNonDie(roll)
 				} 
 				else {
-					this.#DiceWorld.add({...roll,newStartPoint})
+					console.log('diceInherited[roll.sides]', diceInherited[`d${roll.sides}`])
+					let parentTheme
+					if(diceExtra.includes(`d${roll.sides}`)) {
+						const parentThemeName = diceInherited[`d${roll.sides}`]
+						parentTheme = this.themesLoadedData[parentThemeName]
+					}
+					this.#DiceWorld.add({
+						...roll,
+						newStartPoint,
+						theme: parentTheme?.systemName || theme,
+						meshName: parentTheme?.meshName || meshName,
+					})
 				}
 
 				// turn flag off

@@ -109,6 +109,7 @@ class Dice {
     // can we get scene without passing it in?
     const {meshFilePath, meshName, scale} = options
     let has_d100 = false
+    let has_d10 = false
 
     //TODO: cache model files so it won't have to be fetched by other themes using the same models
     // using fetch to get modelData so we can pull out data unrelated to mesh importing
@@ -147,6 +148,9 @@ class Dice {
         if (!has_d100) {
           has_d100 = model.name === "d100"
         }
+        if (!has_d10) {
+          has_d10 = model.name === "d10"
+        }
         model.setEnabled(false)
         model.freezeNormals()
         model.freezeWorldMatrix()
@@ -156,7 +160,7 @@ class Dice {
         // model.id = meshName + '_' + model.id
         model.name = meshName + '_' + model.name
       })
-      if(!has_d100) {
+      if(!has_d100 && has_d10) {
         // console.log("create a d100 from a d10")  
         scene.getMeshByName(meshName + '_d10').clone(meshName + '_d100')
         scene.getMeshByName(meshName + '_d10_collider').clone(meshName + '_d100_collider')
@@ -190,15 +194,16 @@ class Dice {
   static async getRollResult(die,scene) {
     // TODO: Why a function in a function?? fix this
     const getDieRoll = (d=die) => new Promise((resolve,reject) => {
-      
-      const meshFaceIds = scene.colliderFaceMaps[die.config.meshName]
+
+      const meshName = die.config.parentMesh || die.config.meshName
+      const meshFaceIds = scene.colliderFaceMaps[meshName]
 
       if(!meshFaceIds[d.dieType]){
         throw new Error(`No colliderFaceMap data for ${d.dieType}`)
       }
 
       // const dieHitbox = d.config.scene.getMeshByName(`${d.dieType}_collider`).createInstance(`${d.dieType}-hitbox-${d.id}`)
-      const dieHitbox = scene.getMeshByName(`${die.config.meshName}_${d.dieType}_collider`).createInstance(`${die.config.meshName}_${d.dieType}-hitbox-${d.id}`)
+      const dieHitbox = scene.getMeshByName(`${meshName}_${d.dieType}_collider`).createInstance(`${meshName}_${d.dieType}-hitbox-${d.id}`)
       dieHitbox.isPickable = true
       dieHitbox.isVisible = true
       dieHitbox.setEnabled(true)

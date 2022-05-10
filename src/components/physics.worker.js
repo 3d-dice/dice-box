@@ -172,16 +172,20 @@ const updateConfig = (options) => {
 const loadModels = async ({colliders: modelData, meshName}) => {
 
 	let has_d100 = false
+	let has_d10 = false
 
 	// turn our model data into convex hull items for the physics world
 	modelData.forEach((model,i) => {
 		colliders[meshName + '_' + model.name] = model
 		colliders[meshName + '_' + model.name].convexHull = createConvexHull(model)
+		if (!has_d10) {
+			has_d10 = model.id === "d10_collider"
+		}
 		if (!has_d100) {
 			has_d100 = model.id === "d100_collider"
 		}
 	})
-	if (!has_d100) {
+	if (!has_d100 && has_d10) {
 		colliders[`${meshName}_d100_collider`] = colliders[`${meshName}_d10_collider`]
 	}
 }
@@ -378,7 +382,7 @@ const addDie = (options) => {
 	const { sides, id, meshName, scale} = options
 	let cType = `d${sides}_collider`
 	const comboKey = `${meshName}_${cType}`
-	const colliderMass = colliders[comboKey].physicsMass || .1
+	const colliderMass = colliders[comboKey]?.physicsMass || .1
 	const mass = colliderMass * config.mass * config.scale // feature? mass should go up with scale, but it throws off the throwForce and spinForce scaling
 	// TODO: incorporate colliders physicsFriction and physicsRestitution settings
 	// clone the collider

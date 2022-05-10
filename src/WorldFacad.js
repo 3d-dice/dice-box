@@ -527,6 +527,7 @@ class WorldFacad {
 
 				// TODO: eliminate the 'd' for more flexible naming such as 'fate' - ensure numbers are strings
 				if (roll.sides === 'fate' && (!diceAvailable.includes(`d${roll.sides}`) && !diceExtra.includes(`d${roll.sides}`))){
+					console.warn(`fate die unavailable in '${theme}' theme. Using fallback.`)
 					const min = -1
 					const max = 1
 					roll.value = Random.range(min,max)

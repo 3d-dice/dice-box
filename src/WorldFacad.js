@@ -539,7 +539,6 @@ class WorldFacad {
 					this.#DiceWorld.addNonDie(roll)
 				} 
 				else {
-					console.log('diceInherited[roll.sides]', diceInherited[`d${roll.sides}`])
 					let parentTheme
 					if(diceExtra.includes(`d${roll.sides}`)) {
 						const parentThemeName = diceInherited[`d${roll.sides}`]

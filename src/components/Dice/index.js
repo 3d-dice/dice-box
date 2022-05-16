@@ -1,1 +1,1 @@
-export { default } from './Dice'
+export { default } from "./Dice";

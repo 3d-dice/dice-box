@@ -105,28 +105,22 @@ class World {
     );
   }
 
-  resizeWorld() {
-    // send resize events to workers - debounced for performance
-    const resizeWorkers = () => {
-      this.#DiceWorld.resize({
-        width: this.canvas.clientWidth,
-        height: this.canvas.clientHeight,
-      });
-      this.#DiceWorker.postMessage({
-        action: "resize",
-        width: this.canvas.clientWidth,
-        height: this.canvas.clientHeight,
-      });
-    };
-    const debounceResize = debounce(resizeWorkers);
-    window.addEventListener("resize", debounceResize);
+  resizeWorld({ width, height }) {
+    this.#DiceWorld.resize({
+      width: width,
+      height: height,
+    });
+
+    this.#DiceWorker.postMessage({
+      action: "resize",
+      width: width,
+      height: height,
+    });
   }
 
   async init() {
     await this.#loadWorld();
     this.#connectWorld();
-    this.resizeWorld();
-
     this.#DiceWorld.onInitComplete = () => {
       this.diceWorldInit();
     };
@@ -257,7 +251,10 @@ class World {
 
   show() {
     this.canvas.style.display = "block";
-
+    this.resizeWorld({
+      width: this.canvas.clientWidth,
+      height: this.canvas.clientHeight,
+    });
     // make this method chainable
     return this;
   }

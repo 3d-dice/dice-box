@@ -23,20 +23,23 @@ class WorldOnscreen {
 	#themeLoader
 	#physicsWorkerPort
 	#meshList = {}
-	// onInitComplete = () => {}
-	onRollResult = () => {}
-	onRollComplete = () => {}
-	onThemeLoaded = () => {}
+	noop = () => {}
 	diceBufferView = new Float32Array(8000)
 
 	constructor(options){
-		this.onInitComplete = options.onInitComplete
+		this.onInitComplete = options.onInitComplete || this.noop
+		this.onThemeLoaded = options.onThemeLoaded || this.noop
+		this.onRollResult = options.onRollResult || this.noop
+		this.onRollComplete = options.onRollComplete || this.noop
+		this.onDieRemoved = options.onDieRemoved || this.noop
 		this.initialized = this.initScene(options)
 	}
 	
 	// initialize the babylon scene
 	async initScene(config) {
 		this.#canvas  = config.canvas
+		this.#canvas.width = config.width
+		this.#canvas.height = config.height
 	
 		// set the config from World
 		this.config = config.options
@@ -143,7 +146,6 @@ class WorldOnscreen {
 	}
 
 	async loadTheme(options) {
-		// console.log("loading theme")
 		// await loadTheme(theme, this.config.origin + this.config.assetPath, this.#scene)
 		const {theme, basePath, material, meshFilePath, meshName} = options
 		// load the textures and create the materials needed for this theme

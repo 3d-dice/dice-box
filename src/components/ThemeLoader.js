@@ -2,6 +2,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { CustomMaterial } from '@babylonjs/materials/custom/customMaterial';
 import { SerializationHelper } from '@babylonjs/core/Misc/decorators'
+import { deepCopy } from '../helpers'
 
 // this is a monkey patch for cloning CustomMaterial in BabylonJS
 CustomMaterial.prototype.clone = function (name)  {
@@ -37,40 +38,19 @@ class ThemeLoader {
   }
 
   async loadStandardMaterial(options) {
-    const {basePath, theme, material: matParams} = options
+    const {theme, material: matParams} = options
     //TODO: apply more matParams
     const diceMaterial = new StandardMaterial(theme, this.scene);
 
     // TODO: make these methods reusable getDiffuseTexture(matParams, material)
     if(matParams.diffuseTexture){
-      try {        
-        diceMaterial.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture}`,theme)
-        if(matParams.diffuseLevel) {
-          diceMaterial.diffuseTexture.level = matParams.diffuseLevel
-        }
-      } catch (error) {
-        console.error(error)
-      }
+      diceMaterial.diffuseTexture = await this.getTexture('diffuse', options)
     }
     if(matParams.bumpTexture){
-      try {
-        diceMaterial.bumpTexture = await this.importTextureAsync(`${basePath}/${matParams.bumpTexture}`,theme)
-        if(matParams.bumpLevel){
-          diceMaterial.bumpTexture.level = matParams.bumpLevel
-        }
-      } catch (error) {
-        console.error(error)
-      }
+      diceMaterial.bumpTexture = await this.getTexture('bump', options)
     }
     if(matParams.specularTexture){
-      try {        
-        diceMaterial.specularTexture = await this.importTextureAsync(`${basePath}/${matParams.specularTexture}`,theme)
-        if(matParams.specularPower){
-          diceMaterial.specularTexture.specularPower = matParams.specularPower
-        }
-      } catch (error) {
-        console.error(error)
-      }
+      diceMaterial.specularTexture = await this.getTexture('specular', options)
     }
 
     diceMaterial.allowShaderHotSwapping = false
@@ -89,7 +69,7 @@ class ThemeLoader {
 
   // this will create two materials - one with light text and one with dark text, the underlying color can be changed by color instance buffers
   async loadColorMaterial(options) {
-    const {theme, basePath, material: matParams} = options
+    const {theme, material: matParams} = options
     // create the custom color material with white/light numbers
     const diceMatLight = new CustomMaterial(theme+'_light',this.scene)
     // Other fun params for the future
@@ -99,35 +79,16 @@ class ThemeLoader {
     // diceMatLight.ambientTexture = diceTexture
     // diceMatLight.emissiveTexture = diceTexture
     // diceMatLight.opacityTexture = diceTexture
+    const opts = deepCopy(options)
     if(matParams.diffuseTexture && matParams.diffuseTexture.light){
-      try {
-        diceMatLight.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture.light}`,theme)
-        if(matParams.diffuseLevel) {
-          diceMatLight.diffuseTexture.level = matParams.diffuseLevel
-        }
-      } catch (error) {
-        console.error(error)
-      }
+      opts.material.diffuseTexture = options.material.diffuseTexture.light
+      diceMatLight.diffuseTexture = await this.getTexture('diffuse', opts)
     }
     if(matParams.bumpTexture){
-      try {        
-        diceMatLight.bumpTexture = await this.importTextureAsync(`${basePath}/${matParams.bumpTexture}`,theme)
-        if(matParams.bumpLevel){
-          diceMatLight.bumpTexture.level = matParams.bumpLevel
-        }
-      } catch (error) {
-        console.error(error)
-      }
+      diceMatLight.bumpTexture = await this.getTexture('bump', options)
     }
     if(matParams.specularTexture){
-      try {        
-        diceMatLight.specularTexture = await this.importTextureAsync(`${basePath}/${matParams.specularTexture}`,theme)
-        if(matParams.specularPower){
-          diceMatLight.specularTexture.specularPower = matParams.specularPower
-        }
-      } catch (error) {
-        console.error(error)
-      }
+      diceMatLight.specularTexture = await this.getTexture('specular', options)
     }
   
     diceMatLight.allowShaderHotSwapping = false
@@ -152,17 +113,47 @@ class ThemeLoader {
     // create the custom color material with black/dark numbers
     const diceMatDark = diceMatLight.clone(theme+'_dark')
     if(matParams.diffuseTexture && matParams.diffuseTexture.dark){
-      try {
-        diceMatDark.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture.dark}`,theme)
-        if(matParams.diffuseLevel) {
-          diceMatDark.diffuseTexture.level = matParams.diffuseLevel
-        }
-      } catch (error) {
-        console.error(error)
-      }
+      opts.material.diffuseTexture = options.material.diffuseTexture.dark
+      diceMatDark.diffuseTexture = await this.getTexture('diffuse', opts)
     }
     // this must be set again for some reason - does not clone
     diceMatDark.AddAttribute('customColor')
+  }
+
+  async getTexture(type, options){
+    const {basePath, material: matParams, theme} = options
+    let texture
+    const level = type + 'Level'
+    const textureKey = type + 'Texture'
+    // const power = type + 'Power'
+    try {        
+      switch (type) {
+        case "diffuse":
+          texture = await this.importTextureAsync(`${basePath}/${matParams[textureKey]}`, theme)
+          if(matParams[level]) {
+            texture.level = matParams[level]
+          }
+          break;
+        case "bump":
+          texture = await this.importTextureAsync(`${basePath}/${matParams[textureKey]}`, theme)
+          if(matParams[level]) {
+            texture.level = matParams[level]
+          }
+          break;
+        case "specular":    
+            texture = await this.importTextureAsync(`${basePath}/${matParams[textureKey]}`, theme)
+            if(matParams.specularPower){
+              texture.specularPower = matParams.specularPower
+            }
+          break;
+      
+        default:
+          throw new Error(`Texture type: ${type} is not supported`)
+      }
+    } catch (error) {
+      console.error(error)
+    }
+    return texture
   }
 
   async importTextureAsync(url,theme) {

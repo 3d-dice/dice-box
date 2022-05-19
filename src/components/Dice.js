@@ -223,6 +223,10 @@ class Dice {
 
       return resolve(d.value)
     }).catch(error => console.error(error))
+
+    if(!die.mesh){
+      return die.value
+    }
     
     return await getDieRoll()
   }

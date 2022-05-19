@@ -130,7 +130,9 @@ const updateConfig = (options) => {
 	}
 	if(prevConfig.scale !== config.scale) {
 		Object.values(dieCache).forEach(({mesh}) => {
-			mesh.scaling = new Vector3(config.scale,config.scale,config.scale)
+			if(mesh){
+				mesh.scaling = new Vector3(config.scale,config.scale,config.scale)
+			}
 		})
 	}
 	if(prevConfig.shadowOpacity !== config.shadowOpacity) {
@@ -235,17 +237,20 @@ const addNonDie = (die) => {
 	if(engine.activeRenderLoops.length === 0) {
 		render(false)
 	}
-	const {id, value, ...config} = die
+	const {id, value, ...rest} = die
 	const newDie = {
 		id,
 		value,
-		config
+		config: rest
 	}
 	dieCache[id] = newDie
-	
-	dieRollTimer.push(setTimeout(() => {
-		handleAsleep(newDie)
-	}, count++ * config.delay))
+
+	// double timeout to ensure any real dice have a chance to queue up and rollResults isn't triggered right away
+	setTimeout(()=>{
+		dieRollTimer.push(setTimeout(() => {
+			handleAsleep(newDie)
+		}, config.delay))
+	}, 10)
 }
 
 // add a die to the scene

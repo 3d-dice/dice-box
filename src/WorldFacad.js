@@ -41,6 +41,7 @@ class WorldFacad {
 	onDieComplete = () => {}
 	onRollComplete = () => {}
 	onRemoveComplete = () => {}
+	onThemeLoaded = () => {}
 
   constructor(container, options = {}){
 		if(typeof options !== 'object') {
@@ -284,6 +285,12 @@ class WorldFacad {
 			}
 		}
 
+		if(themeData.hasOwnProperty('themeColor')){
+			this.updateConfig({
+				themeColor: themeData.themeColor
+			})
+		}
+
 		// if diceAvailable is not specified then assume the default set of seven
 		if(!themeData.hasOwnProperty('diceAvailable')){
 			themeData.diceAvailable = ['d4','d6','d8','d10','d12','d20','d100']
@@ -332,6 +339,8 @@ class WorldFacad {
 		// save the themeData for later
 		this.themesLoadedData[theme] = themeConfig
 
+		this.onThemeLoaded(themeConfig)
+
 		return themeConfig
 	}
 
@@ -340,13 +349,13 @@ class WorldFacad {
 	async updateConfig(options) {
 		const newConfig = {...this.config,...options}
 		// console.log('newConfig', newConfig)
-		// if(this.config.theme !== options.theme) {
-			await this.loadTheme(options.theme).then(config => {
+		if(options.theme && this.config.theme !== options.theme) {
+			await this.loadTheme(newConfig.theme).then(config => {
 				if(config.material.type !== 'color') {
 					newConfig.themeColor = undefined
 				}
 			}).catch(error => console.error(error))
-		// }
+		}
 
 		this.config = newConfig
 		// pass updates to DiceWorld

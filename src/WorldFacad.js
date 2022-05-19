@@ -41,6 +41,7 @@ class WorldFacad {
 	onDieComplete = () => {}
 	onRollComplete = () => {}
 	onRemoveComplete = () => {}
+	onThemeConfigLoaded = () => {}
 	onThemeLoaded = () => {}
 
   constructor(container, options = {}){
@@ -285,12 +286,6 @@ class WorldFacad {
 			}
 		}
 
-		if(themeData.hasOwnProperty('themeColor')){
-			this.updateConfig({
-				themeColor: themeData.themeColor
-			})
-		}
-
 		// if diceAvailable is not specified then assume the default set of seven
 		if(!themeData.hasOwnProperty('diceAvailable')){
 			themeData.diceAvailable = ['d4','d6','d8','d10','d12','d20','d100']
@@ -318,6 +313,8 @@ class WorldFacad {
 			}
 		)
 
+		this.onThemeConfigLoaded(themeData)
+
 		return themeData
 	}
 
@@ -325,8 +322,10 @@ class WorldFacad {
 		// check the cache
 		if(this.themesLoadedData[theme]) {
 			// short circuit if theme has been previously loaded
+			// console.log(`${theme} has already been loaded. Returning cache`)
 			return this.themesLoadedData[theme]
 		}
+		// console.log(`${theme} is loading ...`)
 
 		// fetch
 		let themeConfig = await this.getThemeConfig(theme).catch(error => console.error(error))
@@ -349,13 +348,13 @@ class WorldFacad {
 	async updateConfig(options) {
 		const newConfig = {...this.config,...options}
 		// console.log('newConfig', newConfig)
-		if(options.theme && this.config.theme !== options.theme) {
-			await this.loadTheme(newConfig.theme).then(config => {
-				if(config.material.type !== 'color') {
-					newConfig.themeColor = undefined
-				}
-			}).catch(error => console.error(error))
-		}
+		// if(options.theme && this.config.theme !== options.theme) {
+			const config = await this.loadThemeQueue.push(() => this.loadTheme(newConfig.theme))
+			const themeData = config.at(-1) //get the last entry returned from the queue
+			if(themeData.material.type !== 'color') {
+				newConfig.themeColor = undefined
+			}
+		// }
 
 		this.config = newConfig
 		// pass updates to DiceWorld

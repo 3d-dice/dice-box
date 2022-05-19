@@ -22,6 +22,7 @@ class WorldOnscreen {
 	#container
 	#themeLoader
 	#physicsWorkerPort
+	#meshList = {}
 	// onInitComplete = () => {}
 	onRollResult = () => {}
 	onRollComplete = () => {}
@@ -149,19 +150,24 @@ class WorldOnscreen {
 		await this.#themeLoader.load({theme,basePath,material})
 	
 		// Load the 3D meshes declared by the theme and return the collider mesh data to be passed on to the physics worker
-		const colliders = await Dice.loadModels({meshFilePath,meshName}, this.#scene)
+		// don't load same models twice
+		if(!Object.keys(this.#meshList).includes(meshName)){
+			this.#meshList[meshName] = meshFilePath
+			const colliders = await Dice.loadModels({meshFilePath,meshName}, this.#scene)
 
-		if(!colliders){
-			throw new Error("No colliders returned from the 3D mesh file. Low poly colliders are expected to be in the same file as the high poly dice and the mesh name contains the word 'collider'")
-		}
-	
-		this.#physicsWorkerPort.postMessage({
-			action: "loadModels",
-			options: {
-				colliders,
-				meshName
+			if(!colliders){
+				throw new Error("No colliders returned from the 3D mesh file. Low poly colliders are expected to be in the same file as the high poly dice and the mesh name contains the word 'collider'")
 			}
-		})
+		
+			this.#physicsWorkerPort.postMessage({
+				action: "loadModels",
+				options: {
+					colliders,
+					meshName
+				}
+			})
+		}
+
 		this.onThemeLoaded({id: theme})
 	}
 

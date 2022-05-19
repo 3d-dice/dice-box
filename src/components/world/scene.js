@@ -14,7 +14,7 @@ function createScene(options) {
   scene.pointerUpPredicate = () => false;
   scene.clearCachedVertexData();
   // used to map 3D mesh faces to actual dice values
-  scene.colliderFaceMaps = []
+  scene.themeData = {}
 
   const optimizationSettings = SceneOptimizerOptions.LowDegradationAllowed()
   optimizationSettings.optimizations = optimizationSettings.optimizations.splice(1)

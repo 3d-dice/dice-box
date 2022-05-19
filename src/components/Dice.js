@@ -6,6 +6,8 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import '../helpers/babylonFileLoader'
 import '@babylonjs/core/Meshes/instancedMesh'
 
+import { deepCopy } from '../helpers';
+
 
 const defaultOptions = {
   assetPath: '',
@@ -107,8 +109,9 @@ class Dice {
   // load all the dice models
   static async loadModels(options, scene) {
     // can we get scene without passing it in?
-    const {meshFilePath, meshName, scale} = options
+    const {meshFilePath, meshName, scale, d4FaceDown = true} = options
     let has_d100 = false
+    let has_d10 = false
 
     //TODO: cache model files so it won't have to be fetched by other themes using the same models
     // using fetch to get modelData so we can pull out data unrelated to mesh importing
@@ -141,11 +144,14 @@ class Dice {
         }
         // shrink the colliders
         if( model.name.includes("collider")) {
-          model.scaling = new Vector3(.7,.7,.7)
+          model.scaling = new Vector3(.9,.9,.9)
         }
         // check if d100 is available as a mesh - otherwise we'll clone a d10
         if (!has_d100) {
           has_d100 = model.name === "d100"
+        }
+        if (!has_d10) {
+          has_d10 = model.name === "d10"
         }
         model.setEnabled(false)
         model.freezeNormals()
@@ -156,16 +162,24 @@ class Dice {
         // model.id = meshName + '_' + model.id
         model.name = meshName + '_' + model.name
       })
-      if(!has_d100) {
+      if(!has_d100 && has_d10) {
         // console.log("create a d100 from a d10")  
         scene.getMeshByName(meshName + '_d10').clone(meshName + '_d100')
         scene.getMeshByName(meshName + '_d10_collider').clone(meshName + '_d100_collider')
+        if(modelData.colliderFaceMap) {
+          modelData.colliderFaceMap['d100'] = deepCopy(modelData.colliderFaceMap['d10'])
+          Object.values(modelData.colliderFaceMap['d100']).forEach((val,i) => {
+            modelData.colliderFaceMap['d100'][i] = val * (val === 10 ? 0 : 10)
+          })
+        }
       }
       // save colliderFaceMap to scene - couldn't find a better place to stash this
       if(!modelData.colliderFaceMap){
         throw new Error(`'colliderFaceMap' data not found in ${meshFilePath}. Without the colliderFaceMap data dice values can not be resolved.`)
       }
-      scene.colliderFaceMaps[meshName] = modelData.colliderFaceMap
+      scene.themeData[meshName] = {}
+      scene.themeData[meshName].colliderFaceMap = modelData.colliderFaceMap
+      scene.themeData[meshName].d4FaceDown = d4FaceDown
     }).catch(error => console.error(error))
     // return collider data so it can be passed to physics
     // TODO: return any physics settings as well
@@ -190,22 +204,27 @@ class Dice {
   static async getRollResult(die,scene) {
     // TODO: Why a function in a function?? fix this
     const getDieRoll = (d=die) => new Promise((resolve,reject) => {
-      
-      const meshFaceIds = scene.colliderFaceMaps[die.config.meshName]
+
+      const meshName = die.config.parentMesh || die.config.meshName
+      const meshFaceIds = scene.themeData[meshName].colliderFaceMap
+      const d4FaceDown = scene.themeData[meshName].d4FaceDown
 
       if(!meshFaceIds[d.dieType]){
         throw new Error(`No colliderFaceMap data for ${d.dieType}`)
       }
 
       // const dieHitbox = d.config.scene.getMeshByName(`${d.dieType}_collider`).createInstance(`${d.dieType}-hitbox-${d.id}`)
-      const dieHitbox = scene.getMeshByName(`${die.config.meshName}_${d.dieType}_collider`).createInstance(`${die.config.meshName}_${d.dieType}-hitbox-${d.id}`)
+      const dieHitbox = scene.getMeshByName(`${meshName}_${d.dieType}_collider`).createInstance(`${meshName}_${d.dieType}-hitbox-${d.id}`)
       dieHitbox.isPickable = true
       dieHitbox.isVisible = true
       dieHitbox.setEnabled(true)
       dieHitbox.position = d.mesh.position
       dieHitbox.rotationQuaternion = d.mesh.rotationQuaternion
 
-			const vector = d.dieType === 'd4' ? Dice.setVector3(0, -1, 0) : Dice.setVector3(0, 1, 0)
+      let vector = Dice.setVector3(0, 1, 0)
+      if(d.dieType === 'd4' && d4FaceDown) {
+        vector = Dice.setVector3(0, -1, 0)
+      }
 
       Dice.ray.direction = vector
       Dice.ray.origin = die.mesh.position

@@ -243,8 +243,7 @@ class WorldFacad {
 					diffuseLevel: 1,
 					bumpTexture: 'normal.png',
 					bumpLevel: .5
-				},
-				themeColor: defaultOptions.themeColor
+				}
 			}
 		} else {
 			// fetch the theme.config file
@@ -322,7 +321,7 @@ class WorldFacad {
 			}
 		)
 
-		this.onThemeConfigLoaded(themeData)
+		// this.onThemeConfigLoaded(themeData)
 
 		return themeData
 	}
@@ -336,16 +335,14 @@ class WorldFacad {
 		}
 		// console.log(`${theme} is loading ...`)
 
-		// fetch
-		let themeConfig = await this.getThemeConfig(theme).catch(error => console.error(error))
+		// fetch and save the themeData for later
+		const themeConfig = this.themesLoadedData[theme] = await this.getThemeConfig(theme).catch(error => console.error(error))
+		this.onThemeConfigLoaded(themeConfig)
 
 		if(!themeConfig) return
 
 		// pass config onto DiceWorld to load - the theme loader needs 'scene' from DiceWorld
 		await this.#DiceWorld.loadTheme(themeConfig).catch(error => console.error(error))
-
-		// save the themeData for later
-		this.themesLoadedData[theme] = themeConfig
 
 		this.onThemeLoaded(themeConfig)
 

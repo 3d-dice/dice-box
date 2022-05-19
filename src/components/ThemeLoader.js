@@ -40,6 +40,8 @@ class ThemeLoader {
     const {basePath, theme, material: matParams} = options
     //TODO: apply more matParams
     const diceMaterial = new StandardMaterial(theme, this.scene);
+
+    // TODO: make these methods reusable getDiffuseTexture(matParams, material)
     if(matParams.diffuseTexture){
       try {        
         diceMaterial.diffuseTexture = await this.importTextureAsync(`${basePath}/${matParams.diffuseTexture}`,theme)
@@ -112,6 +114,16 @@ class ThemeLoader {
         diceMatLight.bumpTexture = await this.importTextureAsync(`${basePath}/${matParams.bumpTexture}`,theme)
         if(matParams.bumpLevel){
           diceMatLight.bumpTexture.level = matParams.bumpLevel
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+    if(matParams.specularTexture){
+      try {        
+        diceMatLight.specularTexture = await this.importTextureAsync(`${basePath}/${matParams.specularTexture}`,theme)
+        if(matParams.specularPower){
+          diceMatLight.specularTexture.specularPower = matParams.specularPower
         }
       } catch (error) {
         console.error(error)

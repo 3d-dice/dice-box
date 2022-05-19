@@ -21,6 +21,7 @@ let
 	container,
 	themeLoader,
 	physicsWorkerPort,
+	meshList = {},
 	diceBufferView = new Float32Array(8000)
 
 // these are messages sent to this worker from World.js
@@ -181,19 +182,24 @@ const loadThemes = async (options) => {
 	await themeLoader.load({theme,basePath,material})
 
 	// Load the 3D meshes declared by the theme and return the collider mesh data to be passed on to the physics worker
-	const colliders = await Dice.loadModels({meshFilePath,meshName,d4FaceDown}, scene)
-
-	if(!colliders){
-		throw new Error("No colliders returned from the 3D mesh file. Low poly colliders are expected to be in the same file as the high poly dice and the mesh name contains the word 'collider'")
+	// don't load same models twice
+	if(!Object.keys(meshList).includes(meshName)){
+		meshList[meshName] = meshFilePath
+		const colliders = await Dice.loadModels({meshFilePath,meshName,d4FaceDown}, scene)
+		
+		if(!colliders){
+			throw new Error("No colliders returned from the 3D mesh file. Low poly colliders are expected to be in the same file as the high poly dice and the mesh name contains the word 'collider'")
+		}
+	
+		physicsWorkerPort.postMessage({
+			action: "loadModels",
+			options: {
+				colliders,
+				meshName
+			}
+		})
 	}
 
-	physicsWorkerPort.postMessage({
-		action: "loadModels",
-		options: {
-			colliders,
-			meshName
-		}
-	})
 	self.postMessage({action:"theme-loaded",id: theme})
 }
 

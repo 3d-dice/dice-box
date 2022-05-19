@@ -48,7 +48,7 @@ self.onmessage = async (e) => {
 				onRollComplete: () => {
 					self.postMessage({action: "roll-complete"})
 				},
-				onDieRemoved: ({rollId}) => {
+				onDieRemoved: (rollId) => {
 					self.postMessage({action:"die-removed", rollId})
 				}
 			})

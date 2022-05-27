@@ -1,11 +1,11 @@
-import { Vector3 } from '@babylonjs/core/Maths/math'
-import { createEngine } from './engine'
-import { createScene } from './scene'
-import { createCamera } from './camera'
-import { createLights } from './lights'
-import DiceBox from './DiceBox'
+import { Vector3 } from '@babylonjs/core/Maths/math.vector'
+import { createEngine } from './world/engine'
+import { createScene } from './world/scene'
+import { createCamera } from './world/camera'
+import { createLights } from './world/lights'
+import Container from './Container'
 import Dice from './Dice'
-import { loadTheme } from './Dice/themes'
+import ThemeLoader from './ThemeLoader'
 
 class WorldOnscreen {
 	config
@@ -19,20 +19,27 @@ class WorldOnscreen {
 	#scene
 	#camera
 	#lights
-	#diceBox
+	#container
+	#themeLoader
 	#physicsWorkerPort
-	onInitComplete = () => {}
-	onRollResult = () => {}
-	onRollComplete = () => {}
+	#meshList = {}
+	noop = () => {}
 	diceBufferView = new Float32Array(8000)
 
 	constructor(options){
+		this.onInitComplete = options.onInitComplete || this.noop
+		this.onThemeLoaded = options.onThemeLoaded || this.noop
+		this.onRollResult = options.onRollResult || this.noop
+		this.onRollComplete = options.onRollComplete || this.noop
+		this.onDieRemoved = options.onDieRemoved || this.noop
 		this.initialized = this.initScene(options)
 	}
 	
 	// initialize the babylon scene
 	async initScene(config) {
 		this.#canvas  = config.canvas
+		this.#canvas.width = config.width
+		this.#canvas.height = config.height
 	
 		// set the config from World
 		this.config = config.options
@@ -41,49 +48,46 @@ class WorldOnscreen {
 		this.#engine  = createEngine(this.#canvas )
 		this.#scene = createScene({engine:this.#engine })
 		this.#camera  = createCamera({engine:this.#engine, scene: this.#scene})
-		this.#lights  = createLights({enableShadows: this.config.enableShadows, scene: this.#scene})
+		this.#lights  = createLights({
+			enableShadows: this.config.enableShadows,
+			shadowOpacity: this.config.shadowOpacity,
+			intensity: this.config.lightIntensity,
+			scene: this.#scene
+		})
 	
 		// create the box that provides surfaces for shadows to render on
-		this.#diceBox  = new DiceBox({
+		this.#container  = new Container({
 			enableShadows: this.config.enableShadows,
 			aspect: this.#canvas.width / this.#canvas.height,
 			lights: this.#lights,
 			scene: this.#scene
 		})
 		
-		// loading all our dice models
-		// we use to load these models individually as needed, but it's faster to load them all at once and prevents animation jank when rolling
-		await Dice.loadModels({
-			assetPath: this.config.origin + this.config.assetPath,
-			scene: this.#scene,
-			scale: this.config.scale
-		})
+		this.#themeLoader = new ThemeLoader({scene: this.#scene})
+
+		// init complete - let the world know
+		this.onInitComplete()
+	}
+
+	connect(port){
+		this.#physicsWorkerPort = port
 
 		this.#physicsWorkerPort.postMessage({
 			action: "initBuffer",
 			diceBuffer: this.diceBufferView.buffer
 		}, [this.diceBufferView.buffer])
-	
-		// init complete - let the world know
-		this.onInitComplete(true)
 
-		// is this needed?
-		// return true
-	}
-
-	connect(port){
-		this.#physicsWorkerPort = port
 		this.#physicsWorkerPort.onmessage = (e) => {
-        switch (e.data.action) {
-          case "updates": // dice status/position updates from physics worker
-						this.updatesFromPhysics(e.data.diceBuffer)
-            break;
-        
-          default:
-            console.error("action from physicsWorker not found in offscreen worker")
-            break;
-        }
-      }
+			switch (e.data.action) {
+				case "updates": // dice status/position updates from physics worker
+					this.updatesFromPhysics(e.data.diceBuffer)
+					break;
+			
+				default:
+					console.error("action from physicsWorker not found in offscreen worker")
+					break;
+			}
+		}
 	}
 
 	updateConfig(options){
@@ -93,22 +97,31 @@ class WorldOnscreen {
 		if(prevConfig.enableShadows !== this.config.enableShadows) {
 			// regenerate the lights
 			Object.values(this.#lights ).forEach(light => light.dispose())
-			this.#lights  = createLights({enableShadows: this.config.enableShadows})
+			this.#lights = createLights({enableShadows: this.config.enableShadows})
 		}
 		if(prevConfig.scale !== this.config.scale) {
 			Object.values(this.#dieCache).forEach(({mesh}) => {
-				mesh.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
+				if(mesh){
+					mesh.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
+				}
 			})
+		}
+		if(prevConfig.shadowOpacity !== this.config.shadowOpacity) {
+			this.#lights.directional.shadowGenerator.darkness = this.config.shadowOpacity
+		}
+		if(prevConfig.lightIntensity !== this.config.lightIntensity) {
+			this.#lights.directional.intensity = .65 * this.config.lightIntensity
+			this.#lights.hemispheric.intensity = .4 * this.config.lightIntensity
 		}
 	}
 
 	// all this does is start the render engine.
-	render(anustart) {
+	render(newStartPoint) {
 		// document.body.addEventListener('click',()=>engine.stopRenderLoop())
 		this.#engine.runRenderLoop(this.renderLoop.bind(this))
 		this.#physicsWorkerPort.postMessage({
 			action: "resumeSimulation",
-			anustart
+			newStartPoint
 		})
 	}
 
@@ -132,8 +145,32 @@ class WorldOnscreen {
 		}
 	}
 
-	async loadTheme(theme) {
-		await loadTheme(theme, this.config.origin + this.config.assetPath, this.#scene)
+	async loadTheme(options) {
+		// await loadTheme(theme, this.config.origin + this.config.assetPath, this.#scene)
+		const {theme, basePath, material, meshFilePath, meshName} = options
+		// load the textures and create the materials needed for this theme
+		await this.#themeLoader.load({theme,basePath,material})
+	
+		// Load the 3D meshes declared by the theme and return the collider mesh data to be passed on to the physics worker
+		// don't load same models twice
+		if(!Object.keys(this.#meshList).includes(meshName)){
+			this.#meshList[meshName] = meshFilePath
+			const colliders = await Dice.loadModels({meshFilePath,meshName}, this.#scene)
+
+			if(!colliders){
+				throw new Error("No colliders returned from the 3D mesh file. Low poly colliders are expected to be in the same file as the high poly dice and the mesh name contains the word 'collider'")
+			}
+		
+			this.#physicsWorkerPort.postMessage({
+				action: "loadModels",
+				options: {
+					colliders,
+					meshName
+				}
+			})
+		}
+
+		this.onThemeLoaded({id: theme})
 	}
 
 	clear() {
@@ -147,7 +184,10 @@ class WorldOnscreen {
 		// stop anything that's currently rendering
 		this.#engine.stopRenderLoop()
 		// remove all dice
-		Object.values(this.#dieCache).forEach(die => die.mesh.dispose())
+		Object.values(this.#dieCache).forEach(die => {
+			if(die.mesh)
+				die.mesh.dispose()
+		})
 		
 		// reset storage
 		this.#dieCache = {}
@@ -160,10 +200,7 @@ class WorldOnscreen {
 
 	add(options) {
 		// loadDie allows you to specify sides(dieType) and theme and returns the options you passed in
-		Dice.loadDie({
-			...options,
-			scene: this.#scene
-		}).then(resp => {
+		Dice.loadDie(options, this.#scene).then(resp => {
 			// space out adding the dice so they don't lump together too much
 			this.#dieRollTimer.push(setTimeout(() => {
 				this.#add(resp)
@@ -171,10 +208,30 @@ class WorldOnscreen {
 		})
 	}
 
+	addNonDie(die){
+		if(this.#engine.activeRenderLoops.length === 0) {
+			this.render(false)
+		}
+		const {id, value, ...rest} = die
+		const newDie = {
+			id,
+			value,
+			config: rest
+		}
+		this.#dieCache[id] = newDie
+		
+		// double timeout to ensure any real dice have a chance to queue up and rollResults isn't triggered right away
+		setTimeout(()=>{
+			this.#dieRollTimer.push(setTimeout(() => {
+				this.handleAsleep(newDie)
+			}, this.#count++ * this.config.delay))
+		}, 10)
+	}
+
 	// add a die to the scene
 	async #add(options) {
 		if(this.#engine.activeRenderLoops.length === 0) {
-			this.render(options.anustart)
+			this.render(options.newStartPoint)
 		}
 		const diceOptions = {
 			...options,
@@ -184,7 +241,7 @@ class WorldOnscreen {
 			lights: this.#lights,
 		}
 		
-		const newDie = new Dice(diceOptions)
+		const newDie = new Dice(diceOptions, this.#scene)
 		
 		// save the die just created to the cache
 		this.#dieCache[newDie.id] = newDie
@@ -192,16 +249,21 @@ class WorldOnscreen {
 		// tell the physics engine to roll this die type - which is a low poly collider
 		this.#physicsWorkerPort.postMessage({
 			action: "addDie",
-			sides: options.sides,
-			scale: this.config.scale,
-			id: newDie.id
+			options: {
+				sides: options.sides,
+				scale: this.config.scale,
+				id: newDie.id,
+				newStartPoint: options.newStartPoint,
+				theme: options.theme,
+				meshName: options.meshName,
+			}
 		})
 	
 		// for d100's we need to add an additional d10 and pair it up with the d100 just created
 		if(options.sides === 100) {
 			// assign the new die to a property on the d100 - spread the options in order to pass a matching theme
-			newDie.d10Instance = await Dice.loadDie({...diceOptions, sides: 10, id: newDie.id + 10000}).then( response =>  {
-				const d10Instance = new Dice(response)
+			newDie.d10Instance = await Dice.loadDie({...diceOptions, sides: 10, id: newDie.id + 10000}, this.#scene).then( response =>  {
+				const d10Instance = new Dice(response, this.#scene)
 				// identify the parent of this d10 so we can calculate the roll result later
 				d10Instance.dieParent = newDie
 				return d10Instance
@@ -210,9 +272,13 @@ class WorldOnscreen {
 			this.#dieCache[`${newDie.d10Instance.id}`] = newDie.d10Instance
 			this.#physicsWorkerPort.postMessage({
 				action: "addDie",
-				sides: 10,
-				scale: this.config.scale,
-				id: newDie.d10Instance.id
+				options: {
+					sides: 10,
+					scale: this.config.scale,
+					id: newDie.d10Instance.id,
+					theme: options.theme,
+					meshName: options.meshName
+				}
 			})
 		}
 	
@@ -228,20 +294,25 @@ class WorldOnscreen {
 	// check if this is d100 and remove associated d10 first
 	if(dieData.hasOwnProperty('d10Instance')){
 		// remove die
-		this.#dieCache[dieData.d10Instance.id].mesh.dispose()
+		if(this.#dieCache[dieData.d10Instance.id].mesh){
+			this.#dieCache[dieData.d10Instance.id].mesh.dispose()
+
+			// remove d10 physics body just for d100 items
+			this.#physicsWorkerPort.postMessage({
+				action: "removeDie",
+				id: dieData.d10Instance.id
+			})
+		}
 		// delete entry
 		delete this.#dieCache[dieData.d10Instance.id]
-		// remove physics body
-		this.#physicsWorkerPort.postMessage({
-			action: "removeDie",
-			id: dieData.d10Instance.id
-    })
 		// decrement count
 		this.#sleeperCount--
 	}
 
 	// remove die
-	this.#dieCache[data.id].mesh.dispose()
+	if(this.#dieCache[data.id].mesh){
+		this.#dieCache[data.id].mesh.dispose()
+	}
 	// delete entry
 	delete this.#dieCache[data.id]
 	// decrement count
@@ -301,11 +372,7 @@ class WorldOnscreen {
 		die.asleep = true
 	
 		// get the roll result for this die
-		let result = await Dice.getRollResult(die)
-		// TODO: catch error if no result is found
-		if(result === undefined) {
-			console.log("No result. This die needs a reroll.")
-		}
+		await Dice.getRollResult(die, this.#scene)
 	
 		if(die.d10Instance || die.dieParent) {
 			// if one of the pair is asleep and the other isn't then it falls through without getting the roll result
@@ -340,7 +407,7 @@ class WorldOnscreen {
 	
 	resize() {
 		// redraw the dicebox
-		this.#diceBox.create({aspect: this.#canvas.width / this.#canvas.height})
+		this.#container.create({aspect: this.#canvas.width / this.#canvas.height})
 		this.#engine.resize()
 	}
 }

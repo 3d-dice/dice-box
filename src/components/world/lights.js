@@ -9,13 +9,13 @@ const defaultOptions = {
 }
 
 function createLights(options = defaultOptions) {
-  const { enableShadows, scene } = options
+  const { enableShadows, shadowOpacity, intensity, scene } = options
   const d_light = new DirectionalLight("DirectionalLight", new Vector3(-0.3, -1, 0.4), scene)
   d_light.position = new Vector3(-50,65,-50)
-  d_light.intensity = .65
+  d_light.intensity = .65 * intensity
   
   const h_light = new HemisphericLight("HemisphericLight", new Vector3(1, 1, 0), scene)
-  h_light.intensity = .2
+  h_light.intensity = .4 * intensity
   
   if(enableShadows){
     d_light.shadowMinZ = 1
@@ -23,7 +23,7 @@ function createLights(options = defaultOptions) {
 		// d_light.autoCalcShadowZBounds = true
     d_light.shadowGenerator = new ShadowGenerator(2048, d_light);
     d_light.shadowGenerator.useCloseExponentialShadowMap = true; // best
-    d_light.shadowGenerator.darkness = .8
+    d_light.shadowGenerator.darkness = shadowOpacity
     // d_light.shadowGenerator.usePoissonSampling = true
     // d_light.shadowGenerator.bias = .01
   }

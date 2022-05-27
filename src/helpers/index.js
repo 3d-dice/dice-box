@@ -54,7 +54,68 @@ export const debounce = (fn) => {
 		timeout = window.requestAnimationFrame(function () {
 			fn.apply(context, args);
 		});
-
 	};
+}
 
+/**
+ * Function Queue - ensures async function calls are triggered in the order they are queued
+ * By David Adler (david_adler) @ https://stackoverflow.com/questions/53540348/js-async-await-tasks-queue
+ * @param  {object} opts Option to dedupe concurrent executions
+ * @return {object} returns object with "push" function, "queue" array, and "flush" function
+ */
+export const createAsyncQueue = (opts = { dedupe: false }) => {
+  const { dedupe } = opts
+  let queue = []
+  let running
+  const push = task => {
+    if (dedupe) queue = []
+    queue.push(task)
+    if (!running) running = start()
+    return running.finally(() => {
+      running = undefined
+    })
+  }
+  const start = async () => {
+    const res = []
+    while (queue.length) {
+      const item = queue.shift()
+      res.push(await item())
+    }
+    return res
+  }
+  return { push, queue, flush: () => running || Promise.resolve([]) }
+}
+
+// deep copy objects and break references to original object
+// Note: does not work with the 'scene' object or objects with circular references
+export const deepCopy = obj => JSON.parse(JSON.stringify(obj))
+
+// Sleeper function to delay execution for testing
+export const sleeper = (ms) => {
+  return new Promise(resolve => setTimeout(() => resolve(), ms));
+}
+
+export class Random {
+  /**
+   * Generate a random number between 0 (inclusive) and 1 (exclusive).
+   * A drop in replacement for Math.random()
+   * @return {number}
+   */
+  static value() {
+    const crypto = window.crypto || window.msCrypto;
+    const buffer = new Uint32Array(1);
+    const int = crypto.getRandomValues(buffer)[0];
+
+    return int / 2**32
+  }
+  /**
+   * Generate a very good random number between min (inclusive) and max (exclusive) by using crypto.getRandomValues() twice.
+   * @param  {number} min
+   * @param  {number} max
+   * @return {number}
+   */
+  static range(min, max) {
+    // return Math.floor(this.value() * (max - min) + min); // plain random
+    return (Math.floor(Math.pow(10,14)*this.value()*this.value())%(max-min+1))+min // super random!
+  }
 }

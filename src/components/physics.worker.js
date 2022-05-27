@@ -73,13 +73,17 @@ self.onmessage = (e) => {
 						diceBufferView = new Float32Array(e.data.diceBuffer)
 						diceBufferView[0] = -1
 						break;
+					case "loadModels":
+						// console.log('e.data', e.data)
+						loadModels(e.data.options)
+						break;
           case "addDie":
 						// toss from all edges
 						// setStartPosition()
-						if(e.data.anustart){
+						if(e.data.options.newStartPoint){
 							setStartPosition()
 						}
-            addDie(e.data.sides, e.data.id)
+            addDie(e.data.options)
             break;
           case "rollDie":
 						// TODO: this won't work, need a die object
@@ -93,7 +97,7 @@ self.onmessage = (e) => {
 						
             break;
           case "resumeSimulation":
-						if(e.data.anustart){
+						if(e.data.newStartPoint){
 							setStartPosition()
 						}
             stopLoop = false
@@ -143,44 +147,7 @@ const init = async (data) => {
 
 	setStartPosition()
 	
-	// load our collider data
-	// perhaps we don't await this, let it run and resolve it later
-	const modelData = await fetch(`${config.origin + config.assetPath}models/dice-revised.json`).then(resp => {
-		if(resp.ok) {
-			const contentType = resp.headers.get("content-type")
-
-			if (contentType && contentType.indexOf("application/json") !== -1) {
-				return resp.json()
-			} 
-			else if (resp.type && resp.type === 'basic') {
-				return resp.json()
-			}
-			else {
-				return resp
-			}
-		} else {
-			throw new Error(`Request rejected with status ${resp.status}: ${resp.statusText}`)
-		}
-	})
-	.then(data => {
-		return data.meshes.filter(mesh => {
-			return mesh.id.includes("collider")
-		})
-	})
-	.catch(error => {
-		console.error(error)
-		return error
-	})
-	
 	physicsWorld = setupPhysicsWorld()
-
-	// turn our model data into convex hull items for the physics world
-	modelData.forEach((model,i) => {
-		model.convexHull = createConvexHull(model)
-		// model.physicsBody = createRigidBody(model.convexHull, {mass: model.mass})
-
-		colliders[model.id] = model
-	})
 
 	addBoxToWorld(config.size, config.startingHeight + 10)
 
@@ -199,7 +166,28 @@ const updateConfig = (options) => {
 	Object.values(colliders).map((collider) => {
 		collider.convexHull.setLocalScaling(setVector3(config.scale, config.scale, config.scale))
 	})
+}
 
+// options object with colliders and meshName are required
+const loadModels = async ({colliders: modelData, meshName}) => {
+
+	let has_d100 = false
+	let has_d10 = false
+
+	// turn our model data into convex hull items for the physics world
+	modelData.forEach((model,i) => {
+		colliders[meshName + '_' + model.name] = model
+		colliders[meshName + '_' + model.name].convexHull = createConvexHull(model)
+		if (!has_d10) {
+			has_d10 = model.id === "d10_collider"
+		}
+		if (!has_d100) {
+			has_d100 = model.id === "d100_collider"
+		}
+	})
+	if (!has_d100 && has_d10) {
+		colliders[`${meshName}_d100_collider`] = colliders[`${meshName}_d10_collider`]
+	}
 }
 
 const setVector3 = (x,y,z) => {
@@ -390,13 +378,17 @@ const removeBoxFromWorld = () => {
 	boxParts.forEach(part => physicsWorld.removeRigidBody(part))
 }
 
-const addDie = (sides, id) => {
+const addDie = (options) => {
+	const { sides, id, meshName, scale} = options
 	let cType = `d${sides}_collider`
-	const mass = colliders[cType].physicsMass * config.mass * config.scale // feature? mass should go up with scale, but it throws off the throwForce and spinForce scaling
+	const comboKey = `${meshName}_${cType}`
+	const colliderMass = colliders[comboKey]?.physicsMass || .1
+	const mass = colliderMass * config.mass * config.scale // feature? mass should go up with scale, but it throws off the throwForce and spinForce scaling
+	// TODO: incorporate colliders physicsFriction and physicsRestitution settings
 	// clone the collider
-	const newDie = createRigidBody(colliders[cType].convexHull, {
+	const newDie = createRigidBody(colliders[comboKey].convexHull, {
 		mass,
-		scaling: colliders[cType].scaling,
+		scaling: colliders[comboKey].scaling,
 		pos: config.startPosition,
 		// quat: colliders[cType].rotationQuaternion,
 	})

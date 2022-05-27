@@ -242,7 +242,9 @@ class WorldFacad {
 					},
 					diffuseLevel: 1,
 					bumpTexture: 'normal.png',
-					bumpLevel: .5
+					bumpLevel: .5,
+					specularTexture: 'specular.jpg',
+					specularPower: 1
 				}
 			}
 		} else {

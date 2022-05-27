@@ -405,9 +405,11 @@ class WorldOnscreen {
 		this.#sleeperCount++
 	}
 	
-	resize() {
+	resize(options) {
 		// redraw the dicebox
-		this.#container.create({aspect: this.#canvas.width / this.#canvas.height})
+		const width = this.#canvas.width = options.width
+		const height = this.#canvas.height = options.height
+		this.#container.create({aspect: width / height})
 		this.#engine.resize()
 	}
 }

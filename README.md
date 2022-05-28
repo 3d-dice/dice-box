@@ -6,6 +6,8 @@ High performance 3D dice roller module made with [BabylonJS](https://www.babylon
 
 ## Docs
 
+**ALERT:** release 1.0.1 just released. New docs are pending. Current docs are for version 0.6. There are some minor API changes.
+
 New docs site now available at [fantasticdice.games](https://fantasticdice.games)
 
 ## Demo

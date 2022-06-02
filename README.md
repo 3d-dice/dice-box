@@ -159,6 +159,29 @@ body {
 
 ## Other Projects
 
+### [Dice UI](https://github.com/3d-dice/dice-ui)
+A collection of vanilla UI modules for Dice Box.
+
+Including:
+
+  1. Advanced Roller Input - a simple form input that allows advanced roll notations
+  2. Dice Picker - clickable dice icons for adding dice to a roll. Good for mobile devices.
+  3. Display Results - shows the roll results in a modal popup
+  4. Box Controls - uses [dat.gui](https://github.com/dataarts/dat.gui) to display configurable dice-box options.
+
+### [Dice Themes](https://github.com/3d-dice/dice-themes)
+A collection of [CC0](https://creativecommons.org/share-your-work/public-domain/cc0/) models and themes you can use with Dice Box.
+
+### [Dice Roller Parser](https://github.com/3d-dice/dice-roller-parser)
+A string parser that returns an object containing the component parts of a dice roll. It supports the full [Roll20 Dice Specification](https://roll20.zendesk.com/hc/en-us/articles/360037773133-Dice-Reference#DiceReference-Roll20DiceSpecification)
+
+
+### [Dice Parser Interface](https://github.com/3d-dice/dice-parser-interface)
+Offers a simple interface between `Dice Roller Parser` and `Dice Box`. This module sends string notations to the parser and breaks them down into notations Dice Box can use. Also sends Dice Box results to the parser to generate the final roll results. Will also handle events that trigger rerolls and exploding dice.
+
+
+## Plugs
+
 ### Quest Portal
 Special thanks to the team at [Quest Portal](https://www.questportal.com/) for supporting and assisting with the development of this dice roller. They've been kind enough to supply some license free dice models that I can distribute with this project. In addition to that, they've provided some good feedback and testing while incorporating `@3d-dice/dice-box` into their platform. Sign up for [early access](https://app.questportal.com/signup) at Quest Portal to see what they're cooking up.
 

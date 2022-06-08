@@ -651,7 +651,7 @@ class WorldFacad {
   parse(notation) {
     const diceNotation = /(\d+)[dD](\d+)(.*)$/i
 		const percentNotation = /(\d+)[dD]([0%]+)(.*)$/i
-		const fudgeNotation = /(\d+)[dD]([fF]+)(.*)$/i
+		const fudgeNotation = /(\d+)df+(ate)*$/i
     const modifier = /([+-])(\d+)/
     const cleanNotation = notation.trim().replace(/\s+/g, '')
     const validNumber = (n, err) => {

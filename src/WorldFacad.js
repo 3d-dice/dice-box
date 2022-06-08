@@ -416,7 +416,7 @@ class WorldFacad {
 	}
 
 	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
-	roll(notation, {theme = undefined,newStartPoint = true} = {}) {
+	roll(notation, {theme = 'default', themeColor, newStartPoint = true} = {}) {
 		// note: to add to a roll on screen use .add method
 		// reset the offscreen worker and physics worker with each new roll
 		this.clear()
@@ -426,6 +426,7 @@ class WorldFacad {
 			id: collectionId,
 			notation,
 			theme,
+			themeColor,
 			newStartPoint
 		})
 
@@ -436,7 +437,7 @@ class WorldFacad {
 		return this.rollCollectionData[collectionId].promise
 	}
 
-  add(notation, {theme = undefined,newStartPoint = true} = {}) {
+  add(notation, {theme = 'default', themeColor, newStartPoint = true} = {}) {
 
 		const collectionId = this.#collectionIndex++
 
@@ -444,6 +445,7 @@ class WorldFacad {
 			id: collectionId,
 			notation,
 			theme,
+			themeColor,
 			newStartPoint
 		})
 		

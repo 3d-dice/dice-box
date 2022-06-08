@@ -38,18 +38,25 @@ class WorldFacad {
 	#DicePhysics
 	#dicePhysicsPromise
 	#dicePhysicsResolve
-	onDieComplete = () => {}
-	onRollComplete = () => {}
-	onRemoveComplete = () => {}
-	onThemeConfigLoaded = () => {}
-	onThemeLoaded = () => {}
+	noop = () => {}
 
   constructor(container, options = {}){
 		if(typeof options !== 'object') {
 			throw new Error('Config options should be an object. Config reference: https://fantasticdice.games/docs/usage/config#configuration-options')
 		}
+		// pull out callback functions from options
+		const { onDieComplete, onRollComplete, onRemoveComplete, onThemeConfigLoaded, onThemeLoaded, ...boxOptions } = options
+
 		// extend defaults with options
-		this.config = {...defaultOptions, ...options}
+		this.config = {...defaultOptions, ...boxOptions}
+
+		// assign callback functions
+		this.onDieComplete = options.onDieComplete || this.noop
+		this.onRollComplete = options.onRollComplete || this.noop
+		this.onRemoveComplete = options.onRemoveComplete || this.noop
+		this.onThemeLoaded = options.onThemeLoaded || this.noop
+		this.onThemeConfigLoaded = options.onThemeConfigLoaded || this.noop
+
 		// if options do not provide a theme color then it should be null
 		if(options.theme){
 			if(options.themeColor) {

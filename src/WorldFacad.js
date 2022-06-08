@@ -8,10 +8,6 @@ const defaultOptions = {
 	shadowOpacity: .8,
 	lightIntensity: 1,
   delay: 10, // delay between dice being generated - 0 causes stuttering and physics popping
-	gravity: 2, // note: high gravity will cause dice piles to jiggle
-	startingHeight: 8, // height to drop the dice from - will not exceed the DiceBox height set by zoom
-	spinForce: 4, // passed on to physics as an impulse force
-	throwForce: 5, // passed on to physics as linear velocity
 	scale: 6, // scale the dice
 	theme: 'default', // can be a hex color or a pre-defined theme such as 'purpleRock'
 	themeColor: '#2e8555', // used for color values or named theme variants - not fully implemented yet // green: #2e8555 // yellow: #feea03

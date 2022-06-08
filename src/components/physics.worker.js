@@ -308,6 +308,7 @@ const addBoxToWorld = (size, height) => {
 	const tempParts = []
 	// ground
 	const localInertia = setVector3(0, 0, 0);
+
 	const groundTransform = new Ammo.btTransform()
 	groundTransform.setIdentity()
 	groundTransform.setOrigin(setVector3(0, -.5, 0))
@@ -319,6 +320,18 @@ const addBoxToWorld = (size, height) => {
 	groundBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(groundBody)
 	tempParts.push(groundBody)
+
+	const ceilingTransform = new Ammo.btTransform()
+	ceilingTransform.setIdentity()
+	ceilingTransform.setOrigin(setVector3(0, height - .5, 0))
+	const ceilingShape = new Ammo.btBoxShape(setVector3(size * aspect, 1, size))
+	const ceilingMotionState = new Ammo.btDefaultMotionState(ceilingTransform)
+	const ceilingInfo = new Ammo.btRigidBodyConstructionInfo(0, ceilingMotionState, ceilingShape, localInertia)
+	const ceilingBody = new Ammo.btRigidBody(ceilingInfo)
+	ceilingBody.setFriction(config.friction)
+	ceilingBody.setRestitution(config.restitution)
+	physicsWorld.addRigidBody(ceilingBody)
+	tempParts.push(ceilingBody)
 
 	const wallTopTransform = new Ammo.btTransform()
 	wallTopTransform.setIdentity()

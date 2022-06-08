@@ -1,1 +1,1 @@
-export { default } from "./WorldFacad"
+export { default } from "./WorldFacade"

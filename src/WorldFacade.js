@@ -19,7 +19,7 @@ const defaultOptions = {
 	suspendSimulation: false
 }
 
-class WorldFacad {
+class WorldFacade {
 	rollCollectionData = {}
 	rollGroupData = {}
 	rollDiceData = {}
@@ -67,7 +67,7 @@ class WorldFacad {
 	// Load the BabylonJS World
 	async #loadWorld(){
 
-		// set up a promise to be fullfilled when a message comes back from DiceWorld indicating init is complete
+		// set up a promise to be fulfilled when a message comes back from DiceWorld indicating init is complete
 		this.#diceWorldPromise = new Promise((resolve, reject) => {
 			this.#diceWorldResolve = resolve
 		})
@@ -78,7 +78,7 @@ class WorldFacad {
 		}
 
 		if ("OffscreenCanvas" in window && "transferControlToOffscreen" in this.canvas && this.config.offscreen) {
-			// Ok to use offscreen canvas - transfer controll offscreen
+			// Ok to use offscreen canvas - transfer control offscreen
 			const WorldOffscreen = await import('./components/world.offscreen').then(module => module.default)
 			// WorldOffscreen is just a container class that passes all method calls to the Offscreen Canvas worker
 			this.#DiceWorld = new WorldOffscreen({
@@ -91,7 +91,7 @@ class WorldFacad {
 				console.warn("This browser does not support OffscreenCanvas. Using standard canvas fallback.")
 				this.config.offscreen = false
 			}
-			// code splitting out WorldOnscreen. It's esentially the same as offscreenCanvas.worker.js but communicates with the main thread differently
+			// code splitting out WorldOnscreen. It's essentially the same as offscreenCanvas.worker.js but communicates with the main thread differently
 			const WorldOnscreen = await import('./components/world.onscreen').then(module => module.default)
 			this.#DiceWorld = new WorldOnscreen({
 				canvas: this.canvas,
@@ -105,7 +105,7 @@ class WorldFacad {
 	#loadPhysics(){
 		// initialize physics world in which AmmoJS runs
 		this.#DicePhysics = new physicsWorker()
-		// set up a promise to be fullfilled when a message comes back from physics.worker indicating init is complete
+		// set up a promise to be fulfilled when a message comes back from physics.worker indicating init is complete
 		this.#dicePhysicsPromise = new Promise((resolve, reject) => {
 			this.#dicePhysicsResolve = resolve
 		})
@@ -130,7 +130,7 @@ class WorldFacad {
 		// create message channel for the visual world and the physics world to communicate through
 		this.#DiceWorld.connect(channel.port1)
 
-		// create message channel for this WorldFacad class to communicate with physics world
+		// create message channel for this WorldFacade class to communicate with physics world
 		this.#DicePhysics.postMessage({
 			action: "connect"
 		},[ channel.port2 ])
@@ -607,7 +607,7 @@ class WorldFacad {
 		}
 
 		// verify that the rollId is unique. If not then increment it by .1
-		// rollIds become keys in the rollDiceData object, so they must be unique or they will overright another entry
+		// rollIds become keys in the rollDiceData object, so they must be unique or they will overwrite another entry
 		const verifyRollId = ( object ) => {
 			if(object.hasOwnProperty('rollId')){
 				if(this.rollDiceData.hasOwnProperty(object.rollId)){
@@ -731,4 +731,4 @@ class Collection{
 	}
 }
 
-export default WorldFacad
+export default WorldFacade

@@ -142,7 +142,7 @@ class Dice {
         model.freezeWorldMatrix()
         model.isPickable = false
         model.doNotSyncBoundingInfo = true
-        // prefix all the meshs ids from this file with the file name so we can find them later e.g.: 'default-dice_d10' and 'default-dice_d10_collider'
+        // prefix all the meshes ids from this file with the file name so we can find them later e.g.: 'default-dice_d10' and 'default-dice_d10_collider'
         // model.id = meshName + '_' + model.id
         model.name = meshName + '_' + model.name
       })

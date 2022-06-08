@@ -1,4 +1,4 @@
-import worldWorker from './offscreenCanvas.worker?worker&inline' // using vits.js worker import - this will be compiled away
+import worldWorker from './offscreenCanvas.worker?worker&inline' // using vite.js worker import - this will be compiled away
 
 class WorldOffScreen {
 	initialized = false
@@ -30,7 +30,7 @@ class WorldOffScreen {
 
 	// initialize the babylon scene
 	async #initScene(config) {
-		// initalize the offscreen worker
+		// initialize the offscreen worker
 		this.#OffscreenWorker.postMessage({
 			action: "init",
 			canvas: this.#offscreenCanvas,

@@ -1,3 +1,4 @@
+import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { createCanvas } from './components/world/canvas'
 import physicsWorker from './components/physics.worker.js?worker&inline'
 import { debounce, createAsyncQueue, Random } from './helpers'
@@ -53,16 +54,7 @@ class WorldFacad {
 		this.onThemeLoaded = options.onThemeLoaded || this.noop
 		this.onThemeConfigLoaded = options.onThemeConfigLoaded || this.noop
 
-		// if options do not provide a theme color then it should be null
-		if(options.theme){
-			if(options.themeColor) {
-				this.config.themeColor = options.themeColor
-			} else {
-				this.config.themeColor = null
-			}
-		}
 
-		// this.config.themeColor =  options.theme ? options.themeColor ? options.themeColor : null : this.config.themeColor
 		// if a canvas selector is provided then that will be used for the dicebox, otherwise a canvas will be created using the config.id
     this.canvas = createCanvas({
       selector: container,
@@ -305,17 +297,6 @@ class WorldFacad {
 			}
 		}
 
-		if(themeData.material.type === 'color') {
-			if (!this.config.themeColor || !themeData.themeColor){
-				themeData.themeColor ??= defaultOptions.themeColor
-				this.config.themeColor = themeData.themeColor
-			}
-		} else if(themeData.material.type !== 'color') {
-			if (this.config.themeColor || themeData.themeColor){
-				// null them both out
-				this.config.themeColor = themeData.themeColor = null
-			}
-		}
 
 		Object.assign(themeData,
 			{
@@ -360,10 +341,7 @@ class WorldFacad {
 		const newConfig = {...this.config,...options}
 		// console.log('newConfig', newConfig)
 		const config = await this.loadThemeQueue.push(() => this.loadTheme(newConfig.theme))
-		const themeData = config.at(-1) //get the last entry returned from the queue
-		if(themeData.material.type !== 'color') {
-			newConfig.themeColor = undefined
-		}
+		// const themeData = config.at(-1) //get the last entry returned from the queue
 
 		this.config = newConfig
 		// pass updates to DiceWorld
@@ -412,7 +390,7 @@ class WorldFacad {
 	}
 
 	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
-	roll(notation, {theme = 'default', themeColor, newStartPoint = true} = {}) {
+	roll(notation, {theme, themeColor, newStartPoint = true} = {}) {
 		// note: to add to a roll on screen use .add method
 		// reset the offscreen worker and physics worker with each new roll
 		this.clear()
@@ -433,7 +411,7 @@ class WorldFacad {
 		return this.rollCollectionData[collectionId].promise
 	}
 
-  add(notation, {theme = 'default', themeColor, newStartPoint = true} = {}) {
+  add(notation, {theme, themeColor, newStartPoint = true} = {}) {
 
 		const collectionId = this.#collectionIndex++
 
@@ -519,8 +497,15 @@ class WorldFacad {
 			const loadTheme = () => this.loadTheme(theme)
 			await this.loadThemeQueue.push(loadTheme)
 
-			const {meshName, diceAvailable, diceInherited = {}} = this.themesLoadedData[theme]
+			const {meshName, diceAvailable, diceInherited = {}, material: { type: materialType }} = this.themesLoadedData[theme]
 			const diceExtra = Object.keys(diceInherited)
+
+			let colorSuffix = '', color
+
+			if(materialType === "color") {
+				color = Color3.FromHexString(themeColor)
+				colorSuffix = ((color.r*256*0.299 + color.g*256*0.587 + color.b*256*0.114) > 175) ? '_dark' : '_light'
+			}
 
 			// TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.
 			for (var i = 0, len = notation.qty; i < len; i++) {
@@ -568,6 +553,8 @@ class WorldFacad {
 						newStartPoint,
 						theme: parentTheme?.systemName || theme,
 						meshName: parentTheme?.meshName || meshName,
+						colorSuffix,
+						color
 					})
 				}
 

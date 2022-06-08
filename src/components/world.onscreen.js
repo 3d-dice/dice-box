@@ -50,7 +50,7 @@ class WorldOnscreen {
 		this.#camera  = createCamera({engine:this.#engine, scene: this.#scene})
 		this.#lights  = createLights({
 			enableShadows: this.config.enableShadows,
-			shadowOpacity: this.config.shadowOpacity,
+			shadowTransparency: this.config.shadowTransparency,
 			intensity: this.config.lightIntensity,
 			scene: this.#scene
 		})
@@ -106,8 +106,8 @@ class WorldOnscreen {
 				}
 			})
 		}
-		if(prevConfig.shadowOpacity !== this.config.shadowOpacity) {
-			this.#lights.directional.shadowGenerator.darkness = this.config.shadowOpacity
+		if(prevConfig.shadowTransparency !== this.config.shadowTransparency) {
+			this.#lights.directional.shadowGenerator.darkness = this.config.shadowTransparency
 		}
 		if(prevConfig.lightIntensity !== this.config.lightIntensity) {
 			this.#lights.directional.intensity = .65 * this.config.lightIntensity

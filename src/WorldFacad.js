@@ -6,7 +6,7 @@ import { debounce, createAsyncQueue, Random } from './helpers'
 const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
   enableShadows: true, // do dice cast shadows onto DiceBox mesh?
-	shadowOpacity: .8,
+	shadowTransparency: .8,
 	lightIntensity: 1,
   delay: 10, // delay between dice being generated - 0 causes stuttering and physics popping
 	scale: 5, // scale the dice

@@ -44,9 +44,9 @@ class Container{
 
 		// Bottom of the Box
 		const ground = CreateBox("ground",{
-			width: this.size, 
+			width: this.size * 2, 
 			height: 1,
-			depth: this.size
+			depth: this.size * 2
 		}, this.config.scene)
 		ground.scaling = new Vector3(aspect, 1, 1)
 		ground.material = boxMaterial

@@ -1,6 +1,5 @@
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
-import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { Ray } from "@babylonjs/core/Culling/ray";
 // import { RayHelper } from '@babylonjs/core/Debug';
 import '../helpers/babylonFileLoader'
@@ -17,8 +16,6 @@ const defaultOptions = {
 	lights: [],
   rollId: null,
   scene: null,
-  sides: 6,
-  theme: 'purpleRock'
 }
 
 // TODO: this would probably be better as a factory pattern
@@ -36,17 +33,16 @@ class Dice {
   }
 
   createInstance() {
-    const { colorSuffix, color } = Dice.parseColor(this.config.themeColor)
-
     // piece together the name of the die we want to instance
-    const targetDie = `${this.config.meshName}_${this.dieType}_${this.config.theme}${colorSuffix}`
+    const targetDie = `${this.config.meshName}_${this.dieType}_${this.config.theme}${this.config.colorSuffix}`
     // create a new unique name for this instance
     const instanceName = `${targetDie}-instance-${this.id}`
+
     // create the instance
     const dieInstance = this.scene.getMeshByName(targetDie).createInstance(instanceName)
 
-    if(color){
-      dieInstance.instancedBuffers.customColor = color
+    if(this.config.color){
+      dieInstance.instancedBuffers.customColor = this.config.color
     }
 
 		// start the instance under the floor, out of camera view
@@ -54,32 +50,24 @@ class Dice {
     dieInstance.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
 		
     if(this.config.enableShadows){
-      for (const key in this.config.lights) {
-        if(key !== 'hemispheric' ) {
-          this.config.lights[key].shadowGenerator.addShadowCaster(dieInstance)
-        }
-      }
+      // let's keep this simple for now since we know there's only one directional light
+      this.config.lights["directional"].shadowGenerator.addShadowCaster(dieInstance)
+      // for (const key in this.config.lights) {
+      //   if(key !== 'hemispheric' ) {
+      //     this.config.lights[key].shadowGenerator.addShadowCaster(dieInstance)
+      //   }
+      // }
     }
 
     // attach the instance to the class object
     this.mesh = dieInstance
   }
 
-  static parseColor(themeColor){
-    let colorSuffix = ''
-    let color = themeColor ? Color3.FromHexString(themeColor) : undefined
-    if (color && (color.r*256*0.299 + color.g*256*0.587 + color.b*256*0.114) > 175){
-      colorSuffix = '_dark'
-    } else {
-      colorSuffix = '_light'
-    }
-    return {colorSuffix, color}
-  }
+
 
   // TODO: add themeOptions for colored materials, must ensure theme and themeOptions are unique somehow
   static async loadDie(options, scene) {
-    const { sides, theme = 'default', themeColor, meshName} = options
-    const { colorSuffix } = Dice.parseColor(themeColor)
+    const { sides, theme = 'default', meshName, colorSuffix} = options
 
     // create a key for this die type and theme for caching and instance creation
     const dieMeshName = meshName + '_d' + sides
@@ -89,17 +77,13 @@ class Dice {
     if (!die) {
       die = scene.getMeshByName(dieMeshName).clone(dieMaterialName)
     }
+
     if(!die.material) {
-      if(themeColor){
-        if (colorSuffix === '_dark'){
-          die.material = scene.getMaterialByName(theme + '_dark')
-        } else {
-          die.material = scene.getMaterialByName(theme + '_light')
-        }
+      die.material = scene.getMaterialByName(theme + colorSuffix)
+      if(colorSuffix.length > 0){
         die.registerInstancedBuffer("customColor", 3)
-      } else {
-        die.material = scene.getMaterialByName(theme)
       }
+
       // die.material.freeze()
     }
 

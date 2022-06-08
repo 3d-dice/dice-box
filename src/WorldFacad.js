@@ -1,3 +1,4 @@
+import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { createCanvas } from './components/world/canvas'
 import physicsWorker from './components/physics.worker.js?worker&inline'
 import { debounce, createAsyncQueue, Random } from './helpers'
@@ -5,14 +6,10 @@ import { debounce, createAsyncQueue, Random } from './helpers'
 const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
   enableShadows: true, // do dice cast shadows onto DiceBox mesh?
-	shadowOpacity: .8,
+	shadowTransparency: .8,
 	lightIntensity: 1,
   delay: 10, // delay between dice being generated - 0 causes stuttering and physics popping
-	gravity: 2, // note: high gravity will cause dice piles to jiggle
-	startingHeight: 8, // height to drop the dice from - will not exceed the DiceBox height set by zoom
-	spinForce: 4, // passed on to physics as an impulse force
-	throwForce: 5, // passed on to physics as linear velocity
-	scale: 6, // scale the dice
+	scale: 5, // scale the dice
 	theme: 'default', // can be a hex color or a pre-defined theme such as 'purpleRock'
 	themeColor: '#2e8555', // used for color values or named theme variants - not fully implemented yet // green: #2e8555 // yellow: #feea03
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
@@ -38,28 +35,26 @@ class WorldFacad {
 	#DicePhysics
 	#dicePhysicsPromise
 	#dicePhysicsResolve
-	onDieComplete = () => {}
-	onRollComplete = () => {}
-	onRemoveComplete = () => {}
-	onThemeConfigLoaded = () => {}
-	onThemeLoaded = () => {}
+	noop = () => {}
 
   constructor(container, options = {}){
 		if(typeof options !== 'object') {
 			throw new Error('Config options should be an object. Config reference: https://fantasticdice.games/docs/usage/config#configuration-options')
 		}
-		// extend defaults with options
-		this.config = {...defaultOptions, ...options}
-		// if options do not provide a theme color then it should be null
-		if(options.theme){
-			if(options.themeColor) {
-				this.config.themeColor = options.themeColor
-			} else {
-				this.config.themeColor = null
-			}
-		}
+		// pull out callback functions from options
+		const { onDieComplete, onRollComplete, onRemoveComplete, onThemeConfigLoaded, onThemeLoaded, ...boxOptions } = options
 
-		// this.config.themeColor =  options.theme ? options.themeColor ? options.themeColor : null : this.config.themeColor
+		// extend defaults with options
+		this.config = {...defaultOptions, ...boxOptions}
+
+		// assign callback functions
+		this.onDieComplete = options.onDieComplete || this.noop
+		this.onRollComplete = options.onRollComplete || this.noop
+		this.onRemoveComplete = options.onRemoveComplete || this.noop
+		this.onThemeLoaded = options.onThemeLoaded || this.noop
+		this.onThemeConfigLoaded = options.onThemeConfigLoaded || this.noop
+
+
 		// if a canvas selector is provided then that will be used for the dicebox, otherwise a canvas will be created using the config.id
     this.canvas = createCanvas({
       selector: container,
@@ -302,17 +297,6 @@ class WorldFacad {
 			}
 		}
 
-		if(themeData.material.type === 'color') {
-			if (!this.config.themeColor || !themeData.themeColor){
-				themeData.themeColor ??= defaultOptions.themeColor
-				this.config.themeColor = themeData.themeColor
-			}
-		} else if(themeData.material.type !== 'color') {
-			if (this.config.themeColor || themeData.themeColor){
-				// null them both out
-				this.config.themeColor = themeData.themeColor = null
-			}
-		}
 
 		Object.assign(themeData,
 			{
@@ -357,10 +341,7 @@ class WorldFacad {
 		const newConfig = {...this.config,...options}
 		// console.log('newConfig', newConfig)
 		const config = await this.loadThemeQueue.push(() => this.loadTheme(newConfig.theme))
-		const themeData = config.at(-1) //get the last entry returned from the queue
-		if(themeData.material.type !== 'color') {
-			newConfig.themeColor = undefined
-		}
+		// const themeData = config.at(-1) //get the last entry returned from the queue
 
 		this.config = newConfig
 		// pass updates to DiceWorld
@@ -409,7 +390,7 @@ class WorldFacad {
 	}
 
 	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
-	roll(notation, {theme = undefined,newStartPoint = true} = {}) {
+	roll(notation, {theme, themeColor, newStartPoint = true} = {}) {
 		// note: to add to a roll on screen use .add method
 		// reset the offscreen worker and physics worker with each new roll
 		this.clear()
@@ -419,6 +400,7 @@ class WorldFacad {
 			id: collectionId,
 			notation,
 			theme,
+			themeColor,
 			newStartPoint
 		})
 
@@ -429,7 +411,7 @@ class WorldFacad {
 		return this.rollCollectionData[collectionId].promise
 	}
 
-  add(notation, {theme = undefined,newStartPoint = true} = {}) {
+  add(notation, {theme, themeColor, newStartPoint = true} = {}) {
 
 		const collectionId = this.#collectionIndex++
 
@@ -437,6 +419,7 @@ class WorldFacad {
 			id: collectionId,
 			notation,
 			theme,
+			themeColor,
 			newStartPoint
 		})
 		
@@ -514,8 +497,15 @@ class WorldFacad {
 			const loadTheme = () => this.loadTheme(theme)
 			await this.loadThemeQueue.push(loadTheme)
 
-			const {meshName, diceAvailable, diceInherited = {}} = this.themesLoadedData[theme]
+			const {meshName, diceAvailable, diceInherited = {}, material: { type: materialType }} = this.themesLoadedData[theme]
 			const diceExtra = Object.keys(diceInherited)
+
+			let colorSuffix = '', color
+
+			if(materialType === "color") {
+				color = Color3.FromHexString(themeColor)
+				colorSuffix = ((color.r*256*0.299 + color.g*256*0.587 + color.b*256*0.114) > 175) ? '_dark' : '_light'
+			}
 
 			// TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.
 			for (var i = 0, len = notation.qty; i < len; i++) {
@@ -563,6 +553,8 @@ class WorldFacad {
 						newStartPoint,
 						theme: parentTheme?.systemName || theme,
 						meshName: parentTheme?.meshName || meshName,
+						colorSuffix,
+						color
 					})
 				}
 
@@ -644,7 +636,7 @@ class WorldFacad {
   parse(notation) {
     const diceNotation = /(\d+)[dD](\d+)(.*)$/i
 		const percentNotation = /(\d+)[dD]([0%]+)(.*)$/i
-		const fudgeNotation = /(\d+)[dD]([fF]+)(.*)$/i
+		const fudgeNotation = /(\d+)df+(ate)*$/i
     const modifier = /([+-])(\d+)/
     const cleanNotation = notation.trim().replace(/\s+/g, '')
     const validNumber = (n, err) => {

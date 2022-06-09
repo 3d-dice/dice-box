@@ -1,7 +1,6 @@
-import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { createCanvas } from './components/world/canvas'
 import physicsWorker from './components/physics.worker.js?worker&inline'
-import { debounce, createAsyncQueue, Random } from './helpers'
+import { debounce, createAsyncQueue, Random, hexToRGB } from './helpers'
 
 const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
@@ -503,8 +502,8 @@ class WorldFacade {
 			let colorSuffix = '', color
 
 			if(materialType === "color") {
-				color = Color3.FromHexString(themeColor)
-				colorSuffix = ((color.r*256*0.299 + color.g*256*0.587 + color.b*256*0.114) > 175) ? '_dark' : '_light'
+				color = hexToRGB(themeColor)
+				colorSuffix = ((color.r*0.299 + color.g*0.587 + color.b*0.114) > 186) ? '_dark' : '_light'
 			}
 
 			// TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.
@@ -553,8 +552,7 @@ class WorldFacade {
 						newStartPoint,
 						theme: parentTheme?.systemName || theme,
 						meshName: parentTheme?.meshName || meshName,
-						colorSuffix,
-						color
+						colorSuffix
 					})
 				}
 

@@ -1,5 +1,6 @@
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
+import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { Ray } from "@babylonjs/core/Culling/ray";
 // import { RayHelper } from '@babylonjs/core/Debug';
 import '../helpers/babylonFileLoader'
@@ -41,8 +42,9 @@ class Dice {
     // create the instance
     const dieInstance = this.scene.getMeshByName(targetDie).createInstance(instanceName)
 
-    if(this.config.color){
-      dieInstance.instancedBuffers.customColor = this.config.color
+    if(this.config.colorSuffix.length > 0){
+      const color = Color3.FromHexString(this.config.themeColor)
+      dieInstance.instancedBuffers.customColor = color
     }
 
 		// start the instance under the floor, out of camera view

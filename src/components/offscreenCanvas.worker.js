@@ -12,10 +12,10 @@ self.onmessage = async (e) => {
       })
       break
     case "addDie":
-			WorldOffscreen.add({...e.data.options})
+			WorldOffscreen.add(e.data.options)
       break
     case "addNonDie":
-			WorldOffscreen.addNonDie({...e.data.options})
+			WorldOffscreen.addNonDie(e.data.options)
       break
 		case "loadTheme":
 			await WorldOffscreen.loadTheme(e.data.options).catch(error => console.error(error))

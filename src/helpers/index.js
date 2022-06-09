@@ -119,3 +119,41 @@ export class Random {
     return (Math.floor(Math.pow(10,14)*this.value()*this.value())%(max-min+1))+min // super random!
   }
 }
+
+// https://www.30secondsofcode.org/c/js-colors/p/1
+export const hexToRGB = hex => {
+  let alpha = false,
+    h = hex.slice(hex.startsWith('#') ? 1 : 0);
+  if (h.length === 3) h = [...h].map(x => x + x).join('');
+  else if (h.length === 8) alpha = true;
+  h = parseInt(h, 16);
+  let val = {
+    r: h >>> 16,
+    g: (h & 0x00ff00) >>> 8,
+    b: (h & 0x0000ff)
+  }
+  if(alpha) {
+    val.r = h >>> 24
+    val.g = (h & 0x00ff0000) >>> 16
+    val.b = (h & 0x0000ff00) >>> 8
+    val.a = (h & 0x000000ff)
+  }
+  return val
+
+};
+
+export const RGBToHSB = (r, g, b) => {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const v = Math.max(r, g, b),
+    n = v - Math.min(r, g, b);
+  const h =
+    n === 0 ? 0 : n && v === r ? (g - b) / n : v === g ? 2 + (b - r) / n : 4 + (r - g) / n;
+  return [60 * (h < 0 ? h + 6 : h), v && (n / v) * 100, v * 100];
+};
+
+export const hexToHSB = (hex) => {
+  const rgb = hexToRGB(hex)
+  return RGBToHSB(rgb.r,rgb.g,rgb.b)
+}

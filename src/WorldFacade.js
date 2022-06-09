@@ -503,7 +503,8 @@ class WorldFacade {
 
 			if(materialType === "color") {
 				color = hexToRGB(themeColor)
-				colorSuffix = ((color.r*0.299 + color.g*0.587 + color.b*0.114) > 186) ? '_dark' : '_light'
+				// dat.gui uses HSB(a.k.a HSV) brightness greater than .5 and saturation less than .5
+				colorSuffix = ((color.r*0.299 + color.g*0.587 + color.b*0.114) > 175) ? '_dark' : '_light'
 			}
 
 			// TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.

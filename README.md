@@ -2,7 +2,7 @@
 
 High performance 3D dice roller module made with [BabylonJS](https://www.babylonjs.com/), [AmmoJS](https://github.com/kripken/ammo.js/) and implemented with [web workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers) and [offscreenCanvas](https://doc.babylonjs.com/divingDeeper/scene/offscreenCanvas). Designed to be easy to integrate into your own JavaScript app.
 
-**Version 1.0.2 just released!** 
+**Version 1.0.5 just released!** 
 
 ![Demo Screenshot](https://github.com/3d-dice/dice-box/blob/main/dice-screenshot.jpg)
 
@@ -12,11 +12,11 @@ The docs site is available at [fantasticdice.games](https://fantasticdice.games)
 
 ## Demo
 
-New demos for version 1.0.2! <br>
+New demos for version 1.0.5! <br>
 Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html <br>
-See the kitchen sink code demo here: https://codesandbox.io/s/3d-dice-demo-v1-0-2-sm4ien <br>
-Here's a simple React Demo for rolling attributes (using 3d6): https://codesandbox.io/s/react-roller-attributes-v1-0-2-65uqhv <br>
-Here's a React Demo with support for advanced dice notation: https://codesandbox.io/s/react-roller-advanced-notation-v1-0-2-rz0nmr
+See the kitchen sink code demo here: https://codesandbox.io/s/3d-dice-demo-v1-0-5-sm4ien <br>
+Here's a simple React Demo for rolling attributes (using 3d6): https://codesandbox.io/s/react-roller-attributes-v1-0-5-65uqhv <br>
+Here's a React Demo with support for advanced dice notation: https://codesandbox.io/s/react-roller-advanced-notation-v1-0-5-rz0nmr
 
 Note: Some demos includes other `@3d-dice` modules such as [dice-roller-parser](https://github.com/3d-dice/dice-roller-parser), [dice-ui](https://github.com/3d-dice/dice-ui), and [dice-parser-interface](https://github.com/3d-dice/dice-parser-interface). Advanced dice notation, such as `4d6dl1` or `4d6!r<2`, is supported with these modules
 

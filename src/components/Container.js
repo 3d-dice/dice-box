@@ -6,45 +6,45 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { ShadowOnlyMaterial } from '@babylonjs/materials/shadowOnly/shadowOnlyMaterial'
 
 const defaultOptions = {
-  aspect: 300 / 150,
-  enableDebugging: false,
-  enableShadows: true,
+	aspect: 300 / 150,
+	enableDebugging: false,
+	enableShadows: true,
 }
 
-class Container{
+class Container {
 	size = 9.5
-	constructor(options){
-		this.config = {...defaultOptions, ...options}
+	constructor(options) {
+		this.config = { ...defaultOptions, ...options }
 		this.create()
 	}
-	create(options){
+	create(options) {
 		// remove any previously existing boxes
 		this.destroy()
 		// extend config with options on create
-		Object.assign(this.config,options)
+		Object.assign(this.config, options)
 		const { aspect, enableDebugging = true, enableShadows } = this.config
 		const wallHeight = 30
 		let boxMaterial
 
 		this.box = new TransformNode("diceBox");
 
-		if(enableDebugging) {
+		if (enableDebugging) {
 			boxMaterial = new StandardMaterial("diceBox_material")
 			boxMaterial.alpha = .7
 			boxMaterial.diffuseColor = new Color3(1, 1, 0);
 		}
 		else {
-			if(enableShadows) {
-				boxMaterial = new ShadowOnlyMaterial('shadowOnly',this.config.scene)
+			if (enableShadows) {
+				boxMaterial = new ShadowOnlyMaterial('shadowOnly', this.config.scene)
 				// boxMaterial.alpha = 1
 				// boxMaterial.diffuseColor = new Color3(1, 1, 1)
 				// boxMaterial.activeLight = lights.directional
-			} 
+			}
 		}
 
 		// Bottom of the Box
-		const ground = CreateBox("ground",{
-			width: this.size * 2, 
+		const ground = CreateBox("ground", {
+			width: this.size * 2,
 			height: 1,
 			depth: this.size * 2
 		}, this.config.scene)
@@ -53,9 +53,9 @@ class Container{
 		ground.receiveShadows = true
 		ground.setParent(this.box)
 
-		if(enableDebugging) {
+		if (enableDebugging) {
 			// North Wall
-			const wallTop = CreateBox("wallTop",{
+			const wallTop = CreateBox("wallTop", {
 				width: this.size,
 				height: wallHeight,
 				depth: 1
@@ -68,11 +68,11 @@ class Container{
 			wallTop.setParent(this.box)
 
 			// Right Wall
-			const wallRight = CreateBox("wallRight",{
-				width: 1, 
+			const wallRight = CreateBox("wallRight", {
+				width: 1,
 				height: wallHeight,
 				depth: this.size
-			}, this.config.scene )
+			}, this.config.scene)
 			wallRight.position.x = this.size * aspect / 2
 			wallRight.position.y = wallHeight / 2
 			wallRight.material = boxMaterial
@@ -80,8 +80,8 @@ class Container{
 			wallRight.setParent(this.box)
 
 			// South Wall
-			const wallBottom = CreateBox("wallBottom",{
-				width: this.size, 
+			const wallBottom = CreateBox("wallBottom", {
+				width: this.size,
 				height: wallHeight,
 				depth: 1
 			}, this.config.scene)
@@ -93,8 +93,8 @@ class Container{
 			wallBottom.setParent(this.box)
 
 			// Left Wall
-			const wallLeft = CreateBox("wallLeft",{
-				width: 1, 
+			const wallLeft = CreateBox("wallLeft", {
+				width: 1,
 				height: wallHeight,
 				depth: this.size
 			}, this.config.scene)
@@ -105,8 +105,8 @@ class Container{
 			wallLeft.setParent(this.box)
 		}
 	}
-	destroy(){
-		if(this.box) {
+	destroy() {
+		if (this.box) {
 			this.box.dispose()
 		}
 	}

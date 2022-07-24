@@ -35,7 +35,8 @@ const defaultOptions = {
 }
 
 let config = { ...defaultOptions }
-const originalRandomMath = Math.random;
+let rng = Math.random;
+let rngSeed;
 
 let emptyVector
 let diceBufferView
@@ -44,6 +45,7 @@ let isSeededRandomMode = false;
 self.onmessage = (e) => {
 	switch (e.data.action) {
 		case "rollDie":
+			console.log("rolling die");
 			rollDie(e.data.sides)
 			break;
 		case "init":
@@ -68,6 +70,16 @@ self.onmessage = (e) => {
 		case "updateConfig":
 			updateConfig(e.data.options)
 			break
+		case "disableSeededRandom":
+			rng = Math.random;
+			isSeededRandomMode = false;
+			break;
+		case "setRandomSeed":
+			console.log(`Setting Random seed to ${e.data.seed}`);
+			rngSeed = e.data.seed;
+			rng = seedrandom(e.data.seed);
+			isSeededRandomMode = true;
+			break;
 		case "connect":
 			worldWorkerPort = e.ports[0]
 			worldWorkerPort.onmessage = (e) => {
@@ -75,18 +87,6 @@ self.onmessage = (e) => {
 					case "initBuffer":
 						diceBufferView = new Float32Array(e.data.diceBuffer)
 						diceBufferView[0] = -1
-						break;
-					case "disableSeededRandom":
-						Math.random = originalRandomMath;
-						isSeededRandomMode = false;
-						break;
-					case "setRandomSeed":
-						if (!isSeededRandomMode) {
-							seedrandom(e.data.seed);
-							isSeededRandomMode = true;
-							break;
-						}
-						Math.seedrandom(e.data.seed);
 						break;
 					case "loadModels":
 						// console.log('e.data', e.data)
@@ -218,13 +218,13 @@ const setStartPosition = () => {
 	let xMax = size * aspect / -2 + edgeOffset
 	let yMin = size / 2 - edgeOffset
 	let yMax = size / -2 + edgeOffset
-	// let xEnvelope = lerp(envelopeSize * aspect - edgeOffset * aspect, -envelopeSize * aspect + edgeOffset * aspect, Math.random())
-	let xEnvelope = lerp(xMin, xMax, Math.random())
-	let yEnvelope = lerp(yMin, yMax, Math.random())
-	let tossFromTop = Math.round(Math.random())
-	let tossFromLeft = Math.round(Math.random())
-	let tossX = Math.round(Math.random())
-	// console.log(`throw coming from`, tossX ? tossFromTop ? "top" : "bottom" : tossFromLeft ? "left" : "right")
+	// let xEnvelope = lerp(envelopeSize * aspect - edgeOffset * aspect, -envelopeSize * aspect + edgeOffset * aspect, rng())
+	let xEnvelope = lerp(xMin, xMax, rng())
+	let yEnvelope = lerp(yMin, yMax, rng())
+	let tossFromTop = Math.round(rng())
+	let tossFromLeft = Math.round(rng())
+	let tossX = Math.round(rng())
+	console.log(`throw coming from`, tossX ? tossFromTop ? "top" : "bottom" : tossFromLeft ? "left" : "right")
 
 	// forces = {
 	// 	xMinForce: tossX ? -config.throwForce * aspect : tossFromLeft ? config.throwForce * aspect * .3 : -config.throwForce * aspect * .3,
@@ -269,9 +269,9 @@ const createRigidBody = (collisionShape, params) => {
 		pos = [0, 0, 0],
 		// quat = [0,0,0,-1],
 		quat = [
-			lerp(-1.5, 1.5, Math.random()),
-			lerp(-1.5, 1.5, Math.random()),
-			lerp(-1.5, 1.5, Math.random()),
+			lerp(-1.5, 1.5, rng()),
+			lerp(-1.5, 1.5, rng()),
+			lerp(-1.5, 1.5, rng()),
 			-1
 		],
 		scale = [1, 1, 1],
@@ -430,17 +430,18 @@ const addDie = (options) => {
 }
 
 const rollDie = (die) => {
+	console.log(`Rolling die. RNG seed is ${rngSeed}, rng is ${rng()}`);
 	die.setLinearVelocity(setVector3(
-		lerp(-config.startPosition[0] * .5, -config.startPosition[0] * config.throwForce, Math.random()),
-		// lerp(-config.startPosition[1] * .5, -config.startPosition[1] * config.throwForce, Math.random()),
-		lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random()),
-		lerp(-config.startPosition[2] * .5, -config.startPosition[2] * config.throwForce, Math.random()),
+		lerp(-config.startPosition[0] * .5, -config.startPosition[0] * config.throwForce, rng()),
+		// lerp(-config.startPosition[1] * .5, -config.startPosition[1] * config.throwForce, rng()),
+		lerp(-config.startPosition[1], -config.startPosition[1] * 2, rng()),
+		lerp(-config.startPosition[2] * .5, -config.startPosition[2] * config.throwForce, rng()),
 	))
 
 	const force = new Ammo.btVector3(
-		lerp(-config.spinForce, config.spinForce, Math.random()),
-		lerp(-config.spinForce, config.spinForce, Math.random()),
-		lerp(-config.spinForce, config.spinForce, Math.random())
+		lerp(-config.spinForce, config.spinForce, rng()),
+		lerp(-config.spinForce, config.spinForce, rng()),
+		lerp(-config.spinForce, config.spinForce, rng())
 	)
 
 	// attempting to create an envelope for the force influence based on scale and mass

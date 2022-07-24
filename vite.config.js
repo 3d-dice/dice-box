@@ -5,16 +5,16 @@ const copy = require('rollup-plugin-copy')
 
 module.exports = defineConfig({
 	base: process.env.NODE_ENV === 'production' ? './' : './src',
-  build: {
-    lib: {
-      entry: path.resolve(__dirname, 'src/index.js'),
-      name: 'dice-box',
-      fileName: (format) => `dice-box.${format}.js`
-    },
+	build: {
+		lib: {
+			entry: path.resolve(__dirname, 'src/index.js'),
+			name: 'dice-box',
+			fileName: (format) => `dice-box.${format}.js`
+		},
 		assetsDir: 'assets/dice-box',
-    rollupOptions: {
+		rollupOptions: {
 			preserveEntrySignatures: "allow-extension",
-      input: {
+			input: {
 				main: path.resolve(__dirname, 'src/index.js')
 			},
 			output: [{
@@ -44,6 +44,6 @@ module.exports = defineConfig({
 				// 	brotliSize: true
 				// })
 			]
-    },
-  }
+		},
+	}
 })

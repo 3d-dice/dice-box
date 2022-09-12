@@ -155,21 +155,17 @@ class WorldFacade {
     );
   }
 
-  resizeWorld() {
+  resizeWorld({ width, height }) {
     // send resize events to workers - debounced for performance
-    const resizeWorkers = ({ width, height }) => {
-      this.#DiceWorld.resize({
-        width: width ?? this.canvas.clientWidth,
-        height: height ?? this.canvas.clientHeight,
-      });
-      this.#DicePhysics.postMessage({
-        action: "resize",
-        width: width ?? this.canvas.clientWidth,
-        height: height ?? this.canvas.clientHeight,
-      });
-    };
-    const debounceResize = debounce(resizeWorkers);
-    window.addEventListener("resize", debounceResize);
+    this.#DiceWorld.resize({
+      width: width ?? this.canvas.clientWidth,
+      height: height ?? this.canvas.clientHeight,
+    });
+    this.#DicePhysics.postMessage({
+      action: "resize",
+      width: width ?? this.canvas.clientWidth,
+      height: height ?? this.canvas.clientHeight,
+    });
   }
 
   async init() {

@@ -186,7 +186,7 @@ class Dice {
   }
 
   static ray = new Ray(Vector3.Zero(), Vector3.Zero(), 1)
-  static vector3 = new Vector3.Zero()
+  static vector3 = Vector3.Zero()
 
   static setVector3(x,y,z) {
     return Dice.vector3.set(x,y,z)

@@ -13,15 +13,18 @@ module.exports = defineConfig({
     },
 		assetsDir: 'assets/dice-box',
     rollupOptions: {
-			preserveEntrySignatures: "allow-extension",
+			preserveEntrySignatures: 'allow-extension',
       input: {
 				main: path.resolve(__dirname, 'src/index.js')
 			},
 			output: [{
-				format: "es",
+				format: 'es',
 				manualChunks: {
 					// babylon: ['@babylonjs/core','@babylonjs/loaders','@babylonjs/materials']
 				},
+				entryFileNames: 'assets/dice-box.es.js',
+				chunkFileNames: 'assets/[name].js',
+				assetFileNames: 'assets/[name].[ext]',
 				sourcemap: false,
 			}],
 			plugins: [
@@ -37,7 +40,7 @@ module.exports = defineConfig({
 							dest: path.resolve(__dirname, 'dist/assets/dice-box')
 						}
 					],
-					hook: "writeBundle"
+					hook: 'writeBundle'
 				}),
 				// visualizer({
 				// 	open: true,

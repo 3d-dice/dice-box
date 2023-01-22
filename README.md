@@ -11,8 +11,10 @@ High performance 3D dice roller module made with [BabylonJS](https://www.babylon
 The docs site is available at [fantasticdice.games](https://fantasticdice.games)
 
 ## Demo
-
-New demos for version 1.0.5! <br>
+__New demo for version 1.0.8!__ <br>
+Use this module as an ES6 module from [UNPKG CDN](https://unpkg.com/browse/@3d-dice/dice-box@1.0.8/) <br>
+No need to use npm install or serve these files yourself. [Static CDN Demo](https://codesandbox.io/s/dice-es6-module-cdn-forked-r646nk?file=/src/index.js) <br><br>
+__New demos for version 1.0.5!__ <br>
 Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html <br>
 See the kitchen sink code demo here: https://codesandbox.io/s/3d-dice-demo-v1-0-5-sm4ien <br>
 Here's a simple React Demo for rolling attributes (using 3d6): https://codesandbox.io/s/react-roller-attributes-v1-0-5-65uqhv <br>

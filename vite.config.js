@@ -1,6 +1,7 @@
 const path = require('path')
 const { defineConfig } = require('vite')
 const copy = require('rollup-plugin-copy')
+const del = require('rollup-plugin-delete')
 const minifyEs = require('./rollup-plugin-minifyEs').default
 // const { visualizer } = require('rollup-plugin-visualizer');
 
@@ -16,7 +17,6 @@ module.exports = defineConfig({
         esm: `dice-box.es.min.js`,
       })[format]
     },
-		assetsDir: 'assets/dice-box',
     rollupOptions: {
 			preserveEntrySignatures: 'allow-extension',
       input: {
@@ -43,15 +43,17 @@ module.exports = defineConfig({
 						{
 							// src: path.resolve(__dirname, 'src/assets/*'),
 							src: [
-								path.resolve(__dirname, 'src/assets/ammo'),
-								path.resolve(__dirname, 'src/assets/models'),
-								path.resolve(__dirname, 'src/assets/themes')
+								path.resolve(__dirname, 'dist/assets/dice-box/*')
 							],
-							dest: path.resolve(__dirname, 'dist/assets/dice-box')
+							dest: path.resolve(__dirname, 'dist/assets')
 						}
 					],
 					hook: 'writeBundle'
 				}),
+				del({ 
+					targets: path.resolve(__dirname, 'dist/assets/dice-box'),
+					hook: 'closeBundle'
+				})
 				// visualizer({
 				// 	open: true,
 				// 	brotliSize: true

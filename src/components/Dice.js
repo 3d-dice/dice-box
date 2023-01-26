@@ -27,7 +27,7 @@ class Dice {
   constructor(options, scene) {
     this.config = {...defaultOptions, ...options}
     this.id = this.config.id !== undefined ? this.config.id : Date.now()
-		this.dieType = `d${this.config.sides}`
+		this.dieType = this.config.sides
     this.comboKey = `${this.config.theme}_${this.dieType}`
     this.scene = scene
     this.createInstance()
@@ -49,7 +49,11 @@ class Dice {
 
 		// start the instance under the floor, out of camera view
 		dieInstance.position.y = -100
-    dieInstance.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
+    dieInstance.scaling = new Vector3(
+      dieInstance.scaling.x * this.config.scale,
+      dieInstance.scaling.y * this.config.scale,
+      dieInstance.scaling.z * this.config.scale
+    )
 		
     if(this.config.enableShadows){
       // let's keep this simple for now since we know there's only one directional light
@@ -72,7 +76,7 @@ class Dice {
     const { sides, theme = 'default', meshName, colorSuffix} = options
 
     // create a key for this die type and theme for caching and instance creation
-    const dieMeshName = meshName + '_d' + sides
+    const dieMeshName = meshName + '_' + sides
     const dieMaterialName = dieMeshName + '_' + theme + colorSuffix
     let die = scene.getMeshByName(dieMaterialName)
 
@@ -130,7 +134,11 @@ class Dice {
         }
         // shrink the colliders
         if( model.name.includes("collider")) {
-          model.scaling = new Vector3(.9,.9,.9)
+          model.scaling = new Vector3(
+            model.scaling.x * .9,
+            model.scaling.y * .9,
+            model.scaling.z * .9
+          )
         }
         // check if d100 is available as a mesh - otherwise we'll clone a d10
         if (!has_d100) {
@@ -144,6 +152,7 @@ class Dice {
         model.freezeWorldMatrix()
         model.isPickable = false
         model.doNotSyncBoundingInfo = true
+        // model.scaling = new Vector3(model.scaling)
         // prefix all the meshes ids from this file with the file name so we can find them later e.g.: 'default-dice_d10' and 'default-dice_d10_collider'
         // model.id = meshName + '_' + model.id
         model.name = meshName + '_' + model.name
@@ -177,7 +186,7 @@ class Dice {
   }
 
   static ray = new Ray(Vector3.Zero(), Vector3.Zero(), 1)
-  static vector3 = new Vector3.Zero()
+  static vector3 = Vector3.Zero()
 
   static setVector3(x,y,z) {
     return Dice.vector3.set(x,y,z)

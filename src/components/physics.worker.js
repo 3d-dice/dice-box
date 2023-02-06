@@ -20,14 +20,14 @@ let spinScale = 60
 
 const defaultOptions = {
 	size: 9.5,
-	startingHeight: 8,
-	spinForce: 6,
-	throwForce: 5,
+	startingHeight: 12,
+	spinForce: 3,
+	throwForce: 2,
 	gravity: 1,
 	mass: 1,
 	friction: .8,
 	restitution: .1,
-	linearDamping: .5,
+	linearDamping: .4,
 	angularDamping: .4,
 	settleTimeout: 5000,
 	// TODO: toss: "center", "edge", "allEdges"
@@ -83,8 +83,7 @@ self.onmessage = (e) => {
 						if(e.data.options.newStartPoint){
 							setStartPosition()
 						}
-            const newDie = addDie(e.data.options)
-						rollDie(newDie)
+            addDie(e.data.options)
             break;
           case "rollDie":
 						// TODO: this won't work, need a die object
@@ -394,7 +393,7 @@ const removeBoxFromWorld = () => {
 
 const addDie = (options) => {
 	const { sides, id, meshName, scale} = options
-	let cType = `${sides}_collider`
+	let cType = `d${sides}_collider`
 	const comboKey = `${meshName}_${cType}`
 	const colliderMass = colliders[comboKey]?.physicsMass || .1
 	const mass = colliderMass * config.mass * config.scale // feature? mass should go up with scale, but it throws off the throwForce and spinForce scaling
@@ -411,10 +410,8 @@ const addDie = (options) => {
 	newDie.mass = mass
 	physicsWorld.addRigidBody(newDie)
 	bodies.push(newDie)
-
-	return newDie
 	// console.log(`added collider for `, type)
-	// rollDie(newDie)
+	rollDie(newDie)
 }
 
 const rollDie = (die) => {
@@ -501,7 +498,7 @@ const update = (delta) => {
 		const speed = rb.getLinearVelocity().length()
 		const tilt = rb.getAngularVelocity().length()
 
-		if(speed < .01 && tilt < .005 || rb.timeout < 0) {
+		if(speed < .01 && tilt < .01 || rb.timeout < 0) {
 			// flag the second param for this body so it can be processed in World, first param will be the roll.id
 			diceBufferView[(i*8) + 1] = rb.id
 			diceBufferView[(i*8) + 2] = -1

@@ -409,12 +409,12 @@ class WorldFacade {
     return this;
   }
 
-  hide() {
-    this.canvas.style.display = "none";
+	hide() {
+		this.canvas.style.display = 'none'
 
-    // make this method chainable
-    return this;
-  }
+		// make this method chainable
+		return this
+	}
 
   show() {
     this.canvas.style.display = "block";
@@ -426,279 +426,263 @@ class WorldFacade {
     return this;
   }
 
-  // TODO: pass data with roll - such as roll name. Passed back at the end in the results
-  roll(notation, { theme, themeColor, newStartPoint = true } = {}) {
-    // note: to add to a roll on screen use .add method
-    // reset the offscreen worker and physics worker with each new roll
-    this.clear();
-    const collectionId = this.#collectionIndex++;
+	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
+	roll(notation, {theme = this.config.theme, themeColor = this.config.themeColor, newStartPoint = true} = {}) {
+		// note: to add to a roll on screen use .add method
+		// reset the offscreen worker and physics worker with each new roll
+		this.clear()
+		const collectionId = this.#collectionIndex++
+		
+		this.rollCollectionData[collectionId] = new Collection({
+			id: collectionId,
+			notation,
+			theme,
+			themeColor,
+			newStartPoint
+		})
 
-    this.rollCollectionData[collectionId] = new Collection({
-      id: collectionId,
-      notation,
-      theme,
-      themeColor,
-      newStartPoint,
-    });
+		const parsedNotation = this.createNotationArray(notation, this.themesLoadedData[theme].diceAvailable)
+		this.#makeRoll(parsedNotation, collectionId)
 
-    const parsedNotation = this.createNotationArray(notation);
-    this.#makeRoll(parsedNotation, collectionId);
+		// returns a Promise that is resolved in onRollComplete
+		return this.rollCollectionData[collectionId].promise
+	}
 
-    // returns a Promise that is resolved in onRollComplete
-    return this.rollCollectionData[collectionId].promise;
+  add(notation, {theme = this.config.theme, themeColor = this.config.themeColor, newStartPoint = true} = {}) {
+
+		const collectionId = this.#collectionIndex++
+
+		this.rollCollectionData[collectionId] = new Collection({
+			id: collectionId,
+			notation,
+			theme,
+			themeColor,
+			newStartPoint
+		})
+		
+		const parsedNotation = this.createNotationArray(notation, this.themesLoadedData[theme].diceAvailable)
+		this.#makeRoll(parsedNotation, collectionId)
+
+		// returns a Promise that is resolved in onRollComplete
+		return this.rollCollectionData[collectionId].promise
   }
 
-  add(notation, { theme, themeColor, newStartPoint = true } = {}) {
-    const collectionId = this.#collectionIndex++;
+	reroll(notation, {remove = false, hide = false, newStartPoint = true} = {}) {
+		// TODO: add hide if you want to keep the die result for an external parser
 
-    this.rollCollectionData[collectionId] = new Collection({
-      id: collectionId,
-      notation,
-      theme,
-      themeColor,
-      newStartPoint,
-    });
+		// ensure notation is an array
+		const rollArray = Array.isArray(notation) ? notation : [notation]
 
-    const parsedNotation = this.createNotationArray(notation);
-    this.#makeRoll(parsedNotation, collectionId);
+		// destructure out 'sides', 'theme', 'groupId', 'rollId' - basically just getting rid of value - could do ({value, ...rest}) => rest
+		const cleanNotation = rollArray.map(({value, ...rest}) => rest)
 
-    // returns a Promise that is resolved in onRollComplete
-    return this.rollCollectionData[collectionId].promise;
-  }
+		if(remove === true){
+			this.remove(cleanNotation, {hide})
+		}
 
-  reroll(
-    notation,
-    { remove = false, hide = false, newStartPoint = true } = {}
-  ) {
-    // TODO: add hide if you want to keep the die result for an external parser
+		// .add will return a promise that will then be returned here
+		return this.add(cleanNotation, {newStartPoint})
+	}
 
-    // ensure notation is an array
-    const rollArray = Array.isArray(notation) ? notation : [notation];
+	remove(notation, {hide = false} = {}) {
+		// ensure notation is an array
+		const rollArray = Array.isArray(notation) ? notation : [notation]
 
-    // destructure out 'sides', 'theme', 'groupId', 'rollId' - basically just getting rid of value - could do ({value, ...rest}) => rest
-    const cleanNotation = rollArray.map(({ value, ...rest }) => rest);
+		const collectionId = this.#collectionIndex++
 
-    if (remove === true) {
-      this.remove(cleanNotation, { hide });
-    }
+		this.rollCollectionData[collectionId] = new Collection({
+			id: collectionId,
+			notation,
+			rolls: rollArray,
+		})
 
-    // .add will return a promise that will then be returned here
-    return this.add(cleanNotation, { newStartPoint });
-  }
+		// loop through each die to be removed
+		rollArray.map(die => {
+			// add the collectionId to the die so it can be looked up in the callback
+			this.rollDiceData[die.rollId].removeCollectionId = collectionId
+			// assign the id for this die from our cache - required for removal
+			// die.id = this.rollDiceData[die.rollId].id - note: can appear in async roll result data if attached to die object
+			let id = this.rollDiceData[die.rollId].id
+			// remove the die from the render - don't like having to pass two ids. rollId is passed over just so it can be passed back for callback
+			this.#DiceWorld.remove({id,rollId: die.rollId})
+			// remove the die from the physics bodies
+			this.#DicePhysics.postMessage({action: "removeDie", id })
+		})
 
-  remove(notation, { hide = false } = {}) {
-    // ensure notation is an array
-    const rollArray = Array.isArray(notation) ? notation : [notation];
+		return this.rollCollectionData[collectionId].promise
+	}
 
-    const collectionId = this.#collectionIndex++;
+	// used by both .add and .roll - .roll clears the box and .add does not
+	async #makeRoll(parsedNotation, collectionId){
 
-    this.rollCollectionData[collectionId] = new Collection({
-      id: collectionId,
-      notation,
-      rolls: rollArray,
-    });
+		const collection = this.rollCollectionData[collectionId]
+		let newStartPoint = collection.newStartPoint
 
-    // loop through each die to be removed
-    rollArray.map((die) => {
-      // add the collectionId to the die so it can be looked up in the callback
-      this.rollDiceData[die.rollId].removeCollectionId = collectionId;
-      // assign the id for this die from our cache - required for removal
-      // die.id = this.rollDiceData[die.rollId].id - note: can appear in async roll result data if attached to die object
-      let id = this.rollDiceData[die.rollId].id;
-      // remove the die from the render - don't like having to pass two ids. rollId is passed over just so it can be passed back for callback
-      this.#DiceWorld.remove({ id, rollId: die.rollId });
-      // remove the die from the physics bodies
-      this.#DicePhysics.postMessage({ action: "removeDie", id });
-    });
+		// loop through the number of dice in the group and roll each one
+		parsedNotation.forEach(async notation => {
+			if(!notation.sides) {
+				throw new Error("Improper dice notation or unable to parse notation")
+			}
+			const theme = notation.theme || collection.theme || this.config.theme
+			const themeColor = notation.themeColor || collection.themeColor || this.config.themeColor
+			const rolls = {}
+			const hasGroupId = notation.groupId !== undefined
+			let index
 
-    return this.rollCollectionData[collectionId].promise;
-  }
+			
+			// load the theme, will be short circuited if previously loaded
+			const loadTheme = () => this.loadTheme(theme)
+			await this.loadThemeQueue.push(loadTheme)
 
-  // used by both .add and .roll - .roll clears the box and .add does not
-  async #makeRoll(parsedNotation, collectionId) {
-    const collection = this.rollCollectionData[collectionId];
-    let newStartPoint = collection.newStartPoint;
+			const {meshName, diceAvailable, diceInherited = {}, material: { type: materialType }} = this.themesLoadedData[theme]
+			const diceExtra = Object.keys(diceInherited)
 
-    // loop through the number of dice in the group and roll each one
-    parsedNotation.forEach(async (notation) => {
-      if (!notation.sides) {
-        throw new Error("Improper dice notation or unable to parse notation");
-      }
-      const theme = notation.theme || collection.theme || this.config.theme;
-      const themeColor =
-        notation.themeColor || collection.themeColor || this.config.themeColor;
-      const rolls = {};
-      const hasGroupId = notation.groupId !== undefined;
-      let index;
+			let colorSuffix = '', color
 
-      // load the theme, will be short circuited if previously loaded
-      const loadTheme = () => this.loadTheme(theme);
-      await this.loadThemeQueue.push(loadTheme);
+			if(materialType === "color") {
+				color = hexToRGB(themeColor)
+				// dat.gui uses HSB(a.k.a HSV) brightness greater than .5 and saturation less than .5
+				colorSuffix = ((color.r*0.299 + color.g*0.587 + color.b*0.114) > 175) ? '_dark' : '_light'
+			}
 
-      const {
-        meshName,
-        diceAvailable,
-        diceInherited = {},
-        material: { type: materialType },
-      } = this.themesLoadedData[theme];
-      const diceExtra = Object.keys(diceInherited);
+			// TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.
+			for (var i = 0, len = notation.qty; i < len; i++) {
+				// id's start at zero and zero can be falsy, so we check for undefined
+				let rollId = notation.rollId !== undefined ? notation.rollId : this.#rollIndex++
+				let id = notation.id !== undefined ? notation.id : this.#idIndex++
+				index = hasGroupId ? notation.groupId : this.#groupIndex
 
-      let colorSuffix = "",
-        color;
+				const dieType = Number.isInteger(notation.sides) ? `d${notation.sides}` : notation.sides
 
-      if (materialType === "color") {
-        color = hexToRGB(themeColor);
-        // dat.gui uses HSB(a.k.a HSV) brightness greater than .5 and saturation less than .5
-        colorSuffix =
-          color.r * 0.299 + color.g * 0.587 + color.b * 0.114 > 175
-            ? "_dark"
-            : "_light";
-      }
+				notation.sides = dieType
 
-      // TODO: should I validate that added dice are only joining groups of the same "sides" value - e.g.: d6's can only be added to groups when sides: 6? Probably.
-      for (var i = 0, len = notation.qty; i < len; i++) {
-        // id's start at zero and zero can be falsy, so we check for undefined
-        let rollId =
-          notation.rollId !== undefined ? notation.rollId : this.#rollIndex++;
-        let id = notation.id !== undefined ? notation.id : this.#idIndex++;
-        index = hasGroupId ? notation.groupId : this.#groupIndex;
+				const roll = {
+					sides: dieType,
+					groupId: index,
+					collectionId: collection.id,
+					rollId,
+					id,
+					theme,
+					themeColor,
+					meshName
+				}
 
-        const roll = {
-          sides: notation.sides,
-          groupId: index,
-          collectionId: collection.id,
-          rollId,
-          id,
-          theme,
-          themeColor,
-          meshName,
-        };
+				rolls[rollId] = roll
+				this.rollDiceData[rollId] = roll
+				collection.rolls.push(this.rollDiceData[rollId])
 
-        rolls[rollId] = roll;
-        this.rollDiceData[rollId] = roll;
-        collection.rolls.push(this.rollDiceData[rollId]);
+				// TODO: eliminate the 'd' for more flexible naming such as 'fate' - ensure numbers are strings
+				if (roll.sides === 'fate' && (!diceAvailable.includes(roll.sides) && !diceExtra.includes(roll.sides))){
+					console.warn(`fate die unavailable in '${theme}' theme. Using fallback.`)
+					const min = -1
+					const max = 1
+					roll.value = Random.range(min,max)
+					this.#DiceWorld.addNonDie(roll)
+				} 
+				else if(this.config.suspendSimulation || (!diceAvailable.includes(roll.sides) && !diceExtra.includes(roll.sides))){
+					// check if the requested roll is available in the current theme, if not then use crypto fallback
+					console.warn(this.config.suspendSimulation ? "3D simulation suspended. Using fallback." : `${roll.sides} die unavailable in '${theme}' theme. Using fallback.`)
+					roll.value = Random.range(1, roll.sides)
+					this.#DiceWorld.addNonDie(roll)
+				} 
+				else {
+					let parentTheme
+					if(diceExtra.includes(roll.sides)) {
+						const parentThemeName = diceInherited[roll.sides]
+						parentTheme = this.themesLoadedData[parentThemeName]
+					}
+					this.#DiceWorld.add({
+						...roll,
+						newStartPoint,
+						theme: parentTheme?.systemName || theme,
+						meshName: parentTheme?.meshName || meshName,
+						colorSuffix
+					})
+				}
 
-        // TODO: eliminate the 'd' for more flexible naming such as 'fate' - ensure numbers are strings
-        if (
-          roll.sides === "fate" &&
-          !diceAvailable.includes(`d${roll.sides}`) &&
-          !diceExtra.includes(`d${roll.sides}`)
-        ) {
-          console.warn(
-            `fate die unavailable in '${theme}' theme. Using fallback.`
-          );
-          const min = -1;
-          const max = 1;
-          roll.value = Random.range(min, max);
-          this.#DiceWorld.addNonDie(roll);
-        } else if (
-          this.config.suspendSimulation ||
-          (!diceAvailable.includes(`d${roll.sides}`) &&
-            !diceExtra.includes(`d${roll.sides}`))
-        ) {
-          // check if the requested roll is available in the current theme, if not then use crypto fallback
-          console.warn(
-            this.config.suspendSimulation
-              ? "3D simulation suspended. Using fallback."
-              : `${roll.sides} sided die unavailable in '${theme}' theme. Using fallback.`
-          );
-          roll.value = Random.range(1, roll.sides);
-          this.#DiceWorld.addNonDie(roll);
-        } else {
-          let parentTheme;
-          if (diceExtra.includes(`d${roll.sides}`)) {
-            const parentThemeName = diceInherited[`d${roll.sides}`];
-            parentTheme = this.themesLoadedData[parentThemeName];
-          }
-          this.#DiceWorld.add({
-            ...roll,
-            newStartPoint,
-            theme: parentTheme?.systemName || theme,
-            meshName: parentTheme?.meshName || meshName,
-            colorSuffix,
-          });
-        }
+				// turn flag off
+				newStartPoint = false
+			}
 
-        // turn flag off
-        newStartPoint = false;
-      }
+			if(hasGroupId) {
+				Object.assign(this.rollGroupData[index].rolls, rolls)
+			} else {
+				// save this roll group for later
+				notation.rolls = rolls
+				notation.id = index
+				this.rollGroupData[index] = notation
+				++this.#groupIndex
+			}
+		})
+	}
 
-      if (hasGroupId) {
-        Object.assign(this.rollGroupData[index].rolls, rolls);
-      } else {
-        // save this roll group for later
-        notation.rolls = rolls;
-        notation.id = index;
-        this.rollGroupData[index] = notation;
-        ++this.#groupIndex;
-      }
-    });
-  }
+	// accepts simple notations eg: 4d6
+	// accepts array of notations eg: ['4d6','2d10']
+	// accepts object {sides:int, qty:int}
+	// accepts array of objects eg: [{sides:int, qty:int, mods:[]}]
+	createNotationArray(input, diceAvailable){
+		const notation = Array.isArray( input ) ? input : [ input ]
+		let parsedNotation = []
 
-  // accepts simple notations eg: 4d6
-  // accepts array of notations eg: ['4d6','2d10']
-  // accepts object {sides:int, qty:int}
-  // accepts array of objects eg: [{sides:int, qty:int, mods:[]}]
-  createNotationArray(input) {
-    const notation = Array.isArray(input) ? input : [input];
-    let parsedNotation = [];
 
-    const verifyObject = (object) => {
-      if (!object.hasOwnProperty("qty")) {
-        object.qty = 1;
-      }
-      if (object.hasOwnProperty("sides")) {
-        return true;
-      } else {
-        const err = "Roll notation is missing sides";
-        throw new Error(err);
-      }
-    };
+		const verifyObject = ( object ) => {
+			if(!object.hasOwnProperty('qty')) {
+				object.qty = 1
+			}
+			if ( object.hasOwnProperty('sides') ) {
+				return true
+			} else {
+				const err = "Roll notation is missing sides"
+				throw new Error(err);
+			}
+		}
 
-    const incrementId = (key) => {
-      key = key.toString();
-      let splitKey = key.split(".");
-      if (splitKey[1]) {
-        splitKey[1] = parseInt(splitKey[1]) + 1;
-      } else {
-        splitKey[1] = 1;
-      }
-      return splitKey[0] + "." + splitKey[1];
-    };
+		const incrementId = (key) => {
+			key = key.toString()
+			let splitKey = key.split(".")
+			if(splitKey[1]){
+				splitKey[1] = parseInt(splitKey[1]) + 1
+			} else {
+				splitKey[1] = 1
+			}
+			return splitKey[0] + "." + splitKey[1]
+		}
 
-    // verify that the rollId is unique. If not then increment it by .1
-    // rollIds become keys in the rollDiceData object, so they must be unique or they will overwrite another entry
-    const verifyRollId = (object) => {
-      if (object.hasOwnProperty("rollId")) {
-        if (this.rollDiceData.hasOwnProperty(object.rollId)) {
-          object.rollId = incrementId(object.rollId);
-        }
-      }
-    };
+		// verify that the rollId is unique. If not then increment it by .1
+		// rollIds become keys in the rollDiceData object, so they must be unique or they will overwrite another entry
+		const verifyRollId = ( object ) => {
+			if(object.hasOwnProperty('rollId')){
+				if(this.rollDiceData.hasOwnProperty(object.rollId)){
+					object.rollId = incrementId(object.rollId)
+				}
+			}
+		}
 
-    // notation is an array of strings or objects
-    notation.forEach((roll) => {
-      // console.log('roll', roll)
-      // if notation is an array of strings
-      if (typeof roll === "string") {
-        parsedNotation.push(this.parse(roll));
-      } else if (typeof notation === "object") {
-        verifyRollId(roll);
-        verifyObject(roll) && parsedNotation.push(roll);
-      }
-    });
+		// notation is an array of strings or objects
+		notation.forEach(roll => {
+			// console.log('roll', roll)
+			// if notation is an array of strings
+			if ( typeof roll === 'string' ) {
+				parsedNotation.push( this.parse( roll, diceAvailable ) )
+			} else if ( typeof notation === 'object' ) {
+				verifyRollId( roll )
+				verifyObject( roll )  && parsedNotation.push( roll )
+			}
+		})
 
-    return parsedNotation;
-  }
+		return parsedNotation
+	}
 
   // parse text die notation such as 2d10+3 => {number:2, type:6, modifier:3}
   // taken from https://github.com/ChapelR/dice-notation
-  parse(notation) {
-    const diceNotation = /(\d+)[dD](\d+)(.*)$/i;
-    const percentNotation = /(\d+)[dD]([0%]+)(.*)$/i;
-    const fudgeNotation = /(\d+)df+(ate)*$/i;
-    const modifier = /([+-])(\d+)/;
-    const cleanNotation = notation.trim().replace(/\s+/g, "");
+  parse(notation, diceAvailable) {
+    const diceNotation = /(\d+)([dD]{1}\d+)(.*)$/i
+		const percentNotation = /(\d+)[dD]([0%]+)(.*)$/i
+		const fudgeNotation = /(\d+)[dD](f+[ate]*)(.*)$/i
+		// const customNotation = /(\d+)[dD](.*)([+-])/i
+		const customNotation = /(\d+)[dD]([\d\w]+)([+-]{0,1}\d+)?/i
+    const modifier = /([+-])(\d+)/
+    const cleanNotation = notation.trim().replace(/\s+/g, '')
     const validNumber = (n, err) => {
       n = Number(n);
       if (Number.isNaN(n) || !Number.isInteger(n) || n < 1) {
@@ -707,11 +691,8 @@ class WorldFacade {
       return n;
     };
 
-    // match percentNotation before diceNotation
-    const roll =
-      cleanNotation.match(percentNotation) ||
-      cleanNotation.match(diceNotation) ||
-      cleanNotation.match(fudgeNotation);
+		// match percentNotation before diceNotation
+    const roll = cleanNotation.match(percentNotation) || cleanNotation.match(diceNotation) || cleanNotation.match(fudgeNotation) || cleanNotation.match(customNotation);
 
     let mod = 0;
     const msg = "Invalid notation: " + notation + "";
@@ -733,13 +714,16 @@ class WorldFacade {
       modifier: mod,
     };
 
-    if (cleanNotation.match(percentNotation)) {
-      returnObj.sides = "100"; // as string, not number
-    } else if (cleanNotation.match(fudgeNotation)) {
-      returnObj.sides = "fate"; // force lowercase
-    } else {
-      returnObj.sides = validNumber(roll[2], msg);
-    }
+		if(cleanNotation.match(percentNotation)){
+			returnObj.sides = '100' // as string, not number
+		} else if(cleanNotation.match(fudgeNotation)){
+			returnObj.sides = 'fate' // force lowercase
+		} else if(diceAvailable.includes(cleanNotation.match(customNotation)[2])){
+			returnObj.sides = roll[2] // dice type instead of number
+		} else {
+			returnObj.sides = roll[2];
+		}
+
 
     return returnObj;
   }

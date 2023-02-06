@@ -51,10 +51,21 @@ const Gl = (G = { dedupe: !1 }) => {
   return { push: X, queue: l, flush: () => d || Promise.resolve([]) };
 }, ul = (G) => JSON.parse(JSON.stringify(G));
 class O {
+  /**
+   * Generate a random number between 0 (inclusive) and 1 (exclusive).
+   * A drop in replacement for Math.random()
+   * @return {number}
+   */
   static value() {
     const b = window.crypto || window.msCrypto, l = new Uint32Array(1);
     return b.getRandomValues(l)[0] / 2 ** 32;
   }
+  /**
+   * Generate a very good random number between min (inclusive) and max (exclusive) by using crypto.getRandomValues() twice.
+   * @param  {number} min
+   * @param  {number} max
+   * @return {number}
+   */
   static range(b, l) {
     return Math.floor(Math.pow(10, 14) * this.value() * this.value()) % (l - b + 1) + b;
   }
@@ -70,15 +81,23 @@ const Wl = (G) => {
   return b && (d.r = l >>> 24, d.g = (l & 16711680) >>> 16, d.b = (l & 65280) >>> 8, d.a = l & 255), d;
 }, Vl = {
   id: `dice-canvas-${Date.now()}`,
+  // set the canvas id
   enableShadows: !0,
+  // do dice cast shadows onto DiceBox mesh?
   shadowTransparency: 0.8,
   lightIntensity: 1,
   delay: 10,
+  // delay between dice being generated - 0 causes stuttering and physics popping
   scale: 5,
+  // scale the dice
   theme: "default",
+  // can be a hex color or a pre-defined theme such as 'purpleRock'
   themeColor: "#2e8555",
+  // used for color values or named theme variants - not fully implemented yet // green: #2e8555 // yellow: #feea03
   offscreen: !0,
+  // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
   assetPath: "/assets/dice-box/",
+  // path to 'ammo', 'models', 'themes' folders and web workers
   origin: location.origin,
   meshFile: "models/default.json",
   suspendSimulation: !1
@@ -86,9 +105,12 @@ const Wl = (G) => {
 var S, F, H, o, R, f, x, h, K, e, w, q, U, $, k, _, z, E, B, T;
 class Yl {
   constructor(b, l = {}) {
+    // Load the BabylonJS World
     Y(this, w);
+    // Load the AmmoJS physics world
     Y(this, U);
     Y(this, k);
+    // used by both .add and .roll - .roll clears the box and .add does not
     Y(this, z);
     Y(this, B);
     v(this, "rollCollectionData", {});
@@ -157,6 +179,7 @@ class Yl {
       this.onRemoveComplete(p);
     }, await Promise.all([V(this, f), V(this, K)]), s(this, k, _).call(this), await this.loadThemeQueue.push(() => this.loadTheme(this.config.theme)), this;
   }
+  // fetch the theme config and return a themeData object
   async getThemeConfig(b) {
     const l = `${this.config.origin}${this.config.assetPath}themes/${b}`;
     let d;
@@ -216,6 +239,8 @@ class Yl {
     if (this.onThemeConfigLoaded(l), !!l)
       return await V(this, R).loadTheme(l).catch((d) => console.error(d)), this.onThemeLoaded(l), l;
   }
+  // TODO: use getter and setter
+  // change config options
   async updateConfig(b) {
     const l = { ...this.config, ...b };
     return await this.loadThemeQueue.push(
@@ -237,6 +262,7 @@ class Yl {
       height: this.canvas.clientHeight
     }), this;
   }
+  // TODO: pass data with roll - such as roll name. Passed back at the end in the results
   roll(b, { theme: l, themeColor: d, newStartPoint: X = !0 } = {}) {
     this.clear();
     const m = N(this, S)._++;
@@ -278,6 +304,10 @@ class Yl {
       V(this, R).remove({ id: Z, rollId: m.rollId }), V(this, h).postMessage({ action: "removeDie", id: Z });
     }), this.rollCollectionData[X].promise;
   }
+  // accepts simple notations eg: 4d6
+  // accepts array of notations eg: ['4d6','2d10']
+  // accepts object {sides:int, qty:int}
+  // accepts array of objects eg: [{sides:int, qty:int, mods:[]}]
   createNotationArray(b) {
     const l = Array.isArray(b) ? b : [b];
     let d = [];
@@ -299,6 +329,8 @@ class Yl {
       typeof c == "string" ? d.push(this.parse(c)) : typeof l == "object" && (Z(c), X(c) && d.push(c));
     }), d;
   }
+  // parse text die notation such as 2d10+3 => {number:2, type:6, modifier:3}
+  // taken from https://github.com/ChapelR/dice-notation
   parse(b) {
     const l = /(\d+)[dD](\d+)(.*)$/i, d = /(\d+)[dD]([0%]+)(.*)$/i, X = /(\d+)df+(ate)*$/i, m = /([+-])(\d+)/, Z = b.trim().replace(/\s+/g, ""), c = (J, y) => {
       if (J = Number(J), Number.isNaN(J) || !Number.isInteger(J) || J < 1)
@@ -337,7 +369,7 @@ S = new WeakMap(), F = new WeakMap(), H = new WeakMap(), o = new WeakMap(), R = 
     V(this, x).call(this);
   };
   if ("OffscreenCanvas" in window && "transferControlToOffscreen" in this.canvas && this.config.offscreen) {
-    const l = await import("./world.offscreen.aa047f78.mjs").then(
+    const l = await import("./world.offscreen-b832c1a6.mjs").then(
       (d) => d.default
     );
     i(this, R, new l({
@@ -349,7 +381,7 @@ S = new WeakMap(), F = new WeakMap(), H = new WeakMap(), o = new WeakMap(), R = 
     this.config.offscreen && (console.warn(
       "This browser does not support OffscreenCanvas. Using standard canvas fallback."
     ), this.config.offscreen = !1);
-    const l = await import("./world.onscreen.9b5676bc.mjs").then(
+    const l = await import("./world.onscreen-53f577c7.mjs").then(
       (d) => d.default
     );
     i(this, R, new l({

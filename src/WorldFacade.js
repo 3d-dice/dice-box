@@ -418,16 +418,25 @@ class WorldFacade {
 
   show() {
     this.canvas.style.display = "block";
+
     this.resizeWorld({
       width: this.canvas.clientWidth,
       height: this.canvas.clientHeight,
     });
+
     // make this method chainable
     return this;
   }
 
   // TODO: pass data with roll - such as roll name. Passed back at the end in the results
-  roll(notation, { theme, themeColor, newStartPoint = true } = {}) {
+  roll(
+    notation,
+    {
+      theme = this.config.theme,
+      themeColor = this.config.themeColor,
+      newStartPoint = true,
+    } = {}
+  ) {
     // note: to add to a roll on screen use .add method
     // reset the offscreen worker and physics worker with each new roll
     this.clear();
@@ -441,14 +450,24 @@ class WorldFacade {
       newStartPoint,
     });
 
-    const parsedNotation = this.createNotationArray(notation);
+    const parsedNotation = this.createNotationArray(
+      notation,
+      this.themesLoadedData[theme].diceAvailable
+    );
     this.#makeRoll(parsedNotation, collectionId);
 
     // returns a Promise that is resolved in onRollComplete
     return this.rollCollectionData[collectionId].promise;
   }
 
-  add(notation, { theme, themeColor, newStartPoint = true } = {}) {
+  add(
+    notation,
+    {
+      theme = this.config.theme,
+      themeColor = this.config.themeColor,
+      newStartPoint = true,
+    } = {}
+  ) {
     const collectionId = this.#collectionIndex++;
 
     this.rollCollectionData[collectionId] = new Collection({
@@ -459,7 +478,10 @@ class WorldFacade {
       newStartPoint,
     });
 
-    const parsedNotation = this.createNotationArray(notation);
+    const parsedNotation = this.createNotationArray(
+      notation,
+      this.themesLoadedData[theme].diceAvailable
+    );
     this.#makeRoll(parsedNotation, collectionId);
 
     // returns a Promise that is resolved in onRollComplete
@@ -563,8 +585,14 @@ class WorldFacade {
         let id = notation.id !== undefined ? notation.id : this.#idIndex++;
         index = hasGroupId ? notation.groupId : this.#groupIndex;
 
+        const dieType = Number.isInteger(notation.sides)
+          ? `d${notation.sides}`
+          : notation.sides;
+
+        notation.sides = dieType;
+
         const roll = {
-          sides: notation.sides,
+          sides: dieType,
           groupId: index,
           collectionId: collection.id,
           rollId,
@@ -581,8 +609,8 @@ class WorldFacade {
         // TODO: eliminate the 'd' for more flexible naming such as 'fate' - ensure numbers are strings
         if (
           roll.sides === "fate" &&
-          !diceAvailable.includes(`d${roll.sides}`) &&
-          !diceExtra.includes(`d${roll.sides}`)
+          !diceAvailable.includes(roll.sides) &&
+          !diceExtra.includes(roll.sides)
         ) {
           console.warn(
             `fate die unavailable in '${theme}' theme. Using fallback.`
@@ -593,21 +621,21 @@ class WorldFacade {
           this.#DiceWorld.addNonDie(roll);
         } else if (
           this.config.suspendSimulation ||
-          (!diceAvailable.includes(`d${roll.sides}`) &&
-            !diceExtra.includes(`d${roll.sides}`))
+          (!diceAvailable.includes(roll.sides) &&
+            !diceExtra.includes(roll.sides))
         ) {
           // check if the requested roll is available in the current theme, if not then use crypto fallback
           console.warn(
             this.config.suspendSimulation
               ? "3D simulation suspended. Using fallback."
-              : `${roll.sides} sided die unavailable in '${theme}' theme. Using fallback.`
+              : `${roll.sides} die unavailable in '${theme}' theme. Using fallback.`
           );
           roll.value = Random.range(1, roll.sides);
           this.#DiceWorld.addNonDie(roll);
         } else {
           let parentTheme;
-          if (diceExtra.includes(`d${roll.sides}`)) {
-            const parentThemeName = diceInherited[`d${roll.sides}`];
+          if (diceExtra.includes(roll.sides)) {
+            const parentThemeName = diceInherited[roll.sides];
             parentTheme = this.themesLoadedData[parentThemeName];
           }
           this.#DiceWorld.add({
@@ -639,7 +667,7 @@ class WorldFacade {
   // accepts array of notations eg: ['4d6','2d10']
   // accepts object {sides:int, qty:int}
   // accepts array of objects eg: [{sides:int, qty:int, mods:[]}]
-  createNotationArray(input) {
+  createNotationArray(input, diceAvailable) {
     const notation = Array.isArray(input) ? input : [input];
     let parsedNotation = [];
 
@@ -681,7 +709,7 @@ class WorldFacade {
       // console.log('roll', roll)
       // if notation is an array of strings
       if (typeof roll === "string") {
-        parsedNotation.push(this.parse(roll));
+        parsedNotation.push(this.parse(roll, diceAvailable));
       } else if (typeof notation === "object") {
         verifyRollId(roll);
         verifyObject(roll) && parsedNotation.push(roll);
@@ -693,10 +721,12 @@ class WorldFacade {
 
   // parse text die notation such as 2d10+3 => {number:2, type:6, modifier:3}
   // taken from https://github.com/ChapelR/dice-notation
-  parse(notation) {
-    const diceNotation = /(\d+)[dD](\d+)(.*)$/i;
+  parse(notation, diceAvailable) {
+    const diceNotation = /(\d+)([dD]{1}\d+)(.*)$/i;
     const percentNotation = /(\d+)[dD]([0%]+)(.*)$/i;
-    const fudgeNotation = /(\d+)df+(ate)*$/i;
+    const fudgeNotation = /(\d+)[dD](f+[ate]*)(.*)$/i;
+    // const customNotation = /(\d+)[dD](.*)([+-])/i
+    const customNotation = /(\d+)[dD]([\d\w]+)([+-]{0,1}\d+)?/i;
     const modifier = /([+-])(\d+)/;
     const cleanNotation = notation.trim().replace(/\s+/g, "");
     const validNumber = (n, err) => {
@@ -711,7 +741,8 @@ class WorldFacade {
     const roll =
       cleanNotation.match(percentNotation) ||
       cleanNotation.match(diceNotation) ||
-      cleanNotation.match(fudgeNotation);
+      cleanNotation.match(fudgeNotation) ||
+      cleanNotation.match(customNotation);
 
     let mod = 0;
     const msg = "Invalid notation: " + notation + "";
@@ -737,8 +768,10 @@ class WorldFacade {
       returnObj.sides = "100"; // as string, not number
     } else if (cleanNotation.match(fudgeNotation)) {
       returnObj.sides = "fate"; // force lowercase
+    } else if (diceAvailable.includes(cleanNotation.match(customNotation)[2])) {
+      returnObj.sides = roll[2]; // dice type instead of number
     } else {
-      returnObj.sides = validNumber(roll[2], msg);
+      returnObj.sides = roll[2];
     }
 
     return returnObj;

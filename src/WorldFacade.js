@@ -540,14 +540,13 @@ class WorldFacade {
 					const max = 1
 					roll.value = Random.range(min,max)
 					this.#DiceWorld.addNonDie(roll)
-				} 
-				else if(this.config.suspendSimulation || (!diceAvailable.includes(roll.sides) && !diceExtra.includes(roll.sides))){
+				} else if(this.config.suspendSimulation || (!diceAvailable.includes(roll.sides) && !diceExtra.includes(roll.sides))){
 					// check if the requested roll is available in the current theme, if not then use crypto fallback
 					console.warn(this.config.suspendSimulation ? "3D simulation suspended. Using fallback." : `${roll.sides} die unavailable in '${theme}' theme. Using fallback.`)
-					roll.value = Random.range(1, roll.sides)
+					const max = Number.isInteger(roll.sides) ? roll.sides : parseIn(roll.sides.replace(/\D/g,''))
+					roll.value = Random.range(1, max)
 					this.#DiceWorld.addNonDie(roll)
-				} 
-				else {
+				} else {
 					let parentTheme
 					if(diceExtra.includes(roll.sides)) {
 						const parentThemeName = diceInherited[roll.sides]

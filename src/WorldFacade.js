@@ -13,7 +13,8 @@ const defaultOptions = {
 	themeColor: '#2e8555', // used for color values or named theme variants - not fully implemented yet // green: #2e8555 // yellow: #feea03
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
 	assetPath: '/assets/dice-box/', // path to 'ammo', 'models', 'themes' folders and web workers
-	origin: location.origin,
+	// origin: location.origin,
+	origin: typeof window !== "undefined" ? window.location.origin : "",
 	meshFile: `models/default.json`,
 	suspendSimulation: false
 }
@@ -59,6 +60,7 @@ class WorldFacade {
       selector: container,
       id: this.config.id
     })
+				this.isVisible = true
 		// create a queue to prevent theme being loaded multiple times
 		this.loadThemeQueue = createAsyncQueue({dedupe: true})
   }
@@ -376,6 +378,7 @@ class WorldFacade {
 
 	hide() {
 		this.canvas.style.display = 'none'
+		this.isVisible = false;
 
 		// make this method chainable
 		return this
@@ -383,6 +386,8 @@ class WorldFacade {
 
 	show() {
 		this.canvas.style.display = 'block'
+		this.isVisible = true;
+		this.resizeWorld();
 
 		// make this method chainable
 		return this

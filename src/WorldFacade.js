@@ -548,7 +548,7 @@ class WorldFacade {
 				} else if(this.config.suspendSimulation || (!diceAvailable.includes(roll.sides) && !diceExtra.includes(roll.sides))){
 					// check if the requested roll is available in the current theme, if not then use crypto fallback
 					console.warn(this.config.suspendSimulation ? "3D simulation suspended. Using fallback." : `${roll.sides} die unavailable in '${theme}' theme. Using fallback.`)
-					const max = Number.isInteger(roll.sides) ? roll.sides : parseIn(roll.sides.replace(/\D/g,''))
+					const max = Number.isInteger(roll.sides) ? roll.sides : parseInt(roll.sides.replace(/\D/g,''))
 					roll.value = Random.range(1, max)
 					this.#DiceWorld.addNonDie(roll)
 				} else {

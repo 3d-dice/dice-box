@@ -1,11 +1,10 @@
-const path = require('path')
-const { defineConfig } = require('vite')
-const copy = require('rollup-plugin-copy')
-const del = require('rollup-plugin-delete')
-const minifyEs = require('./rollup-plugin-minifyEs').default
-// const { visualizer } = require('rollup-plugin-visualizer');
+import path from 'path'
+import { defineConfig } from 'vite'
+import copy from 'rollup-plugin-copy'
+import del from 'rollup-plugin-delete'
+import minifyEs from './rollup-plugin-minifyEs'
 
-module.exports = defineConfig({
+export default defineConfig({
 	base: process.env.NODE_ENV === 'production' ? './' : './src',
   build: {
     lib: {

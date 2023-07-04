@@ -1,12 +1,11 @@
-'use strict'
+import copydir from 'copy-dir'
+import path from 'path'
+import fs from 'fs'
+import readline from 'readline'
+import { stdin as input, stdout as output } from 'process'
 
-const copydir = require('copy-dir');
-const path = require('path');
-const fs = require('fs');
-const readline = require('readline');
-const { stdin: input, stdout: output } = require('process');
+import { AbortController } from 'node-abort-controller' //polyfill for Node <v14
 
-const { AbortController } = require('node-abort-controller'); //polyfill for Node <v14
 const ac = new AbortController();
 const signal = ac.signal;
 

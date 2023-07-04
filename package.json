@@ -25,15 +25,16 @@
   "bugs": {
     "url": "https://github.com/3d-dice/dice-box/issues"
   },
+  "type": "module",
   "files": [
     "dist",
     "copyAssets.js"
   ],
   "main": "./dist/dice-box.es.js",
-  "dev-files": [
+  "files-dev": [
     "src"
   ],
-  "dev-main": "./src/index",
+  "main-dev": "./src/index",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

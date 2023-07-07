@@ -521,10 +521,12 @@ class WorldFacade {
 
 				const dieType = Number.isInteger(notation.sides) ? `d${notation.sides}` : notation.sides
 
-				notation.sides = dieType
+				// notation.sides = dieType
 
 				const roll = {
-					sides: dieType,
+					sides: notation.sides,
+					data: notation.data,
+					dieType,
 					groupId: index,
 					collectionId: collection.id,
 					rollId,
@@ -539,13 +541,13 @@ class WorldFacade {
 				collection.rolls.push(this.rollDiceData[rollId])
 
 				// TODO: eliminate the 'd' for more flexible naming such as 'fate' - ensure numbers are strings
-				if (roll.sides === 'fate' && (!diceAvailable.includes(roll.sides) && !diceExtra.includes(roll.sides))){
+				if (roll.sides === 'fate' && (!diceAvailable.includes(dieType) && !diceExtra.includes(dieType))){
 					console.warn(`fate die unavailable in '${theme}' theme. Using fallback.`)
 					const min = -1
 					const max = 1
 					roll.value = Random.range(min,max)
 					this.#DiceWorld.addNonDie(roll)
-				} else if(this.config.suspendSimulation || (!diceAvailable.includes(roll.sides) && !diceExtra.includes(roll.sides))){
+				} else if(this.config.suspendSimulation || (!diceAvailable.includes(dieType) && !diceExtra.includes(dieType))){
 					// check if the requested roll is available in the current theme, if not then use crypto fallback
 					console.warn(this.config.suspendSimulation ? "3D simulation suspended. Using fallback." : `${roll.sides} die unavailable in '${theme}' theme. Using fallback.`)
 					const max = Number.isInteger(roll.sides) ? roll.sides : parseInt(roll.sides.replace(/\D/g,''))
@@ -553,8 +555,8 @@ class WorldFacade {
 					this.#DiceWorld.addNonDie(roll)
 				} else {
 					let parentTheme
-					if(diceExtra.includes(roll.sides)) {
-						const parentThemeName = diceInherited[roll.sides]
+					if(diceExtra.includes(dieType)) {
+						const parentThemeName = diceInherited[dieType]
 						parentTheme = this.themesLoadedData[parentThemeName]
 					}
 					this.#DiceWorld.add({
@@ -596,6 +598,10 @@ class WorldFacade {
 				object.qty = 1
 			}
 			if ( object.hasOwnProperty('sides') ) {
+				if(object.sides === '100'){
+					object.sides = 100
+					object.data = 'single'
+				}
 				return true
 			} else {
 				const err = "Roll notation is missing sides"
@@ -681,7 +687,8 @@ class WorldFacade {
 		}
 
 		if(cleanNotation.match(percentNotation)){
-			returnObj.sides = '100' // as string, not number
+			returnObj.sides = roll[2]
+			returnObj.data = 'single'
 		} else if(cleanNotation.match(fudgeNotation)){
 			returnObj.sides = 'fate' // force lowercase
 		} else if(diceAvailable.includes(cleanNotation.match(customNotation)[2])){

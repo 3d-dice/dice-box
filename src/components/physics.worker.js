@@ -394,7 +394,8 @@ const removeBoxFromWorld = () => {
 
 const addDie = (options) => {
 	const { sides, id, meshName, scale} = options
-	let cType = `${sides}_collider`
+	const dieType = Number.isInteger(sides) ? `d${sides}` : sides
+	let cType = `${dieType}_collider`
 	const comboKey = `${meshName}_${cType}`
 	const colliderMass = colliders[comboKey]?.physicsMass || .1
 	const mass = colliderMass * config.mass * config.scale // feature? mass should go up with scale, but it throws off the throwForce and spinForce scaling

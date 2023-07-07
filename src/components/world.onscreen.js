@@ -260,9 +260,9 @@ class WorldOnscreen {
 		})
 	
 		// for d100's we need to add an additional d10 and pair it up with the d100 just created
-		if(options.sides === 100) {
+		if(options.sides === 100 && options.data !== 'single') {
 			// assign the new die to a property on the d100 - spread the options in order to pass a matching theme
-			newDie.d10Instance = await Dice.loadDie({...diceOptions, sides: 10, id: newDie.id + 10000}, this.#scene).then( response =>  {
+			newDie.d10Instance = await Dice.loadDie({...diceOptions, dieType: 'd10', sides: 10, id: newDie.id + 10000}, this.#scene).then( response =>  {
 				const d10Instance = new Dice(response, this.#scene)
 				// identify the parent of this d10 so we can calculate the roll result later
 				d10Instance.dieParent = newDie

@@ -27,8 +27,9 @@ class Dice {
   constructor(options, scene) {
     this.config = {...defaultOptions, ...options}
     this.id = this.config.id !== undefined ? this.config.id : Date.now()
-		this.dieType = this.config.sides
-    this.comboKey = `${this.config.theme}_${this.dieType}`
+    this.sides = this.config.sides
+		this.dieType = this.config.dieType
+    this.comboKey = `${this.config.theme}_${this.config.dieType}`
     this.scene = scene
     this.createInstance()
   }
@@ -75,8 +76,12 @@ class Dice {
   static async loadDie(options, scene) {
     const { sides, theme = 'default', meshName, colorSuffix} = options
 
+    if(!options.dieType){
+      options.dieType = Number.isInteger(sides) ? `d${sides}` : sides
+    }
+
     // create a key for this die type and theme for caching and instance creation
-    const dieMeshName = meshName + '_' + sides
+    const dieMeshName = meshName + '_' + options.dieType
     const dieMaterialName = dieMeshName + '_' + theme + colorSuffix
     let die = scene.getMeshByName(dieMaterialName)
 

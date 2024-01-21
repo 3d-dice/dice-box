@@ -97,7 +97,14 @@ class WorldOnscreen {
 		if(prevConfig.enableShadows !== this.config.enableShadows) {
 			// regenerate the lights
 			Object.values(this.#lights ).forEach(light => light.dispose())
-			this.#lights = createLights({enableShadows: this.config.enableShadows})
+			this.#lights = createLights(
+				{
+					enableShadows: this.config.enableShadows,
+					shadowTransparency: this.config.shadowTransparency,
+					intensity: this.config.lightIntensity,
+					scene: this.#scene
+				}
+			)
 		}
 		if(prevConfig.scale !== this.config.scale) {
 			Object.values(this.#dieCache).forEach(({mesh}) => {

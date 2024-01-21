@@ -1,6 +1,6 @@
 import { createCanvas } from './components/world/canvas'
 import physicsWorker from './components/physics.worker.js?worker&inline'
-import { debounce, createAsyncQueue, Random, hexToRGB } from './helpers'
+import { debounce, createAsyncQueue, Random, hexToRGB, webgl_support } from './helpers'
 
 const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
@@ -35,6 +35,7 @@ class WorldFacade {
 	#DicePhysics
 	#dicePhysicsPromise
 	#dicePhysicsResolve
+	#webgl_support = true
 	noop = () => {}
 
   constructor(container, options = {}){
@@ -54,13 +55,18 @@ class WorldFacade {
 		this.onThemeLoaded = options.onThemeLoaded || this.noop
 		this.onThemeConfigLoaded = options.onThemeConfigLoaded || this.noop
 
+		// is webGL supported?
+		if(webgl_support()){
+			// if a canvas selector is provided then that will be used for the dicebox, otherwise a canvas will be created using the config.id
+			this.canvas = createCanvas({
+				selector: container,
+				id: this.config.id
+			})
+			this.isVisible = true
+		} else {
+			this.#webgl_support = false
+		}
 
-		// if a canvas selector is provided then that will be used for the dicebox, otherwise a canvas will be created using the config.id
-    this.canvas = createCanvas({
-      selector: container,
-      id: this.config.id
-    })
-				this.isVisible = true
 		// create a queue to prevent theme being loaded multiple times
 		this.loadThemeQueue = createAsyncQueue({dedupe: true})
   }
@@ -78,7 +84,16 @@ class WorldFacade {
 			this.#diceWorldResolve()
 		}
 
-		if ("OffscreenCanvas" in window && "transferControlToOffscreen" in this.canvas && this.config.offscreen) {
+    if(!this.#webgl_support){
+      console.warn('This browser does not support WebGL which is required for 3D rendering. Falling back to random number generator')
+      const WorldNone = await import('./components/world.none').then(module => module.default)
+      this.#DiceWorld = new WorldNone({
+				canvas: this.canvas,
+				options: this.config,
+				onInitComplete
+			})
+    }
+		else if ("OffscreenCanvas" in window && "transferControlToOffscreen" in this.canvas && this.config.offscreen) {
 			// Ok to use offscreen canvas - transfer control offscreen
 			const WorldOffscreen = await import('./components/world.offscreen').then(module => module.default)
 			// WorldOffscreen is just a container class that passes all method calls to the Offscreen Canvas worker
@@ -141,7 +156,9 @@ class WorldFacade {
 		// send resize events to workers - debounced for performance
 		const resizeWorkers = () => {
 			this.#DiceWorld.resize({width: this.canvas.clientWidth, height: this.canvas.clientHeight})
-			this.#DicePhysics.postMessage({action: "resize", width: this.canvas.clientWidth, height: this.canvas.clientHeight});
+			if(this.#DicePhysics){
+				this.#DicePhysics.postMessage({action: "resize", width: this.canvas.clientWidth, height: this.canvas.clientHeight});
+			}
 		}
 		const debounceResize = debounce(resizeWorkers)
 		window.addEventListener("resize", debounceResize)
@@ -149,7 +166,11 @@ class WorldFacade {
 
   async init() {
 		// trigger physics first so it can load in parallel with world
-		this.#loadPhysics()
+    if(this.#webgl_support){
+      this.#loadPhysics()
+    } else {
+      this.#dicePhysicsPromise = Promise.resolve()
+    }
 		await this.#loadWorld()
 		this.resizeWorld()
 
@@ -209,9 +230,11 @@ class WorldFacade {
 
     // wait for both DiceWorld and DicePhysics to initialize
 		await Promise.all([this.#diceWorldPromise, this.#dicePhysicsPromise])
-		// set up message channels between Dice World and Dice Physics
-
-		this.#connectWorld()
+    
+    if(this.#DicePhysics){
+      // set up message channels between Dice World and Dice Physics
+      this.#connectWorld()
+    }
 
 		// queue load of the theme defined in the config
 		await this.loadThemeQueue.push(() => this.loadTheme(this.config.theme))
@@ -347,11 +370,14 @@ class WorldFacade {
 		this.config = newConfig
 		// pass updates to DiceWorld
 		this.#DiceWorld.updateConfig(newConfig)
+
+		if(this.#DicePhysics){
 		// pass updates to PhysicsWorld
-		this.#DicePhysics.postMessage({
-			action: 'updateConfig',
-			options: newConfig
-		})
+			this.#DicePhysics.postMessage({
+				action: 'updateConfig',
+				options: newConfig
+			})
+		}
 
 		// make this method chainable
 		return this
@@ -369,15 +395,19 @@ class WorldFacade {
 		this.rollDiceData = {}
 		// clear all rendered die bodies
 		this.#DiceWorld.clear()
-    // clear all physics die bodies
-    this.#DicePhysics.postMessage({action: "clearDice"})
+		if(this.#DicePhysics){
+			// clear all physics die bodies
+			this.#DicePhysics.postMessage({action: "clearDice"})
+		}
 
 		// make this method chainable
 		return this
   }
 
 	hide() {
-		this.canvas.style.display = 'none'
+		if(this.canvas){
+			this.canvas.style.display = 'none'
+		}
 		this.isVisible = false;
 
 		// make this method chainable
@@ -385,7 +415,9 @@ class WorldFacade {
 	}
 
 	show() {
-		this.canvas.style.display = 'block'
+		if(this.canvas){
+			this.canvas.style.display = 'block'
+		}
 		this.isVisible = true;
 		this.resizeWorld();
 
@@ -472,8 +504,10 @@ class WorldFacade {
 			let id = this.rollDiceData[die.rollId].id
 			// remove the die from the render - don't like having to pass two ids. rollId is passed over just so it can be passed back for callback
 			this.#DiceWorld.remove({id,rollId: die.rollId})
-			// remove the die from the physics bodies
-			this.#DicePhysics.postMessage({action: "removeDie", id })
+			if(this.#DicePhysics){
+				// remove the die from the physics bodies
+				this.#DicePhysics.postMessage({action: "removeDie", id })
+			}
 		})
 
 		return this.rollCollectionData[collectionId].promise
@@ -523,7 +557,7 @@ class WorldFacade {
 				const dieType = Number.isInteger(notation.sides) ? `d${notation.sides}` : notation.sides
 
         // when a roll string is passed in, notation.sides will be a string - convert it to an integer so it will match the object data type of a notation object
-        if(/^d[1-9]{1}[0-9]{1}0?$/.test(notation.sides)){
+        if(/^d[1-9]{1}[0-9]{0,1}0?$/.test(notation.sides)){
           notation.sides =  parseInt(notation.sides.replace('d', ''))
         }
 
@@ -545,15 +579,21 @@ class WorldFacade {
 				collection.rolls.push(this.rollDiceData[rollId])
 
 				// TODO: eliminate the 'd' for more flexible naming such as 'fate' - ensure numbers are strings
-				if (roll.sides === 'fate' && (!diceAvailable.includes(dieType) && !diceExtra.includes(dieType))){
+				if (roll.sides === 'fate' && (!diceAvailable.includes(dieType) && !diceExtra.includes(dieType)) || roll.sides === 'fate' && !this.#webgl_support){
 					console.warn(`fate die unavailable in '${theme}' theme. Using fallback.`)
 					const min = -1
 					const max = 1
 					roll.value = Random.range(min,max)
 					this.#DiceWorld.addNonDie(roll)
-				} else if(this.config.suspendSimulation || (!diceAvailable.includes(dieType) && !diceExtra.includes(dieType))){
+				} else if(this.config.suspendSimulation || (!diceAvailable.includes(dieType) && !diceExtra.includes(dieType)) || !this.#webgl_support){
 					// check if the requested roll is available in the current theme, if not then use crypto fallback
-					console.warn(this.config.suspendSimulation ? "3D simulation suspended. Using fallback." : `${roll.sides} die unavailable in '${theme}' theme. Using fallback.`)
+					const warning = 
+					!this.#webgl_support 
+						? `This browser does not support webGL. Using random number fallback.` 
+						: this.config.suspendSimulation 
+							? "3D simulation suspended. Using fallback." 
+							: `${roll.sides} die unavailable in '${theme}' theme. Using fallback.`
+					console.warn(warning)
 					const max = Number.isInteger(roll.sides) ? roll.sides : parseInt(roll.sides.replace(/\D/g,''))
 					roll.value = Random.range(1, max)
 					this.#DiceWorld.addNonDie(roll)
@@ -631,6 +671,9 @@ class WorldFacade {
 				if(this.rollDiceData.hasOwnProperty(object.rollId)){
 					object.rollId = incrementId(object.rollId)
 				}
+			}
+			if(!object.hasOwnProperty('modifier')){
+				object.modifier = 0
 			}
 		}
 

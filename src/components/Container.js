@@ -22,7 +22,7 @@ class Container{
 		this.destroy()
 		// extend config with options on create
 		Object.assign(this.config,options)
-		const { aspect, enableDebugging = true, enableShadows } = this.config
+		const { aspect, enableDebugging, enableShadows } = this.config
 		const wallHeight = 30
 		let boxMaterial
 

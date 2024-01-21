@@ -519,9 +519,13 @@ class WorldFacade {
 				let id = notation.id !== undefined ? notation.id : this.#idIndex++
 				index = hasGroupId ? notation.groupId : this.#groupIndex
 
+        // when a roll object is passed in, notation.sides could be an integer - convert the die type to include the "d" prefix so it will match the model names
 				const dieType = Number.isInteger(notation.sides) ? `d${notation.sides}` : notation.sides
 
-				// notation.sides = dieType
+        // when a roll string is passed in, notation.sides will be a string - convert it to an integer so it will match the object data type of a notation object
+        if(/^d[1-9]{1}[0-9]{1}0?$/.test(notation.sides)){
+          notation.sides =  parseInt(notation.sides.replace('d', ''))
+        }
 
 				const roll = {
 					sides: notation.sides,
@@ -649,7 +653,7 @@ class WorldFacade {
   // taken from https://github.com/ChapelR/dice-notation
   parse(notation, diceAvailable) {
     const diceNotation = /(\d+)([dD]{1}\d+)(.*)$/i
-		const percentNotation = /(\d+)[dD]([0%]+)(.*)$/i
+		const percentNotation = /(\d+)[dD](00|%)(.*)$/i
 		const fudgeNotation = /(\d+)[dD](f+[ate]*)(.*)$/i
 		// const customNotation = /(\d+)[dD](.*)([+-])/i
 		const customNotation = /(\d+)[dD]([\d\w]+)([+-]{0,1}\d+)?/i
@@ -687,7 +691,7 @@ class WorldFacade {
 		}
 
 		if(cleanNotation.match(percentNotation)){
-			returnObj.sides = roll[2]
+			returnObj.sides = 'd100'
 			returnObj.data = 'single'
 		} else if(cleanNotation.match(fudgeNotation)){
 			returnObj.sides = 'fate' // force lowercase

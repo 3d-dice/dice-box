@@ -2,7 +2,7 @@
 
 High performance 3D dice roller module made with [BabylonJS](https://www.babylonjs.com/), [AmmoJS](https://github.com/kripken/ammo.js/) and implemented with [web workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers) and [offscreenCanvas](https://doc.babylonjs.com/divingDeeper/scene/offscreenCanvas). Designed to be easy to integrate into your own JavaScript app.
 
-**Version 1.0.10 just released!** 
+**Version 1.0.11 just released!** 
 
 ![Demo Screenshot](https://github.com/3d-dice/dice-box/blob/main/dice-screenshot.jpg)
 
@@ -11,10 +11,13 @@ High performance 3D dice roller module made with [BabylonJS](https://www.babylon
 The docs site is available at [fantasticdice.games](https://fantasticdice.games)
 
 ## Demo
-__New demo for version 1.0.8!__ <br>
+__New demo for version 1.0.11__ <br>
+The latest code running on AWS [Dice Box](https://d3rivgcgaqw1jo.cloudfront.net/index.html)
+
+__New demo for version 1.0.8__ <br>
 Use this module as an ES6 module from [UNPKG CDN](https://unpkg.com/browse/@3d-dice/dice-box@1.0.8/) <br>
 No need to use npm install or serve these files yourself. [Static CDN Demo](https://codesandbox.io/s/dice-es6-module-cdn-lhbs99?file=/src/index.js) <br><br>
-__New demos for version 1.0.5!__ <br>
+__New demos for version 1.0.5__ <br>
 Try out the kitchen sink demo at https://d3rivgcgaqw1jo.cloudfront.net/index.html <br>
 See the kitchen sink code demo here: https://codesandbox.io/s/3d-dice-demo-v1-0-5-sm4ien <br>
 Here's a simple React Demo for rolling attributes (using 3d6): https://codesandbox.io/s/react-roller-attributes-v1-0-5-65uqhv <br>

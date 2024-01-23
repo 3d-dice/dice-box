@@ -387,11 +387,14 @@ class WorldOnscreen {
 			if(die?.d10Instance?.asleep || die?.dieParent?.asleep) {
 				const d100 = die.config.sides === 100 ? die : die.dieParent
 				const d10 = die.config.sides === 10 ? die : die.d10Instance
-				if (d10.value === 0 && d100.value === 0) {
-					d100.value = 100; // 00 + 0 is 100 on a d100
-				} else {
-					d100.value = d100.value + d10.value
+				if(d100.rawValue){
+					// this die is being processed again for some reason, probably a physics ineration that woke it before it was immobilized
+					d100.value = d100.rawValue
 				}
+				// save the original value
+				d100.rawValue = d100.value
+
+				d100.value = d100.value + d10.value
 	
 				this.onRollResult({
 					rollId: d100.config.rollId,

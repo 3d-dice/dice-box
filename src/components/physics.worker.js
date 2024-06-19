@@ -16,7 +16,6 @@ let width = 150
 let height = 150
 let aspect = 1
 let stopLoop = false
-let spinScale = 60
 
 const defaultOptions = {
 	size: 9.5,
@@ -118,6 +117,34 @@ self.onmessage = (e) => {
   }
 }
 
+
+const computeGravity = (gravity = defaultOptions.gravity, mass = defaultOptions.mass) => {
+	// make gravity a little bit stronger for heavy objects, so they seem heavier
+	return gravity === 0 ? 0 : gravity + mass / 3
+}
+
+const computeMass = (mass = defaultOptions.mass) => {
+	// high values in mass are pretty ineffective, but whole intigers make better config values, so we shave down the value
+	// also prevents mass from ever being zero
+	return 1 + mass / 3
+}
+
+const computeSpin = (spin = defaultOptions.spinForce, spinScale = 60) => {
+	// scale down the actual spin value from a nice intiger in config to a fractional value
+	return spin/spinScale
+}
+
+const computeThrowForce = (throwForce = defaultOptions.throwForce, mass = defaultOptions.mass, scale = defaultOptions.scale) => {
+	return throwForce / 2 / mass * (1 + scale / 6)
+}
+
+const computeStartingHeight = (height = defaultOptions.startingHeight) => {
+	// ensure minimum startingHeight of 1
+	return height < 1 ? 1 : height
+}
+
+
+
 // runs when the worker loads to set up the Ammo physics world and load our colliders
 // loaded colliders will be cached and added to the world in a later post message
 const init = async (data) => {
@@ -126,14 +153,11 @@ const init = async (data) => {
 	aspect = width / height
 
 	config = {...config,...data.options}
-	config.gravity === 0 ? 0 : config.gravity + config.mass / 3
-	config.mass = 1 + config.mass / 3
-	config.spinForce = config.spinForce/spinScale
-	config.throwForce = config.throwForce / 2 / config.mass * (1 + config.scale / 6)
-	// config.spinForce = (config.spinForce/100) * (config.scale * (config.scale < 1 ? .5 : 2))
-	// config.throwForce = config.throwForce * (config.scale < 1 ? 2 - (config.scale ** config.scale) : 1 + config.scale/6)
-	// ensure minimum startingHeight of 1
-	config.startingHeight = config.startingHeight < 1 ? 1 : config.startingHeight
+	config.gravity = computeGravity(config.gravity, config.mass)
+	config.mass = computeMass(config.mass)
+	config.spinForce = computeSpin(config.spinForce)
+	config.throwForce = computeThrowForce(config.throwForce,config.mass,config.scale)
+	config.startingHeight = computeStartingHeight(config.startingHeight)
 
 	const ammoWASM = {
 		// locateFile: () => '../../node_modules/ammo.js/builds/ammo.wasm.wasm'
@@ -151,16 +175,25 @@ const init = async (data) => {
 	physicsWorld = setupPhysicsWorld()
 
 	addBoxToWorld(config.size, config.startingHeight + 10)
-
 }
 
 const updateConfig = (options) => {
-	config = {...config,...options}
-	config.mass = 1 + config.mass / 3
-	config.gravity = config.gravity === 0 ? 0 : config.gravity + config.mass / 3
-	config.spinForce = config.spinForce/spinScale
-	config.throwForce = config.throwForce / 2 / config.mass * (1 + config.scale / 6)
-	config.startingHeight = config.startingHeight < 1 ? 1 : config.startingHeight
+	if(options.mass){
+		config.mass = computeMass(options.mass)
+	}
+	if(options.mass || options.gravity) {
+		config.gravity = computeGravity(options?.gravity, options?.mass)
+	}
+	if(options.spinForce) {
+		config.spinForce = computeSpin(options.spinForce)
+	}
+	if(options.throwForce || options.mass || options.scale){
+		config.throwForce = computeThrowForce(options?.throwForce, options?.mass, options?.scale)
+	}
+	if(options.startingHeight) {
+		computeStartingHeight(options.startingHeight)
+	}
+
 	removeBoxFromWorld()
 	addBoxToWorld(config.size, config.startingHeight + 10)
 	physicsWorld.setGravity(setVector3(0, -9.81 * config.gravity, 0))

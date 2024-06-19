@@ -1,8 +1,8 @@
-# Dice-Box
+# Dice-Box &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/frankieali/infima-extras/blob/main/LICENSE) [![npm version](https://img.shields.io/npm/v/@3d-dice/dice-box.svg?style=flat)](https://www.npmjs.com/package/@3d-dice/dice-box)
 
 High performance 3D dice roller module made with [BabylonJS](https://www.babylonjs.com/), [AmmoJS](https://github.com/kripken/ammo.js/) and implemented with [web workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers) and [offscreenCanvas](https://doc.babylonjs.com/divingDeeper/scene/offscreenCanvas). Designed to be easy to integrate into your own JavaScript app.
 
-**Version 1.0.11 just released!** 
+**Version 1.0.13 just released!** 
 
 ![Demo Screenshot](https://github.com/3d-dice/dice-box/blob/main/dice-screenshot.jpg)
 

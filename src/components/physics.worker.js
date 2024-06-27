@@ -178,20 +178,21 @@ const init = async (data) => {
 }
 
 const updateConfig = (options) => {
+	config = {...config, ...options}
 	if(options.mass){
-		config.mass = computeMass(options.mass)
+		config.mass = computeMass(config.mass)
 	}
 	if(options.mass || options.gravity) {
-		config.gravity = computeGravity(options?.gravity, options?.mass)
+		config.gravity = computeGravity(config.gravity, config.mass)
 	}
 	if(options.spinForce) {
-		config.spinForce = computeSpin(options.spinForce)
+		config.spinForce = computeSpin(config.spinForce)
 	}
 	if(options.throwForce || options.mass || options.scale){
-		config.throwForce = computeThrowForce(options?.throwForce, options?.mass, options?.scale)
+		config.throwForce = computeThrowForce(config.throwForce, config.mass, config.scale)
 	}
 	if(options.startingHeight) {
-		computeStartingHeight(options.startingHeight)
+		computeStartingHeight(config.startingHeight)
 	}
 
 	removeBoxFromWorld()

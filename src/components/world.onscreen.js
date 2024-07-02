@@ -109,7 +109,12 @@ class WorldOnscreen {
 		if(prevConfig.scale !== this.config.scale) {
 			Object.values(this.#dieCache).forEach(({mesh}) => {
 				if(mesh){
-					mesh.scaling = new Vector3(this.config.scale,this.config.scale,this.config.scale)
+					const {x = 1,y = 1,z = 1} = mesh?.metadata?.baseScale
+					mesh.scaling = new Vector3(
+						this.config.scale * x,
+						this.config.scale * y,
+						this.config.scale * z
+					)
 				}
 			})
 		}

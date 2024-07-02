@@ -129,7 +129,7 @@ const computeMass = (mass = defaultOptions.mass) => {
 	return 1 + mass / 3
 }
 
-const computeSpin = (spin = defaultOptions.spinForce, spinScale = 60) => {
+const computeSpin = (spin = defaultOptions.spinForce, spinScale = 40) => {
 	// scale down the actual spin value from a nice intiger in config to a fractional value
 	return spin/spinScale
 }
@@ -185,6 +185,7 @@ const updateConfig = (options) => {
 	if(options.mass || options.gravity) {
 		config.gravity = computeGravity(config.gravity, config.mass)
 	}
+	
 	if(options.spinForce) {
 		config.spinForce = computeSpin(config.spinForce)
 	}
@@ -199,7 +200,7 @@ const updateConfig = (options) => {
 	addBoxToWorld(config.size, config.startingHeight + 10)
 	physicsWorld.setGravity(setVector3(0, -9.81 * config.gravity, 0))
 	Object.values(colliders).map((collider) => {
-		collider.convexHull.setLocalScaling(setVector3(config.scale, config.scale, config.scale))
+		collider.convexHull.setLocalScaling(setVector3(collider.scaling[0] * config.scale, collider.scaling[1] * config.scale, collider.scaling[2] * config.scale))
 	})
 }
 
@@ -273,7 +274,7 @@ const createConvexHull = (mesh) => {
 		let v = setVector3(mesh.positions[i], mesh.positions[i+1], mesh.positions[i+2])
 		convexMesh.addPoint(v, true)
 	}
-
+	
 	convexMesh.setLocalScaling(setVector3(mesh.scaling[0] * config.scale, mesh.scaling[1] * config.scale, mesh.scaling[2] * config.scale))
 
 	return convexMesh
@@ -453,17 +454,20 @@ const addDie = (options) => {
 }
 
 const rollDie = (die) => {
+
+	// lerp picks a random number between two values
 	die.setLinearVelocity(setVector3(
 		lerp(-config.startPosition[0] * .5, -config.startPosition[0] * config.throwForce, Math.random()),
-		// lerp(-config.startPosition[1] * .5, -config.startPosition[1] * config.throwForce, Math.random()),
-		lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random()),
+		lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random()), // limit the y force to 2
 		lerp(-config.startPosition[2] * .5, -config.startPosition[2] * config.throwForce, Math.random()),
 	))
 
+	const flippy = Math.random() > .5 ? 1 : -1 // random positive or negative number
+	const spinny = lerp(config.spinForce * .5, config.spinForce, Math.random())
 	const force = new Ammo.btVector3(
-		lerp(-config.spinForce, config.spinForce, Math.random()),
-		lerp(-config.spinForce, config.spinForce, Math.random()),
-		lerp(-config.spinForce, config.spinForce, Math.random())
+		spinny * flippy,
+		spinny * -flippy, // flip the flippy to avoid gimble lock
+		spinny * flippy
 	)
 
 	// attempting to create an envelope for the force influence based on scale and mass

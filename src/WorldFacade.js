@@ -4,18 +4,19 @@ import { debounce, createAsyncQueue, Random, hexToRGB, webgl_support } from './h
 
 const defaultOptions = {
 	id: `dice-canvas-${Date.now()}`, // set the canvas id
+	container: null,
   enableShadows: true, // do dice cast shadows onto DiceBox mesh?
 	shadowTransparency: .8,
 	lightIntensity: 1,
   delay: 10, // delay between dice being generated - 0 causes stuttering and physics popping
 	scale: 5, // scale the dice
 	theme: 'default', // can be a hex color or a pre-defined theme such as 'purpleRock'
+	preloadThemes: [],
 	themeColor: '#2e8555', // used for color values or named theme variants - not fully implemented yet // green: #2e8555 // yellow: #feea03
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
-	assetPath: '/assets/dice-box/', // path to 'ammo', 'models', 'themes' folders and web workers
+	assetPath: '/assets/dice-box/', // path to 'ammo', 'themes' folders and web workers
 	// origin: location.origin,
 	origin: typeof window !== "undefined" ? window.location.origin : "",
-	meshFile: `models/default.json`,
 	suspendSimulation: false
 }
 
@@ -38,7 +39,14 @@ class WorldFacade {
 	#webgl_support = true
 	noop = () => {}
 
-  constructor(container, options = {}){
+  constructor(options = {}){
+		// allow for depricated config with a warning
+		if (arguments.length === 2 && typeof(arguments[0] === 'string') && typeof(arguments[1] === 'object')) {
+			console.warn(`You are using the old API. Dicebox constructor accepts a config object as it's only argument. Please read the v1.1.0 docs at https://fantasticdice.games/docs/usage/config`)
+			options = arguments[1]
+			options.container = arguments[0]
+		}
+
 		if(typeof options !== 'object') {
 			throw new Error('Config options should be an object. Config reference: https://fantasticdice.games/docs/usage/config#configuration-options')
 		}
@@ -59,7 +67,7 @@ class WorldFacade {
 		if(webgl_support()){
 			// if a canvas selector is provided then that will be used for the dicebox, otherwise a canvas will be created using the config.id
 			this.canvas = createCanvas({
-				selector: container,
+				selector: this.config.container,
 				id: this.config.id
 			})
 			this.isVisible = true
@@ -68,7 +76,7 @@ class WorldFacade {
 		}
 
 		// create a queue to prevent theme being loaded multiple times
-		this.loadThemeQueue = createAsyncQueue({dedupe: true})
+		this.loadThemeQueue = createAsyncQueue()
   }
 
 	// Load the BabylonJS World
@@ -238,6 +246,13 @@ class WorldFacade {
 
 		// queue load of the theme defined in the config
 		await this.loadThemeQueue.push(() => this.loadTheme(this.config.theme))
+		
+		// queue load of other defined themes
+
+		this.config.preloadThemes.forEach(async function(theme) {
+			await this.loadThemeQueue.push(() => this.loadTheme(theme))
+		}.bind(this))
+
 
 		//TODO: this should probably return a promise
 		// make this method chainable
@@ -247,78 +262,62 @@ class WorldFacade {
 	// fetch the theme config and return a themeData object
 	async getThemeConfig(theme){
 		const basePath = `${this.config.origin}${this.config.assetPath}themes/${theme}`
-		let themeData
 
-		if (theme === 'default'){
-			// sensible defaults
-			themeData = {
-				name: "Default Colors",
-				material: {
-					type: "color",
-					diffuseTexture: {
-						light: 'diffuse-light.png',
-						dark: 'diffuse-dark.png'
-					},
-					diffuseLevel: 1,
-					bumpTexture: 'normal.png',
-					bumpLevel: .5,
-					specularTexture: 'specular.jpg',
-					specularPower: 1
+		// fetch the theme.config file
+		let themeData = await fetch(`${basePath}/theme.config.json`).then(resp => {
+			if(resp.ok) {
+				const contentType = resp.headers.get("content-type")
+				if (contentType && contentType.indexOf("application/json") !== -1) {
+					return resp.json()
+				} 
+				else if (resp.type && resp.type === 'basic') {
+					return resp.json()
 				}
+				else {
+					// return resp
+					throw new Error(`Incorrect contentType: ${contentType}. Expected "application/json" or "basic"`)
+				}
+			} else {
+				throw new Error(`Unable to fetch config file for theme: '${theme}'. Request rejected with status ${resp.status}: ${resp.statusText}`)
 			}
-		} else {
-			// fetch the theme.config file
-			themeData = await fetch(`${basePath}/theme.config.json`).then(resp => {
-				if(resp.ok) {
-					const contentType = resp.headers.get("content-type")
-					if (contentType && contentType.indexOf("application/json") !== -1) {
-						return resp.json()
-					} 
-					else if (resp.type && resp.type === 'basic') {
-						return resp.json()
-					}
-					else {
-						// return resp
-						throw new Error(`Incorrect contentType: ${contentType}. Expected "application/json" or "basic"`)
-					}
-				} else {
-					throw new Error(`Unable to fetch config file for theme: '${theme}'. Request rejected with status ${resp.status}: ${resp.statusText}`)
-				}
-			}).catch(error => console.error(error))
-		}
+		}).catch(error => console.error(error))
 
-		let meshFilePath = this.config.origin + this.config.assetPath + this.config.meshFile
-		let meshName = 'default'
 		if(!themeData){
 			throw new Error("No theme config data to work with.")
 		}
+
+		let meshName = 'default'
+		let meshFilePath = `${this.config.origin}${this.config.assetPath}themes/default/default.json`
+
 		if(themeData.hasOwnProperty('meshFile')){
+			meshName = themeData.meshFile.replace(/(.*)\..{2,4}$/,'$1')
 			meshFilePath = `${basePath}/${themeData.meshFile}`
-			if(!themeData.hasOwnProperty('meshName')) {
-				console.warn('You should provide a meshName in your theme.config.json file')
-				// fallback to fileName as meshName without extension
-				meshName = themeData.meshFile.replace(/(.*)\..{2,4}$/,'$1')
-			} else {
-				meshName = themeData.meshName
-			}
 		}
 
 		// if diceAvailable is not specified then assume the default set of seven
 		if(!themeData.hasOwnProperty('diceAvailable')){
-			themeData.diceAvailable = ['d4','d6','d8','d10','d12','d20','d100']
+			throw new Error('A theme must indicate which dice are available by defining "diceAvailable".')
 		}
 
+		// extend themes
+		// if a theme extends another theme then the diceAvailable will be added to the diceExtended value of the extended theme
+		// the extended them can then roll those dice as if it were part of it's own theme
+		// example: diceOfRolling-fate extends diceOfRolling. You can now roll 3dfate with the theme: 'diceOfRolling'
+
 		if(themeData.hasOwnProperty("extends")){
-			let target = this.themesLoadedData[themeData.extends]
-			if(!target){
-				target = await this.loadTheme(themeData.extends).catch(error => console.error(error))
+			const target = await this.loadTheme(themeData.extends).catch(error => console.error(error))
+
+			// can not extend a theme that extends another theme
+			if(target.hasOwnProperty("extends")){
+				throw new Error('Cannot extend a theme that extends another theme.')
 			}
-			if(target){
-				themeData.diceInherited = [...(themeData.diceInherited || [])]
-				target.diceAvailable.map(die => {
-					themeData.diceInherited[die] = target.systemName
-				})
-			}
+
+			// add target diceAvailable into theme.diceExtended
+			const newDice = {}
+			themeData.diceAvailable.forEach(die => {
+				newDice[die] = themeData.systemName
+			})
+			target.diceExtended = {...target.diceExtended, ...newDice}
 		}
 
 
@@ -524,19 +523,32 @@ class WorldFacade {
 			if(!notation.sides) {
 				throw new Error("Improper dice notation or unable to parse notation")
 			}
-			const theme = notation.theme || collection.theme || this.config.theme
+			let theme = notation.theme || collection.theme || this.config.theme
 			const themeColor = notation.themeColor || collection.themeColor || this.config.themeColor
 			const rolls = {}
 			const hasGroupId = notation.groupId !== undefined
 			let index
-
 			
 			// load the theme, will be short circuited if previously loaded
 			const loadTheme = () => this.loadTheme(theme)
 			await this.loadThemeQueue.push(loadTheme)
 
-			const {meshName, diceAvailable, diceInherited = {}, material: { type: materialType }} = this.themesLoadedData[theme]
-			const diceExtra = Object.keys(diceInherited)
+			// const {meshName, diceAvailable, diceInherited = {}, material: { type: materialType }} = this.themesLoadedData[theme]
+			let meshName = this.themesLoadedData[theme].meshName
+			let diceAvailable = this.themesLoadedData[theme]?.diceAvailable
+			let diceExtended = this.themesLoadedData[theme].diceExtended || {}
+			let materialType = this.themesLoadedData[theme]?.material?.type
+
+			const diceExtra = Object.keys(diceExtended)
+
+			if(diceExtra && diceExtra.includes(notation.sides)){
+				theme = diceExtended[notation.sides]
+				const loadExtendedTheme = () => this.loadTheme(theme)
+				this.loadThemeQueue.push(loadExtendedTheme)
+				meshName = this.themesLoadedData[theme].meshName
+				diceAvailable = this.themesLoadedData[theme]?.diceAvailable
+				materialType = this.themesLoadedData[theme]?.material?.type
+			}
 
 			let colorSuffix = '', color
 
@@ -598,16 +610,16 @@ class WorldFacade {
 					roll.value = Random.range(1, max)
 					this.#DiceWorld.addNonDie(roll)
 				} else {
-					let parentTheme
+					let extendedTheme
 					if(diceExtra.includes(dieType)) {
-						const parentThemeName = diceInherited[dieType]
-						parentTheme = this.themesLoadedData[parentThemeName]
+						const extendedThemeName = diceExtended[dieType]
+						extendedTheme = this.themesLoadedData[extendedThemeName]
 					}
 					this.#DiceWorld.add({
 						...roll,
 						newStartPoint,
-						theme: parentTheme?.systemName || theme,
-						meshName: parentTheme?.meshName || meshName,
+						theme: extendedTheme?.systemName || theme,
+						meshName: extendedTheme?.meshName || meshName,
 						colorSuffix
 					})
 				}

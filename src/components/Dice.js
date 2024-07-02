@@ -36,17 +36,20 @@ class Dice {
 
   createInstance() {
     // piece together the name of the die we want to instance
-    const targetDie = `${this.config.meshName}_${this.dieType}_${this.config.theme}${this.config.colorSuffix}`
+    const targetDieName = `${this.config.meshName}_${this.dieType}_${this.config.theme}${this.config.colorSuffix}`
     // create a new unique name for this instance
-    const instanceName = `${targetDie}-instance-${this.id}`
+    const instanceName = `${targetDieName}-instance-${this.id}`
 
     // create the instance
-    const dieInstance = this.scene.getMeshByName(targetDie).createInstance(instanceName)
+    const targetDie = this.scene.getMeshByName(targetDieName)
+    const dieInstance = targetDie.createInstance(instanceName)
 
     if(this.config.colorSuffix.length > 0){
       const color = Color3.FromHexString(this.config.themeColor)
       dieInstance.instancedBuffers.customColor = color
     }
+
+    dieInstance.metadata = targetDie.metadata
 
 		// start the instance under the floor, out of camera view
 		dieInstance.position.y = -100
@@ -161,6 +164,9 @@ class Dice {
         // prefix all the meshes ids from this file with the file name so we can find them later e.g.: 'default-dice_d10' and 'default-dice_d10_collider'
         // model.id = meshName + '_' + model.id
         model.name = meshName + '_' + model.name
+        model.metadata = {
+          baseScale: model.scaling
+        }
       })
       if(!has_d100 && has_d10) {
         // console.log("create a d100 from a d10")  

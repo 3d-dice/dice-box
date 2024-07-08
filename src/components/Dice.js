@@ -243,7 +243,10 @@ class Dice {
       // rayHelper.show(d.config.scene)
 			d.value = meshFaceIds[d.dieType][picked.faceId]
       if(d.value === undefined){
-        throw new Error(`colliderFaceMap Error: No value found for ${d.dieType} mesh face ${picked.faceId}`)
+        // throw new Error(`colliderFaceMap Error: No value found for ${d.dieType} mesh face ${picked.faceId}`)
+        // log error, but allow result processing to continue
+        console.error(`colliderFaceMap Error: No value found for ${d.dieType} mesh face ${picked.faceId}`)
+        d.value = 0
       }
 
       return resolve(d.value)

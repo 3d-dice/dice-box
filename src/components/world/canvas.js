@@ -1,9 +1,12 @@
+import './canvas.css'
+
 function createCanvas(options) {
   const { selector, id } = options
 
   let container = document.body
   let canvas = document.createElement('canvas')
   canvas.id = id
+  canvas.classList.add('dice-box-canvas')
 
   if(selector) {
     if (typeof selector !== 'string') {

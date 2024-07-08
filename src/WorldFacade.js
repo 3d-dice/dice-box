@@ -51,12 +51,13 @@ class WorldFacade {
 			throw new Error('Config options should be an object. Config reference: https://fantasticdice.games/docs/usage/config#configuration-options')
 		}
 		// pull out callback functions from options
-		const { onDieComplete, onRollComplete, onRemoveComplete, onThemeConfigLoaded, onThemeLoaded, ...boxOptions } = options
+		const { onBeforeRoll, onDieComplete, onRollComplete, onRemoveComplete, onThemeConfigLoaded, onThemeLoaded, ...boxOptions } = options
 
 		// extend defaults with options
 		this.config = {...defaultOptions, ...boxOptions}
 
 		// assign callback functions
+		this.onBeforeRoll = options.onBeforeRoll || this.noop
 		this.onDieComplete = options.onDieComplete || this.noop
 		this.onRollComplete = options.onRollComplete || this.noop
 		this.onRemoveComplete = options.onRemoveComplete || this.noop
@@ -318,6 +319,8 @@ class WorldFacade {
 				newDice[die] = themeData.systemName
 			})
 			target.diceExtended = {...target.diceExtended, ...newDice}
+			// set the theme to the parent theme
+			this.config.theme = themeData.extends
 		}
 
 
@@ -363,10 +366,20 @@ class WorldFacade {
 	async updateConfig(options) {
 		const newConfig = {...this.config,...options}
 		// console.log('newConfig', newConfig)
-		const config = await this.loadThemeQueue.push(() => this.loadTheme(newConfig.theme))
+		// const config = await this.loadThemeQueue.push(() => this.loadTheme(newConfig.theme))
 		// const themeData = config.at(-1) //get the last entry returned from the queue
 
 		this.config = newConfig
+
+		if(newConfig.theme){
+			const config = await this.loadThemeQueue.push(() => this.loadTheme(newConfig.theme))
+			const themeData = config.at(-1) //get the last entry returned from the queue
+			if(themeData.hasOwnProperty("extends")){
+				// set the theme to the parent theme
+				this.config.theme = themeData.extends
+			}
+		}
+
 		// pass updates to DiceWorld
 		this.#DiceWorld.updateConfig(newConfig)
 
@@ -403,10 +416,14 @@ class WorldFacade {
 		return this
   }
 
-	hide() {
-		if(this.canvas){
+	hide(className) {
+		if(className){
+			this.canvas.dataset.hideClass = className
+			this.canvas.classList.add(className)
+		} else {
 			this.canvas.style.display = 'none'
 		}
+
 		this.isVisible = false;
 
 		// make this method chainable
@@ -414,7 +431,11 @@ class WorldFacade {
 	}
 
 	show() {
-		if(this.canvas){
+		const hideClass = this.canvas.dataset?.hideClass
+		if(hideClass){
+			delete this.canvas.dataset.hideClass
+			this.canvas.classList.remove(hideClass)
+		} else {
 			this.canvas.style.display = 'block'
 		}
 		this.isVisible = true;
@@ -514,6 +535,8 @@ class WorldFacade {
 
 	// used by both .add and .roll - .roll clears the box and .add does not
 	async #makeRoll(parsedNotation, collectionId){
+
+		this.onBeforeRoll(parsedNotation, collectionId)
 
 		const collection = this.rollCollectionData[collectionId]
 		let newStartPoint = collection.newStartPoint

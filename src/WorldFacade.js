@@ -12,6 +12,7 @@ const defaultOptions = {
 	scale: 5, // scale the dice
 	theme: 'default', // can be a hex color or a pre-defined theme such as 'purpleRock'
 	preloadThemes: [],
+	externalThemes: {}, // point to CDN paths
 	themeColor: '#2e8555', // used for color values or named theme variants - not fully implemented yet // green: #2e8555 // yellow: #feea03
 	offscreen: true, // use offscreen canvas browser feature for performance improvements - will fallback to false based on feature detection
 	assetPath: '/assets/dice-box/', // path to 'ammo', 'themes' folders and web workers
@@ -262,7 +263,12 @@ class WorldFacade {
 
 	// fetch the theme config and return a themeData object
 	async getThemeConfig(theme){
-		const basePath = `${this.config.origin}${this.config.assetPath}themes/${theme}`
+		let basePath = `${this.config.origin}${this.config.assetPath}themes/${theme}`
+
+		if(this.config.externalThemes[theme]){
+			basePath = this.config.externalThemes[theme]
+		}
+
 
 		// fetch the theme.config file
 		let themeData = await fetch(`${basePath}/theme.config.json`).then(resp => {

@@ -542,7 +542,7 @@ class WorldFacade {
 	// used by both .add and .roll - .roll clears the box and .add does not
 	async #makeRoll(parsedNotation, collectionId){
 
-		this.onBeforeRoll(parsedNotation, collectionId)
+		this.onBeforeRoll(parsedNotation)
 
 		const collection = this.rollCollectionData[collectionId]
 		let newStartPoint = collection.newStartPoint

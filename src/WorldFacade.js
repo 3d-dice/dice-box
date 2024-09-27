@@ -52,7 +52,7 @@ class WorldFacade {
 			throw new Error('Config options should be an object. Config reference: https://fantasticdice.games/docs/usage/config#configuration-options')
 		}
 		// pull out callback functions from options
-		const { onBeforeRoll, onDieComplete, onRollComplete, onRemoveComplete, onThemeConfigLoaded, onThemeLoaded, ...boxOptions } = options
+		const { onCollision, onBeforeRoll, onDieComplete, onRollComplete, onRemoveComplete, onThemeConfigLoaded, onThemeLoaded, ...boxOptions } = options
 
 		// extend defaults with options
 		this.config = {...defaultOptions, ...boxOptions}
@@ -64,6 +64,8 @@ class WorldFacade {
 		this.onRemoveComplete = options.onRemoveComplete || this.noop
 		this.onThemeLoaded = options.onThemeLoaded || this.noop
 		this.onThemeConfigLoaded = options.onThemeConfigLoaded || this.noop
+		this.onCollision = options.onCollision || this.noop; // Add the new collision callback
+
 
 		// is webGL supported?
 		if(webgl_support()){
@@ -138,7 +140,13 @@ class WorldFacade {
 		this.#DicePhysics.onmessage = (e) => {
 			switch( e.data.action ) {
 				case "init-complete":
-					this.#dicePhysicsResolve() // fulfill promise so other things can run
+					this.#dicePhysicsResolve(); // fulfill promise so other things can run
+					break;
+				case "collision": // Handle collision events from the worker
+                    if (this.onCollision) {
+                        this.onCollision(e.data.body0Id, e.data.body1Id, e.data.force);
+                    }
+                    break;
 			}
     }
 		// initialize the AmmoJS physics worker

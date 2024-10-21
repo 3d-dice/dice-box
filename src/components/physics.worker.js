@@ -352,6 +352,7 @@ const addBoxToWorld = (size, height) => {
 	const groundMotionState = new Ammo.btDefaultMotionState(groundTransform)
 	const groundInfo = new Ammo.btRigidBodyConstructionInfo(0, groundMotionState, groundShape, localInertia)
 	const groundBody = new Ammo.btRigidBody(groundInfo)
+	groundBody.id='box_bottom'
 	groundBody.setFriction(config.friction)
 	groundBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(groundBody)
@@ -364,6 +365,7 @@ const addBoxToWorld = (size, height) => {
 	const ceilingMotionState = new Ammo.btDefaultMotionState(ceilingTransform)
 	const ceilingInfo = new Ammo.btRigidBodyConstructionInfo(0, ceilingMotionState, ceilingShape, localInertia)
 	const ceilingBody = new Ammo.btRigidBody(ceilingInfo)
+	ceilingBody.id='box_top'
 	ceilingBody.setFriction(config.friction)
 	ceilingBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(ceilingBody)
@@ -376,6 +378,7 @@ const addBoxToWorld = (size, height) => {
 	const topMotionState = new Ammo.btDefaultMotionState(wallTopTransform)
 	const topInfo = new Ammo.btRigidBodyConstructionInfo(0, topMotionState, wallTopShape, localInertia)
 	const topBody = new Ammo.btRigidBody(topInfo)
+	topBody.id='box_north_wall'
 	topBody.setFriction(config.friction)
 	topBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(topBody)
@@ -388,6 +391,7 @@ const addBoxToWorld = (size, height) => {
 	const bottomMotionState = new Ammo.btDefaultMotionState(wallBottomTransform)
 	const bottomInfo = new Ammo.btRigidBodyConstructionInfo(0, bottomMotionState, wallBottomShape, localInertia)
 	const bottomBody = new Ammo.btRigidBody(bottomInfo)
+	bottomBody.id='box_south_wall'
 	bottomBody.setFriction(config.friction)
 	bottomBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(bottomBody)
@@ -400,6 +404,7 @@ const addBoxToWorld = (size, height) => {
 	const rightMotionState = new Ammo.btDefaultMotionState(wallRightTransform)
 	const rightInfo = new Ammo.btRigidBodyConstructionInfo(0, rightMotionState, wallRightShape, localInertia)
 	const rightBody = new Ammo.btRigidBody(rightInfo)
+	rightBody.id='box_east_wall'
 	rightBody.setFriction(config.friction)
 	rightBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(rightBody)
@@ -412,6 +417,7 @@ const addBoxToWorld = (size, height) => {
 	const leftMotionState = new Ammo.btDefaultMotionState(wallLeftTransform)
 	const leftInfo = new Ammo.btRigidBodyConstructionInfo(0, leftMotionState, wallLeftShape, localInertia)
 	const leftBody = new Ammo.btRigidBody(leftInfo)
+	leftBody.id='box_west_wall'
 	leftBody.setFriction(config.friction)
 	leftBody.setRestitution(config.restitution)
 	physicsWorld.addRigidBody(leftBody)
@@ -570,9 +576,9 @@ const update = (delta) => {
                 // Calculate the force (F = m * a) based on velocity and collision normal
                 const collisionForce = normal.dot(relativeVelocity);
                 totalForce += Math.abs(collisionForce);  // Add to total collision force
-            }
-        }
-
+							}
+						}
+						
         if (totalForce > 0) {
             // Send the collision data to the main thread
             self.postMessage({

@@ -534,6 +534,56 @@ const update = (delta) => {
 
 	diceBufferView[0] = bodies.length
 
+	// Detect collisions
+    const numManifolds = physicsWorld.getDispatcher().getNumManifolds();
+    for (let i = 0; i < numManifolds; i++) {
+        const contactManifold = physicsWorld.getDispatcher().getManifoldByIndexInternal(i);
+        const body0 = Ammo.castObject(contactManifold.getBody0(), Ammo.btRigidBody);
+        const body1 = Ammo.castObject(contactManifold.getBody1(), Ammo.btRigidBody);
+
+        const rb0Id = body0.id;
+        const rb1Id = body1.id;
+
+        let totalForce = 0;
+
+        // Calculate collision force
+        const numContacts = contactManifold.getNumContacts();
+        for (let j = 0; j < numContacts; j++) {
+            const contactPoint = contactManifold.getContactPoint(j);
+
+            // Check if the contact point indicates collision (penetration depth)
+            if (contactPoint.getDistance() < 0) {
+                // Relative velocity of the two bodies at the contact point
+                const normal = contactPoint.get_m_normalWorldOnB();
+
+                const velocity0 = body0.getLinearVelocity();
+                const velocity1 = body1.getLinearVelocity();
+
+                // Calculate relative velocity
+                const relativeVelocity = new Ammo.btVector3();
+                relativeVelocity.setValue(
+                    velocity0.x() - velocity1.x(),
+                    velocity0.y() - velocity1.y(),
+                    velocity0.z() - velocity1.z()
+                );
+
+                // Calculate the force (F = m * a) based on velocity and collision normal
+                const collisionForce = normal.dot(relativeVelocity);
+                totalForce += Math.abs(collisionForce);  // Add to total collision force
+            }
+        }
+
+        if (totalForce > 0) {
+            // Send the collision data to the main thread
+            self.postMessage({
+                action: "collision",
+                body0Id: rb0Id,
+                body1Id: rb1Id,
+                force: totalForce
+            });
+        }
+    }
+
 	// looping backwards since bodies are removed as they are put to sleep
 	for (let i = bodies.length - 1; i >= 0; i--) {
 		const rb = bodies[i]

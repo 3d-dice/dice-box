@@ -266,6 +266,9 @@ class WorldOnscreen {
 				scale: this.config.scale,
 				id: newDie.id,
 				newStartPoint: options.newStartPoint,
+				throwOrigin: options.throwOrigin,
+				throwDirection: options.throwDirection,
+				throwStrength: options.throwStrength,
 				theme: options.theme,
 				meshName: options.meshName,
 			}

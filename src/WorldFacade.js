@@ -18,7 +18,18 @@ const defaultOptions = {
 	assetPath: '/assets/dice-box/', // path to 'ammo', 'themes' folders and web workers
 	// origin: location.origin,
 	origin: typeof window !== "undefined" ? window.location.origin : "",
-	suspendSimulation: false
+	suspendSimulation: false,
+	// throwOrigin: where dice spawn from. Accepts a named zone
+	// ('random' | 'center' | 'top' | 'bottom' | 'left' | 'right' | 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight')
+	// or an explicit [x, y, z] world position. Defaults to 'random' (existing behavior).
+	throwOrigin: 'random',
+	// throwDirection: optional [x, y, z] vector indicating the general direction to throw.
+	// When omitted, dice are thrown toward the opposite side of the origin (existing behavior).
+	throwDirection: null,
+	// throwStrength: per-roll multiplier on throw velocity. 1 = default, clamped in the physics worker.
+	throwStrength: 1,
+	// maxThrowStrength: ceiling applied to throwStrength in the physics worker.
+	maxThrowStrength: 3
 }
 
 class WorldFacade {
@@ -460,18 +471,21 @@ class WorldFacade {
 	}
 
 	// TODO: pass data with roll - such as roll name. Passed back at the end in the results
-	roll(notation, {theme = this.config.theme, themeColor = this.config.themeColor, newStartPoint = true} = {}) {
+	roll(notation, {theme = this.config.theme, themeColor = this.config.themeColor, newStartPoint = true, throwOrigin = this.config.throwOrigin, throwDirection = this.config.throwDirection, throwStrength = this.config.throwStrength} = {}) {
 		// note: to add to a roll on screen use .add method
 		// reset the offscreen worker and physics worker with each new roll
 		this.clear()
 		const collectionId = this.#collectionIndex++
-		
+
 		this.rollCollectionData[collectionId] = new Collection({
 			id: collectionId,
 			notation,
 			theme,
 			themeColor,
-			newStartPoint
+			newStartPoint,
+			throwOrigin,
+			throwDirection,
+			throwStrength
 		})
 
 		const parsedNotation = this.createNotationArray(notation, this.themesLoadedData[theme].diceAvailable)
@@ -481,7 +495,7 @@ class WorldFacade {
 		return this.rollCollectionData[collectionId].promise
 	}
 
-  add(notation, {theme = this.config.theme, themeColor = this.config.themeColor, newStartPoint = true} = {}) {
+  add(notation, {theme = this.config.theme, themeColor = this.config.themeColor, newStartPoint = true, throwOrigin = this.config.throwOrigin, throwDirection = this.config.throwDirection, throwStrength = this.config.throwStrength} = {}) {
 
 		const collectionId = this.#collectionIndex++
 
@@ -490,7 +504,10 @@ class WorldFacade {
 			notation,
 			theme,
 			themeColor,
-			newStartPoint
+			newStartPoint,
+			throwOrigin,
+			throwDirection,
+			throwStrength
 		})
 		
 		const parsedNotation = this.createNotationArray(notation, this.themesLoadedData[theme].diceAvailable)
@@ -500,7 +517,7 @@ class WorldFacade {
 		return this.rollCollectionData[collectionId].promise
   }
 
-	reroll(notation, {remove = false, hide = false, newStartPoint = true} = {}) {
+	reroll(notation, {remove = false, hide = false, newStartPoint = true, throwOrigin, throwDirection, throwStrength} = {}) {
 		// TODO: add hide if you want to keep the die result for an external parser
 
 		// ensure notation is an array
@@ -514,7 +531,7 @@ class WorldFacade {
 		}
 
 		// .add will return a promise that will then be returned here
-		return this.add(cleanNotation, {newStartPoint})
+		return this.add(cleanNotation, {newStartPoint, throwOrigin, throwDirection, throwStrength})
 	}
 
 	remove(notation, {hide = false} = {}) {
@@ -554,6 +571,9 @@ class WorldFacade {
 
 		const collection = this.rollCollectionData[collectionId]
 		let newStartPoint = collection.newStartPoint
+		const throwOrigin = collection.throwOrigin
+		const throwDirection = collection.throwDirection
+		const throwStrength = collection.throwStrength
 
 		// loop through the number of dice in the group and roll each one
 		parsedNotation.forEach(async notation => {
@@ -655,6 +675,9 @@ class WorldFacade {
 					this.#DiceWorld.add({
 						...roll,
 						newStartPoint,
+						throwOrigin,
+						throwDirection,
+						throwStrength,
 						theme: extendedTheme?.systemName || theme,
 						meshName: extendedTheme?.meshName || meshName,
 						colorSuffix

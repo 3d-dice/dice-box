@@ -39,6 +39,7 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
+    "demo:drag": "vite --config drag-demo/vite.config.js",
     "postinstall": "node copyAssets.js"
   },
   "dependencies": {

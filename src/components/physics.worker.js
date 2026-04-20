@@ -80,10 +80,10 @@ self.onmessage = (e) => {
 						// toss from all edges
 						// setStartPosition()
 						if(e.data.options.newStartPoint){
-							setStartPosition()
+							setStartPosition(e.data.options.throwOrigin)
 						}
             const newDie = addDie(e.data.options)
-						rollDie(newDie)
+						rollDie(newDie, e.data.options.throwDirection, e.data.options.throwStrength)
             break;
           case "rollDie":
 						// TODO: this won't work, need a die object
@@ -231,38 +231,54 @@ const setVector3 = (x,y,z) => {
 	return sharedVector3
 }
 
-const setStartPosition = () => {
-	let size = config.size
-	// let envelopeSize = size * .6 / 2
-	let edgeOffset = .5
-	let xMin = size * aspect / 2 - edgeOffset
-	let xMax = size * aspect / -2 + edgeOffset
-	let yMin = size / 2 - edgeOffset
-	let yMax = size / -2 + edgeOffset
-	// let xEnvelope = lerp(envelopeSize * aspect - edgeOffset * aspect, -envelopeSize * aspect + edgeOffset * aspect, Math.random())
-	let xEnvelope = lerp(xMin, xMax, Math.random())
-	let yEnvelope = lerp(yMin, yMax, Math.random())
-	let tossFromTop = Math.round(Math.random())
-	let tossFromLeft = Math.round(Math.random())
-	let tossX = Math.round(Math.random())
-	// console.log(`throw coming from`, tossX ? tossFromTop ? "top" : "bottom" : tossFromLeft ? "left" : "right")
+const setStartPosition = (originOverride) => {
+	const size = config.size
+	const edgeOffset = .5
+	// axis extremes in the x/z plane. xRight/xLeft match prior xMin/xMax respectively;
+	// zNear/zFar match prior yMin/yMax (the variables were named as if looking down at the box).
+	const xRight = size * aspect / 2 - edgeOffset
+	const xLeft  = size * aspect / -2 + edgeOffset
+	const zNear  = size / 2 - edgeOffset          // closer to camera (bottom of overhead view)
+	const zFar   = size / -2 + edgeOffset         // farther from camera (top of overhead view)
+	const y = config.startingHeight
 
-	// forces = {
-	// 	xMinForce: tossX ? -config.throwForce * aspect : tossFromLeft ? config.throwForce * aspect * .3 : -config.throwForce * aspect * .3,
-	// 	xMaxForce: tossX ? config.throwForce * aspect : tossFromLeft ? config.throwForce * aspect * 1 : -config.throwForce * aspect * 1,
-	// 	zMinForce: tossX ? tossFromTop ? config.throwForce * .3 : -config.throwForce * .3 : -config.throwForce,
-	// 	zMaxForce: tossX ? tossFromTop ? config.throwForce * 1 : -config.throwForce * 1 : config.throwForce,
-	// }
+	const origin = originOverride !== undefined ? originOverride : config.throwOrigin
 
-	config.startPosition = [
-		// tossing on x axis then z should be locked to top or bottom
-		// not tossing on x axis then x should be locked to the left or right
-		tossX ? xEnvelope : tossFromLeft ? xMax : xMin,
-		config.startingHeight,
-		tossX ? tossFromTop ? yMax : yMin : yEnvelope
-	]
+	// explicit vector: [x, y?, z]
+	if (Array.isArray(origin)) {
+		config.startPosition = [
+			origin[0],
+			origin[1] == null ? y : origin[1], // null from structured clone of undefined
+			origin[2]
+		]
+		return
+	}
 
-	// console.log(`startPosition`, config.startPosition)
+	const randX = () => lerp(xLeft, xRight, Math.random())
+	const randZ = () => lerp(zFar, zNear, Math.random())
+
+	let x, z
+	switch (origin) {
+		case 'center':      x = 0;     z = 0;     break
+		case 'top':         x = randX(); z = zFar;  break
+		case 'bottom':      x = randX(); z = zNear; break
+		case 'left':        x = xLeft;   z = randZ(); break
+		case 'right':       x = xRight;  z = randZ(); break
+		case 'topLeft':     x = xLeft;   z = zFar;  break
+		case 'topRight':    x = xRight;  z = zFar;  break
+		case 'bottomLeft':  x = xLeft;   z = zNear; break
+		case 'bottomRight': x = xRight;  z = zNear; break
+		default: {
+			// 'random', undefined, or unknown string: preserve historical random-edge behavior
+			const tossFromTop = Math.round(Math.random())
+			const tossFromLeft = Math.round(Math.random())
+			const tossX = Math.round(Math.random())
+			x = tossX ? randX() : tossFromLeft ? xLeft : xRight
+			z = tossX ? (tossFromTop ? zFar : zNear) : randZ()
+		}
+	}
+
+	config.startPosition = [x, y, z]
 }
 
 const createConvexHull = (mesh) => {
@@ -459,14 +475,36 @@ const addDie = (options) => {
 	// rollDie(newDie)
 }
 
-const rollDie = (die) => {
+const rollDie = (die, directionOverride, strengthOverride) => {
 
-	// lerp picks a random number between two values
-	die.setLinearVelocity(setVector3(
-		lerp(-config.startPosition[0] * .5, -config.startPosition[0] * config.throwForce, Math.random()),
-		lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random()), // limit the y force to 2
-		lerp(-config.startPosition[2] * .5, -config.startPosition[2] * config.throwForce, Math.random()),
-	))
+	const direction = directionOverride !== undefined ? directionOverride : config.throwDirection
+	const rawStrength = strengthOverride !== undefined ? strengthOverride : config.throwStrength
+	// clamp to a sane range: 0 would produce a dead drop, and runaway values
+	// would fling dice through the box walls.
+	const maxStrength = config.maxThrowStrength ?? 3
+	const strength = Math.max(0, Math.min(maxStrength, rawStrength == null ? 1 : rawStrength))
+	let vx, vy, vz
+	if (Array.isArray(direction)) {
+		// Use the provided direction as the throw vector. Normalize so magnitude is
+		// governed by throwForce and the origin's distance from center (matching the
+		// scale of the default-random behavior).
+		const [dx, dy = 0, dz] = direction
+		const mag = Math.hypot(dx, dy, dz) || 1
+		const nx = dx / mag, ny = dy / mag, nz = dz / mag
+		const baseMag = Math.hypot(config.startPosition[0], config.startPosition[2]) || config.size
+		const speed = baseMag * config.throwForce * strength
+		vx = lerp(nx * speed * .5, nx * speed, Math.random())
+		vz = lerp(nz * speed * .5, nz * speed, Math.random())
+		// preserve a downward drop plus any vertical component of the requested direction
+		vy = lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random()) + ny * speed * 0.3
+	} else {
+		// default: throw toward the opposite side of the box
+		const force = config.throwForce * strength
+		vx = lerp(-config.startPosition[0] * .5, -config.startPosition[0] * force, Math.random())
+		vy = lerp(-config.startPosition[1], -config.startPosition[1] * 2, Math.random())
+		vz = lerp(-config.startPosition[2] * .5, -config.startPosition[2] * force, Math.random())
+	}
+	die.setLinearVelocity(setVector3(vx, vy, vz))
 
 	const flippy = Math.random() > .5 ? 1 : -1 // random positive or negative number
 	const spinny = lerp(config.spinForce * .5, config.spinForce, Math.random())

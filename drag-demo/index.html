@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Dice Drag Throw</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color: #eee; font-family: system-ui, sans-serif; }
+      #dice-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; }
+      #hud {
+        position: fixed; top: 12px; left: 12px; z-index: 10;
+        background: rgba(0,0,0,.5); padding: 10px 12px; border-radius: 8px;
+        display: flex; gap: 8px; align-items: center;
+      }
+      #hud input { width: 80px; padding: 4px 6px; border-radius: 4px; border: 1px solid #444; background: #222; color: #eee; }
+      #hud .hint { font-size: 12px; opacity: .7; margin-left: 6px; }
+      #debug { position: fixed; bottom: 12px; left: 12px; font-size: 12px; opacity: .7; z-index: 10; white-space: pre; }
+      #arrow {
+        position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9;
+        width: 100vw; height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hud">
+      <label>Roll: <input id="notation" type="text" value="4d6" /></label>
+      <span class="hint">drag anywhere on the canvas to fling the dice</span>
+    </div>
+    <svg id="arrow">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#4af" />
+        </marker>
+      </defs>
+      <line id="arrow-line" x1="0" y1="0" x2="0" y2="0" stroke="#4af" stroke-width="3" marker-end="url(#arrowhead)" />
+    </svg>
+    <div id="debug"></div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
